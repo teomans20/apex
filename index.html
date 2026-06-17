@@ -24,8 +24,8 @@
   input { font-size: 16px; }
   input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   input[type=number] { -moz-appearance: textfield; }
-  .day-card { transition: transform 0.15s ease; }
-  .day-card:active { transform: scale(0.97); }
+  .day-card { transition: transform 0.15s ease, box-shadow 0.35s ease; box-shadow: 0 0 12px var(--glow-low, transparent); }
+  .day-card:active { transform: scale(0.97); box-shadow: 0 0 40px var(--glow-high, transparent), 0 10px 60px var(--glow-high, transparent); transition: transform 0.15s ease, box-shadow 0.12s ease; }
   .exercise-btn:active, .cal-cell:active { background: rgba(255,255,255,0.05) !important; }
   .add-btn:active, .submit-btn:not(:disabled):active { transform: scale(0.98); }
   .tab-btn:active { transform: scale(0.95); }
@@ -58,11 +58,53 @@
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
-const DAY_CONFIG = {
-  push: { name: 'PUSH', subtitle: 'Chest · Shoulders · Triceps', accent: '#FF5722', accentSoft: 'rgba(255,87,34,0.15)', gradient: 'linear-gradient(135deg,#FF5722,#E64A19)' },
-  pull: { name: 'PULL', subtitle: 'Back · Biceps', accent: '#2196F3', accentSoft: 'rgba(33,150,243,0.15)', gradient: 'linear-gradient(135deg,#2196F3,#1565C0)' },
-  upper: { name: 'UPPER', subtitle: 'Full upper body', accent: '#AB47BC', accentSoft: 'rgba(171,71,188,0.15)', gradient: 'linear-gradient(135deg,#AB47BC,#6A1B9A)' },
-  leg: { name: 'LEG', subtitle: 'Legs · Glutes · Calves', accent: '#9CCC65', accentSoft: 'rgba(156,204,101,0.15)', gradient: 'linear-gradient(135deg,#9CCC65,#558B2F)' },
+const BUILTIN_DAYS = {
+  push: { name: 'PUSH', subtitle: 'Chest · Shoulders · Triceps', accent: '#FF3D3D', accentSoft: 'rgba(255,61,61,0.15)', gradient: 'linear-gradient(135deg,#FF3D3D,#8B1111)', glowLow: 'rgba(255,61,61,0.08)', glowHigh: 'rgba(255,61,61,0.55)' },
+  pull: { name: 'PULL', subtitle: 'Back · Biceps', accent: '#4A90E2', accentSoft: 'rgba(74,144,226,0.15)', gradient: 'linear-gradient(135deg,#4A90E2,#1E3A5F)', glowLow: 'rgba(74,144,226,0.08)', glowHigh: 'rgba(74,144,226,0.55)' },
+  upper: { name: 'UPPER', subtitle: 'Full upper body', accent: '#D4A547', accentSoft: 'rgba(212,165,71,0.15)', gradient: 'linear-gradient(135deg,#D4A547,#8B6914)', glowLow: 'rgba(212,165,71,0.10)', glowHigh: 'rgba(212,165,71,0.60)' },
+  leg: { name: 'LEG', subtitle: 'Legs · Glutes · Calves', accent: '#34D399', accentSoft: 'rgba(52,211,153,0.15)', gradient: 'linear-gradient(135deg,#34D399,#064E3B)', glowLow: 'rgba(52,211,153,0.08)', glowHigh: 'rgba(52,211,153,0.55)' },
+};
+
+// Premium color palette for custom days. Each entry builds a full day config.
+const DAY_COLOR_PALETTE = [
+  { id: 'teal',    accent: '#2DD4BF', dark: '#0F766E' },
+  { id: 'violet',  accent: '#A78BFA', dark: '#5B21B6' },
+  { id: 'magenta', accent: '#EC4899', dark: '#9D174D' },
+  { id: 'amber',   accent: '#F59E0B', dark: '#92400E' },
+  { id: 'indigo',  accent: '#6366F1', dark: '#312E81' },
+  { id: 'rose',    accent: '#FB7185', dark: '#9F1239' },
+  { id: 'cyan',    accent: '#22D3EE', dark: '#0E7490' },
+  { id: 'lime',    accent: '#A3E635', dark: '#3F6212' },
+  { id: 'orange',  accent: '#FB923C', dark: '#9A3412' },
+  { id: 'slate',   accent: '#94A3B8', dark: '#334155' },
+];
+
+const hexToRgb = (hex) => {
+  const h = hex.replace('#', '');
+  return { r: parseInt(h.slice(0,2),16), g: parseInt(h.slice(2,4),16), b: parseInt(h.slice(4,6),16) };
+};
+
+// Build a full day config object from a base accent + dark color
+const buildDayConfig = (name, subtitle, accent, dark) => {
+  const { r, g, b } = hexToRgb(accent);
+  return {
+    name: name.toUpperCase(),
+    subtitle: subtitle || '',
+    accent,
+    accentSoft: `rgba(${r},${g},${b},0.15)`,
+    gradient: `linear-gradient(135deg,${accent},${dark})`,
+    glowLow: `rgba(${r},${g},${b},0.08)`,
+    glowHigh: `rgba(${r},${g},${b},0.55)`,
+  };
+};
+
+// Merge built-in days with user's custom days into a single config map
+const buildDayConfigMap = (customDays) => {
+  const map = { ...BUILTIN_DAYS };
+  (customDays || []).forEach(cd => {
+    map[cd.id] = buildDayConfig(cd.name, cd.subtitle, cd.accent, cd.dark);
+  });
+  return map;
 };
 
 const DEFAULT_EXERCISES = {
@@ -86,6 +128,7 @@ const REFRESH_INTERVAL = 30000;
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const TR_MONTHS_SHORT = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
 
 const Icon = {
   Chevron: () => <span style={{fontSize:24,lineHeight:1,fontWeight:300}}>‹</span>,
@@ -294,14 +337,16 @@ function Confetti({ count = 60 }) {
   );
 }
 
-function PRCelebration({ weight, reps, exerciseName, onClose }) {
+function PRCelebration({ weight, reps, exerciseName, type, onClose }) {
   useEffect(() => { haptic([50, 50, 100]); const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
+  const isTop = type === 'top';
+  const title = isTop ? 'YENİ TOP REKOR!' : 'YENİ BACK-OFF REKOR!';
   return (
     <div className="pr-overlay" onClick={onClose} style={S.prOverlay}>
       <Confetti />
       <div className="pr-content" style={S.prContent}>
         <div style={S.prStar}>★</div>
-        <div style={S.prTitle}>YENİ REKOR!</div>
+        <div style={S.prTitle}>{title}</div>
         <div style={S.prExercise}>{exerciseName}</div>
         <div style={S.prValue}>{weight}kg × {reps}</div>
         <div style={S.prHint}>Devam etmek için dokun</div>
@@ -354,7 +399,7 @@ function ProgressChart({ history, color }) {
 // MONTHLY CALENDAR
 // ═══════════════════════════════════════════
 
-function MonthlyCalendar({ logs, sessions, onTapDay }) {
+function MonthlyCalendar({ logs, sessions, dayConfig, onTapDay }) {
   const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
 
   const workoutsByDay = useMemo(() => {
@@ -410,7 +455,7 @@ function MonthlyCalendar({ logs, sessions, onTapDay }) {
               <div style={{ ...S.calendarDayNum, color: isToday ? '#fff' : (hasWorkout ? '#ccc' : '#555'), fontWeight: isToday ? 800 : 600 }}>{cell.day}</div>
               {hasWorkout && (
                 <div style={S.calendarDots}>
-                  {types.map(t => <div key={t} style={{ ...S.calendarDot, background: DAY_CONFIG[t].accent }} />)}
+                  {types.map(t => <div key={t} style={{ ...S.calendarDot, background: (dayConfig[t]?.accent || '#666') }} />)}
                 </div>
               )}
             </button>
@@ -421,7 +466,7 @@ function MonthlyCalendar({ logs, sessions, onTapDay }) {
   );
 }
 
-function DayDetailModal({ targetDateKey, data, onClose, onDeleteLog, onDeleteWorkout, onAddWorkout }) {
+function DayDetailModal({ targetDateKey, data, dayConfig, onClose, onDeleteLog, onDeleteWorkout, onAddWorkout }) {
   const { date, workouts } = useMemo(() => {
     const parts = targetDateKey.split('-').map(Number);
     const d = new Date(parts[0], parts[1], parts[2]);
@@ -438,6 +483,64 @@ function DayDetailModal({ targetDateKey, data, onClose, onDeleteLog, onDeleteWor
     });
     return { date: d, workouts: byType };
   }, [targetDateKey, data]);
+
+  // Compute Top/Back-off PR details and target hit rate for a workout day
+  const computeDayStats = (dayLogs) => {
+    const isBetter = (a, b) => a.weight > b.weight || (a.weight === b.weight && a.reps > b.reps);
+    const bestOf = (sets) => sets.reduce((best, s) => !best || isBetter(s, best) ? s : best, null);
+
+    const byExercise = {};
+    dayLogs.forEach(l => { if (!byExercise[l.exerciseName]) byExercise[l.exerciseName] = []; byExercise[l.exerciseName].push(l); });
+
+    const topPRs = []; // { exercise, weight, reps }
+    const backoffPRs = [];
+    let targetsHit = 0, targetsTotal = 0;
+    const dayStart = new Date(date).setHours(0,0,0,0);
+
+    Object.entries(byExercise).forEach(([exName, exLogs]) => {
+      const sorted = [...exLogs].sort((a, b) => a.timestamp - b.timestamp);
+      const todayTop = sorted[0];
+      const todayBackoffs = sorted.slice(1);
+      const todayBestBackoff = todayBackoffs.length ? bestOf(todayBackoffs) : null;
+
+      // Prior logs (before this day)
+      const priorLogs = data.logs.filter(l => l.exerciseName === exName && l.timestamp < dayStart);
+      if (priorLogs.length === 0) return;
+
+      // Categorize prior into top/backoff
+      const priorByDay = {};
+      priorLogs.forEach(l => { const k = dateKey(l.timestamp); if (!priorByDay[k]) priorByDay[k] = []; priorByDay[k].push(l); });
+      const priorTops = [], priorBackoffs = [];
+      Object.values(priorByDay).forEach(dl => {
+        const ds = [...dl].sort((a, b) => a.timestamp - b.timestamp);
+        if (ds[0]) priorTops.push(ds[0]);
+        ds.slice(1).forEach(s => priorBackoffs.push(s));
+      });
+      const priorTopPR = priorTops.length ? bestOf(priorTops) : null;
+      const priorBackoffPR = priorBackoffs.length ? bestOf(priorBackoffs) : null;
+
+      // PR check
+      if (todayTop && priorTopPR && isBetter(todayTop, priorTopPR)) {
+        topPRs.push({ exercise: exName, weight: todayTop.weight, reps: todayTop.reps });
+      }
+      if (todayBestBackoff && priorBackoffPR && isBetter(todayBestBackoff, priorBackoffPR)) {
+        backoffPRs.push({ exercise: exName, weight: todayBestBackoff.weight, reps: todayBestBackoff.reps });
+      }
+
+      // Target hit vs last day
+      const lastDayLogs = Object.values(priorByDay).sort((a, b) => b[0].timestamp - a[0].timestamp)[0];
+      if (!lastDayLogs) return;
+      const lastSorted = [...lastDayLogs].sort((a, b) => a.timestamp - b.timestamp);
+      const lastTop = lastSorted[0];
+      const lastBackoffs = lastSorted.slice(1);
+      const lastBestBackoff = lastBackoffs.length ? bestOf(lastBackoffs) : null;
+
+      if (lastTop && todayTop) { targetsTotal++; if (isBetter(todayTop, lastTop)) targetsHit++; }
+      if (lastBestBackoff && todayBestBackoff) { targetsTotal++; if (isBetter(todayBestBackoff, lastBestBackoff)) targetsHit++; }
+    });
+
+    return { topPRs, backoffPRs, targetsHit, targetsTotal };
+  };
 
   const weekday = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][date.getDay()];
   const todayKey = dateKey(Date.now());
@@ -458,9 +561,10 @@ function DayDetailModal({ targetDateKey, data, onClose, onDeleteLog, onDeleteWor
         </div>
 
         {Object.entries(workouts).map(([dayType, w]) => {
-          const cfg = DAY_CONFIG[dayType];
+          const cfg = dayConfig[dayType] || BUILTIN_DAYS.push;
           const duration = w.session?.endTime ? w.session.endTime - w.session.startTime : null;
           const volume = w.logs.reduce((s, l) => s + l.weight * l.reps, 0);
+          const dayStats = computeDayStats(w.logs);
           const byExercise = {};
           w.logs.forEach(l => { if (!byExercise[l.exerciseName]) byExercise[l.exerciseName] = []; byExercise[l.exerciseName].push(l); });
           // Sort by timestamp so sets are in order
@@ -478,6 +582,37 @@ function DayDetailModal({ targetDateKey, data, onClose, onDeleteLog, onDeleteWor
                 <div style={S.dayStatBox}><div style={S.dayStatVal}>{w.logs.length}</div><div style={S.dayStatLbl}>SET</div></div>
                 <div style={S.dayStatBox}><div style={S.dayStatVal}>{(volume/1000).toFixed(1)}t</div><div style={S.dayStatLbl}>HACİM</div></div>
               </div>
+              {(dayStats.topPRs.length > 0 || dayStats.backoffPRs.length > 0 || dayStats.targetsTotal > 0) && (
+                <div style={S.dayDetailHighlights}>
+                  {dayStats.topPRs.length > 0 && (
+                    <div style={{ ...S.dayPRBlock, background: 'rgba(255,215,0,0.08)', borderColor: 'rgba(255,215,0,0.35)' }}>
+                      <div style={{ ...S.dayPRBlockLabel, color: '#FFD700' }}>★ TOP REKORLAR ({dayStats.topPRs.length})</div>
+                      {dayStats.topPRs.map((pr, i) => (
+                        <div key={i} style={S.dayPRBlockRow}>
+                          <span style={S.dayPRExName}>{pr.exercise}</span>
+                          <span style={{ ...S.dayPRExVal, color: '#FFD700' }}>{pr.weight}kg × {pr.reps}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {dayStats.backoffPRs.length > 0 && (
+                    <div style={{ ...S.dayPRBlock, background: 'rgba(192,192,192,0.06)', borderColor: 'rgba(192,192,192,0.25)' }}>
+                      <div style={{ ...S.dayPRBlockLabel, color: '#C0C0C0' }}>★ BACK-OFF REKORLAR ({dayStats.backoffPRs.length})</div>
+                      {dayStats.backoffPRs.map((pr, i) => (
+                        <div key={i} style={S.dayPRBlockRow}>
+                          <span style={S.dayPRExName}>{pr.exercise}</span>
+                          <span style={{ ...S.dayPRExVal, color: '#C0C0C0' }}>{pr.weight}kg × {pr.reps}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {dayStats.targetsTotal > 0 && (
+                    <div style={{ ...S.dayTargetChip, background: dayStats.targetsHit === dayStats.targetsTotal ? 'rgba(76,175,80,0.12)' : '#1a1a1a', borderColor: dayStats.targetsHit === dayStats.targetsTotal ? '#4CAF50' : '#2a2a2a', color: dayStats.targetsHit === dayStats.targetsTotal ? '#4CAF50' : '#aaa' }}>
+                      🎯 {dayStats.targetsHit}/{dayStats.targetsTotal} hedef tutturuldu
+                    </div>
+                  )}
+                </div>
+              )}
               <div style={S.dayDetailExercises}>
                 {Object.entries(byExercise).map(([name, list]) => (
                   <div key={name} style={S.dayDetailExercise}>
@@ -486,7 +621,7 @@ function DayDetailModal({ targetDateKey, data, onClose, onDeleteLog, onDeleteWor
                       {list.map((l, idx) => (
                         <div key={l.id} style={S.dayDetailExSetItem}>
                           <div style={S.dayDetailSetLeft}>
-                            <span style={S.dayDetailSetIdx}>{idx + 1}</span>
+                            <span style={{ ...S.dayDetailSetIdx, color: idx === 0 ? '#FFD700' : '#666' }}>{idx === 0 ? 'T' : idx + 1}</span>
                             <span style={S.dayDetailSetVal}>{l.weight}<span style={S.dayDetailSetUnit}>kg</span> × {l.reps}</span>
                           </div>
                           <button onClick={() => onDeleteLog(l.id)} style={S.dayDetailSetDel}>×</button>
@@ -503,7 +638,7 @@ function DayDetailModal({ targetDateKey, data, onClose, onDeleteLog, onDeleteWor
         <div style={S.addWorkoutSection}>
           <div style={S.addWorkoutLabel}>{hasWorkouts ? 'YENİ ANTRENMAN EKLE' : 'BU GÜNE ANTRENMAN EKLE'}</div>
           <div style={S.addWorkoutGrid}>
-            {Object.entries(DAY_CONFIG).map(([key, cfg]) => (
+            {Object.entries(dayConfig).map(([key, cfg]) => (
               <button key={key} onClick={() => onAddWorkout(targetDateKey, key)} style={{ ...S.addWorkoutBtn, background: cfg.gradient }}>
                 + {cfg.name}
               </button>
@@ -559,7 +694,7 @@ function WorkoutTab() {
   const [view, setView] = useState('home');
   const [currentDay, setCurrentDay] = useState(null);
   const [currentExercise, setCurrentExercise] = useState(null);
-  const [data, setData] = useState({ exercises: DEFAULT_EXERCISES, logs: [], sessions: [] });
+  const [data, setData] = useState({ exercises: DEFAULT_EXERCISES, logs: [], sessions: [], customDays: [] });
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [prCelebration, setPrCelebration] = useState(null);
@@ -567,46 +702,110 @@ function WorkoutTab() {
   const [dayDetailKey, setDayDetailKey] = useState(null);
   const [logDate, setLogDate] = useState(null); // null = today; "YYYY-M-D" string = backdated
   const [sessionSummary, setSessionSummary] = useState(null);
+  const [showAddDay, setShowAddDay] = useState(false);
+  const [editDayId, setEditDayId] = useState(null); // custom day being edited
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        setData({ exercises: { ...DEFAULT_EXERCISES, ...(parsed.exercises || {}) }, logs: parsed.logs || [], sessions: parsed.sessions || [] });
+        setData({ exercises: { ...DEFAULT_EXERCISES, ...(parsed.exercises || {}) }, logs: parsed.logs || [], sessions: parsed.sessions || [], customDays: parsed.customDays || [] });
       }
     } catch (e) {}
   }, []);
+
+  // Build the merged day config (built-in + custom) — used everywhere
+  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays), [data.customDays]);
 
   const saveData = (newData) => {
     setData(newData);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newData)); } catch (e) {}
   };
 
-  const getPR = (exerciseName) => {
-    const logs = data.logs.filter(l => l.exerciseName === exerciseName);
-    if (logs.length === 0) return null;
-    return logs.reduce((max, l) => l.weight > (max?.weight || 0) ? l : max, null);
+  // Custom day management
+  const addCustomDay = (name, subtitle, paletteId, exercises) => {
+    const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId) || DAY_COLOR_PALETTE[0];
+    const id = 'custom_' + Date.now().toString(36);
+    const newDay = { id, name: name.trim(), subtitle: (subtitle || '').trim(), accent: palette.accent, dark: palette.dark, paletteId: palette.id };
+    const newExercises = { ...data.exercises, [id]: exercises || [] };
+    saveData({ ...data, customDays: [...(data.customDays || []), newDay], exercises: newExercises });
+    setShowAddDay(false);
+  };
+
+  const updateCustomDay = (id, name, subtitle, paletteId) => {
+    const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId) || DAY_COLOR_PALETTE[0];
+    const newCustomDays = (data.customDays || []).map(d => d.id === id ? { ...d, name: name.trim(), subtitle: (subtitle || '').trim(), accent: palette.accent, dark: palette.dark, paletteId: palette.id } : d);
+    saveData({ ...data, customDays: newCustomDays });
+    setEditDayId(null);
+  };
+
+  const deleteCustomDay = (id) => {
+    const newCustomDays = (data.customDays || []).filter(d => d.id !== id);
+    const newExercises = { ...data.exercises };
+    delete newExercises[id];
+    // Also remove logs and sessions for this day type
+    const newLogs = data.logs.filter(l => l.dayType !== id);
+    const newSessions = data.sessions.filter(s => s.dayType !== id);
+    saveData({ ...data, customDays: newCustomDays, exercises: newExercises, logs: newLogs, sessions: newSessions });
+    setEditDayId(null);
+  };
+
+  // Helpers for set categorization (1st set of a day = top, rest = back-off)
+  const isBetterSet = (a, b) => a.weight > b.weight || (a.weight === b.weight && a.reps > b.reps);
+  const bestOfSets = (sets) => sets.reduce((best, s) => !best || isBetterSet(s, best) ? s : best, null);
+
+  // Group an exercise's logs by day, return { topSets: [], backoffSets: [] } for all-time
+  const getCategorizedSets = (exerciseName) => {
+    const byDay = {};
+    data.logs.filter(l => l.exerciseName === exerciseName).forEach(l => {
+      const k = dateKey(l.timestamp);
+      if (!byDay[k]) byDay[k] = [];
+      byDay[k].push(l);
+    });
+    const topSets = [], backoffSets = [];
+    Object.values(byDay).forEach(dayLogs => {
+      const sorted = [...dayLogs].sort((a, b) => a.timestamp - b.timestamp);
+      if (sorted[0]) topSets.push(sorted[0]);
+      sorted.slice(1).forEach(s => backoffSets.push(s));
+    });
+    return { topSets, backoffSets };
+  };
+
+  const getTopPR = (exerciseName) => {
+    const { topSets } = getCategorizedSets(exerciseName);
+    return topSets.length ? bestOfSets(topSets) : null;
+  };
+  const getBackoffPR = (exerciseName) => {
+    const { backoffSets } = getCategorizedSets(exerciseName);
+    return backoffSets.length ? bestOfSets(backoffSets) : null;
   };
 
   const addLog = (exerciseName, weight, reps) => {
     const w = parseFloat(weight), r = parseInt(reps);
-    const previousPR = getPR(exerciseName);
     let timestamp;
+    const targetDayKey = logDate || dateKey(Date.now());
+    const existingSetsToday = data.logs.filter(l => l.exerciseName === exerciseName && dateKey(l.timestamp) === targetDayKey).length;
+    const setType = existingSetsToday === 0 ? 'top' : 'backoff';
+
+    // Get the relevant PR BEFORE adding the new log
+    const previousPR = setType === 'top' ? getTopPR(exerciseName) : getBackoffPR(exerciseName);
+
     if (logDate) {
       const parts = logDate.split('-').map(Number);
-      // Place at noon + random offset so multiple sets within same day get unique timestamps and stay in order
-      timestamp = new Date(parts[0], parts[1], parts[2], 12, 0, 0).getTime() + (data.logs.filter(l => dateKey(l.timestamp) === logDate && l.exerciseName === exerciseName).length * 60000) + Math.floor(Math.random() * 1000);
+      timestamp = new Date(parts[0], parts[1], parts[2], 12, 0, 0).getTime() + (existingSetsToday * 60000) + Math.floor(Math.random() * 1000);
     } else {
       timestamp = Date.now();
     }
     const newLog = { id: Date.now().toString() + Math.random(), exerciseName, dayType: currentDay, weight: w, reps: r, timestamp };
     saveData({ ...data, logs: [...data.logs, newLog] });
-    // Only celebrate PR for today's entries (backdating shouldn't trigger surprise animations)
-    if (!logDate) {
-      const isNewPR = !previousPR || w > previousPR.weight || (w === previousPR.weight && r > previousPR.reps);
-      if (isNewPR && (previousPR || data.logs.filter(l => l.exerciseName === exerciseName).length > 0)) {
-        setPrCelebration({ weight: w, reps: r, exerciseName });
+
+    // Only celebrate PR for today's entries; need at least one prior PR in the same category
+    if (!logDate && previousPR) {
+      const newSet = { weight: w, reps: r };
+      const isNewPR = isBetterSet(newSet, previousPR);
+      if (isNewPR) {
+        setPrCelebration({ weight: w, reps: r, exerciseName, type: setType });
       }
     }
   };
@@ -657,6 +856,19 @@ function WorkoutTab() {
     const isBetter = (a, b) => a.weight > b.weight || (a.weight === b.weight && a.reps > b.reps);
     const bestOf = (sets) => sets.reduce((best, s) => !best || isBetter(s, best) ? s : best, null);
 
+    // Categorize all logs of an exercise into top + backoff (1st set of a day = top, rest = backoff)
+    const categorize = (logs) => {
+      const byDay = {};
+      logs.forEach(l => { const k = dateKey(l.timestamp); if (!byDay[k]) byDay[k] = []; byDay[k].push(l); });
+      const tops = [], backs = [];
+      Object.values(byDay).forEach(dayLogs => {
+        const sorted = [...dayLogs].sort((a, b) => a.timestamp - b.timestamp);
+        if (sorted[0]) tops.push(sorted[0]);
+        sorted.slice(1).forEach(s => backs.push(s));
+      });
+      return { tops, backs };
+    };
+
     const sessionLogs = src.logs.filter(l => l.timestamp >= session.startTime && l.timestamp <= session.endTime);
     const totalTonnage = sessionLogs.reduce((s, l) => s + l.weight * l.reps, 0);
     const duration = session.endTime - session.startTime;
@@ -671,35 +883,50 @@ function WorkoutTab() {
       previousTonnage = prevLogs.reduce((s, l) => s + l.weight * l.reps, 0);
     }
 
-    // PRs and targets
     const exercisesToday = [...new Set(sessionLogs.map(l => l.exerciseName))];
-    const prs = [];
+    const prs = []; // each: { exercise, weight, reps, type: 'top'|'backoff' }
     let targetsHit = 0, targetsTotal = 0;
-    exercisesToday.forEach(exName => {
-      const exLogs = sessionLogs.filter(l => l.exerciseName === exName);
-      const todayBest = bestOf(exLogs);
-      if (!todayBest) return;
 
-      // All-time best before this session
+    exercisesToday.forEach(exName => {
+      const exSessionLogs = sessionLogs.filter(l => l.exerciseName === exName).sort((a, b) => a.timestamp - b.timestamp);
+      const todayTop = exSessionLogs[0];
+      const todayBackoffs = exSessionLogs.slice(1);
+      const todayBestBackoff = todayBackoffs.length ? bestOf(todayBackoffs) : null;
+
+      // All prior logs of this exercise before this session
       const allPriorLogs = src.logs.filter(l => l.exerciseName === exName && l.timestamp < session.startTime);
-      const allTimePrev = bestOf(allPriorLogs);
-      if (allTimePrev && isBetter(todayBest, allTimePrev)) {
-        prs.push({ exercise: exName, weight: todayBest.weight, reps: todayBest.reps });
+      const { tops: priorTops, backs: priorBacks } = categorize(allPriorLogs);
+      const priorTopPR = priorTops.length ? bestOf(priorTops) : null;
+      const priorBackoffPR = priorBacks.length ? bestOf(priorBacks) : null;
+
+      // TOP PR check
+      if (todayTop && priorTopPR && isBetter(todayTop, priorTopPR)) {
+        prs.push({ exercise: exName, weight: todayTop.weight, reps: todayTop.reps, type: 'top' });
+      }
+      // BACK-OFF PR check
+      if (todayBestBackoff && priorBackoffPR && isBetter(todayBestBackoff, priorBackoffPR)) {
+        prs.push({ exercise: exName, weight: todayBestBackoff.weight, reps: todayBestBackoff.reps, type: 'backoff' });
       }
 
-      // Last workout day's best (for target hit calculation)
+      // Target hit: compare today's top to last workout day's top, today's backoff to last workout day's backoff
       if (allPriorLogs.length === 0) return;
       const priorByDay = {};
-      allPriorLogs.forEach(l => {
-        const k = dateKey(l.timestamp);
-        if (!priorByDay[k]) priorByDay[k] = [];
-        priorByDay[k].push(l);
-      });
-      const lastDay = Object.values(priorByDay).sort((a, b) => b[0].timestamp - a[0].timestamp)[0];
-      const lastDayBest = bestOf(lastDay);
-      if (!lastDayBest) return;
-      targetsTotal++;
-      if (isBetter(todayBest, lastDayBest)) targetsHit++;
+      allPriorLogs.forEach(l => { const k = dateKey(l.timestamp); if (!priorByDay[k]) priorByDay[k] = []; priorByDay[k].push(l); });
+      const lastDayLogs = Object.values(priorByDay).sort((a, b) => b[0].timestamp - a[0].timestamp)[0];
+      if (!lastDayLogs) return;
+      const lastDaySorted = [...lastDayLogs].sort((a, b) => a.timestamp - b.timestamp);
+      const lastDayTop = lastDaySorted[0];
+      const lastDayBackoffs = lastDaySorted.slice(1);
+      const lastDayBestBackoff = lastDayBackoffs.length ? bestOf(lastDayBackoffs) : null;
+
+      if (lastDayTop && todayTop) {
+        targetsTotal++;
+        if (isBetter(todayTop, lastDayTop)) targetsHit++;
+      }
+      if (lastDayBestBackoff && todayBestBackoff) {
+        targetsTotal++;
+        if (isBetter(todayBestBackoff, lastDayBestBackoff)) targetsHit++;
+      }
     });
 
     // This week's day type distribution
@@ -746,7 +973,7 @@ function WorkoutTab() {
         try {
           const imp = JSON.parse(ev.target.result);
           if (imp.exercises && imp.logs) {
-            saveData({ exercises: { ...DEFAULT_EXERCISES, ...imp.exercises }, logs: imp.logs, sessions: imp.sessions || [] });
+            saveData({ exercises: { ...DEFAULT_EXERCISES, ...imp.exercises }, logs: imp.logs, sessions: imp.sessions || [], customDays: imp.customDays || [] });
             alert('Yedek yüklendi!');
           }
         } catch { alert('Dosya okunamadı.'); }
@@ -781,23 +1008,31 @@ function WorkoutTab() {
 
   return (
     <>
-      {view === 'home' && <HomeView onSelectDay={(d) => { setCurrentDay(d); setLogDate(null); setView('day'); }} data={data} onMenu={() => setShowMenu(true)} onTapCalendarDay={setDayDetailKey} />}
-      {view === 'day' && <DayView dayType={currentDay} exercises={data.exercises[currentDay] || []} getLastPerformance={getLastPerformance} activeSession={getActiveSession()} onStartSession={startSession} onEndSession={endSession} onBack={() => { setView('home'); setLogDate(null); }} onSelectExercise={(e) => { setCurrentExercise(e); setView('exercise'); }} onAddExercise={() => setShowAddExercise(true)} onRemoveExercise={removeExercise} onReorderExercises={reorderExercises} logDate={logDate} />}
-      {view === 'exercise' && <ExerciseView exerciseName={currentExercise} dayType={currentDay} history={getHistoryGrouped(currentExercise)} onBack={() => setView('day')} onAddLog={(w, r) => addLog(currentExercise, w, r)} onDeleteLog={deleteLog} logDate={logDate} />}
-      {showAddExercise && <AddExerciseModal dayType={currentDay} onClose={() => setShowAddExercise(false)} onAdd={(n) => { addExercise(n); setShowAddExercise(false); }} />}
+      {view === 'home' && <HomeView onSelectDay={(d) => { setCurrentDay(d); setLogDate(null); setView('day'); }} data={data} dayConfig={dayConfig} onMenu={() => setShowMenu(true)} onTapCalendarDay={setDayDetailKey} onAddDay={() => setShowAddDay(true)} onEditDay={setEditDayId} />}
+      {view === 'day' && <DayView dayType={currentDay} cfg={dayConfig[currentDay]} exercises={data.exercises[currentDay] || []} logsForDay={data.logs} getLastPerformance={getLastPerformance} activeSession={getActiveSession()} onStartSession={startSession} onEndSession={endSession} onBack={() => { setView('home'); setLogDate(null); }} onSelectExercise={(e) => { setCurrentExercise(e); setView('exercise'); }} onAddExercise={() => setShowAddExercise(true)} onRemoveExercise={removeExercise} onReorderExercises={reorderExercises} logDate={logDate} />}
+      {view === 'exercise' && <ExerciseView exerciseName={currentExercise} cfg={dayConfig[currentDay]} history={getHistoryGrouped(currentExercise)} onBack={() => setView('day')} onAddLog={(w, r) => addLog(currentExercise, w, r)} onDeleteLog={deleteLog} logDate={logDate} />}
+      {showAddExercise && <AddExerciseModal cfg={dayConfig[currentDay]} existingExercises={data.exercises} dayConfig={dayConfig} currentDayId={currentDay} onClose={() => setShowAddExercise(false)} onAdd={(n) => { addExercise(n); setShowAddExercise(false); }} />}
       {showMenu && <MenuModal onClose={() => setShowMenu(false)} onExport={exportData} onImport={importData} />}
-      {prCelebration && <PRCelebration {...prCelebration} onClose={() => setPrCelebration(null)} />}
-      {dayDetailKey && <DayDetailModal targetDateKey={dayDetailKey} data={data} onClose={() => setDayDetailKey(null)} onDeleteLog={deleteLog} onDeleteWorkout={deleteWorkoutDay} onAddWorkout={startBackdatedWorkout} />}
-      {sessionSummary && <SessionSummaryModal summary={sessionSummary} onClose={() => setSessionSummary(null)} />}
+      {showAddDay && <DayEditorModal onClose={() => setShowAddDay(false)} onSave={addCustomDay} existingExercises={data.exercises} dayConfig={dayConfig} />}
+      {editDayId && <DayEditorModal editingDay={data.customDays.find(d => d.id === editDayId)} onClose={() => setEditDayId(null)} onSave={(name, sub, pal) => updateCustomDay(editDayId, name, sub, pal)} onDelete={() => { if (confirm('Bu günü ve tüm kayıtlarını silmek istiyor musun?')) deleteCustomDay(editDayId); }} />}
+      {prCelebration && <PRCelebration {...prCelebration} cfg={dayConfig[prCelebration.dayType] || dayConfig[currentDay]} onClose={() => setPrCelebration(null)} />}
+      {dayDetailKey && <DayDetailModal targetDateKey={dayDetailKey} data={data} dayConfig={dayConfig} onClose={() => setDayDetailKey(null)} onDeleteLog={deleteLog} onDeleteWorkout={deleteWorkoutDay} onAddWorkout={startBackdatedWorkout} />}
+      {sessionSummary && <SessionSummaryModal summary={sessionSummary} dayConfig={dayConfig} onClose={() => setSessionSummary(null)} />}
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
     </>
   );
 }
 
-function HomeView({ onSelectDay, data, onMenu, onTapCalendarDay }) {
+function HomeView({ onSelectDay, data, dayConfig, onMenu, onTapCalendarDay, onAddDay, onEditDay }) {
   const todayLogs = data.logs.filter(l => dateKey(l.timestamp) === dateKey(Date.now()));
   const totalSessions = new Set(data.logs.map(l => dateKey(l.timestamp))).size;
   const totalVolume = data.logs.reduce((s, l) => s + l.weight * l.reps, 0);
+  const customIds = (data.customDays || []).map(d => d.id);
+
+  // Long-press handling for custom day cards
+  const pressTimer = useRef(null);
+  const startPress = (id) => { pressTimer.current = setTimeout(() => { haptic(40); onEditDay(id); }, 550); };
+  const cancelPress = () => { clearTimeout(pressTimer.current); };
 
   return (
     <div style={S.screen}>
@@ -813,18 +1048,113 @@ function HomeView({ onSelectDay, data, onMenu, onTapCalendarDay }) {
       </div>
       <div style={S.sectionLabel}>BUGÜN HANGİSİ?</div>
       <div style={S.dayGrid}>
-        {Object.entries(DAY_CONFIG).map(([key, cfg]) => (
-          <button key={key} onClick={() => onSelectDay(key)} style={{ ...S.dayCard, background: cfg.gradient }} className="day-card">
-            <div style={S.dayCardInner}><div style={S.dayCardName}>{cfg.name}</div><div style={S.dayCardSubtitle}>{cfg.subtitle}</div></div>
-          </button>
-        ))}
+        {Object.entries(dayConfig).map(([key, cfg]) => {
+          const isCustom = customIds.includes(key);
+          return (
+            <button key={key} onClick={() => onSelectDay(key)}
+              onTouchStart={isCustom ? () => startPress(key) : undefined}
+              onTouchEnd={isCustom ? cancelPress : undefined}
+              onTouchMove={isCustom ? cancelPress : undefined}
+              style={{ ...S.dayCard, background: cfg.gradient, '--glow-low': cfg.glowLow, '--glow-high': cfg.glowHigh }} className="day-card">
+              <div style={S.dayCardInner}>
+                <div style={S.dayCardName}>{cfg.name}</div>
+                <div style={S.dayCardSubtitle}>{cfg.subtitle}</div>
+              </div>
+              {isCustom && <div style={S.customDayBadge} onClick={(e) => { e.stopPropagation(); onEditDay(key); }}>⋯</div>}
+            </button>
+          );
+        })}
+        <button onClick={onAddDay} style={S.addDayCard} className="day-card">
+          <div style={S.addDayInner}>
+            <div style={S.addDayPlus}>+</div>
+            <div style={S.addDayText}>GÜN EKLE</div>
+          </div>
+        </button>
       </div>
       <div style={{ ...S.sectionLabel, marginTop: 28 }}>TAKVİM</div>
-      <MonthlyCalendar logs={data.logs} sessions={data.sessions} onTapDay={onTapCalendarDay} />
+      <MonthlyCalendar logs={data.logs} sessions={data.sessions} dayConfig={dayConfig} onTapDay={onTapCalendarDay} />
       <div style={S.legend}>
-        {Object.entries(DAY_CONFIG).map(([k, cfg]) => (
+        {Object.entries(dayConfig).map(([k, cfg]) => (
           <div key={k} style={S.legendItem}><div style={{ ...S.legendDot, background: cfg.accent }} /><span style={S.legendLabel}>{cfg.name}</span></div>
         ))}
+      </div>
+      <SixMonthStats logs={data.logs} sessions={data.sessions} />
+    </div>
+  );
+}
+
+function SixMonthStats({ logs, sessions }) {
+  const [selectedIdx, setSelectedIdx] = useState(null);
+
+  // Build last 6 months (including current), oldest → newest
+  const months = useMemo(() => {
+    const now = new Date();
+    const arr = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear(), month = d.getMonth();
+      // Workout days this month (unique dateKeys from logs)
+      const dayKeys = new Set();
+      logs.forEach(l => {
+        const ld = new Date(l.timestamp);
+        if (ld.getFullYear() === year && ld.getMonth() === month) dayKeys.add(dateKey(l.timestamp));
+      });
+      // Total duration from completed sessions this month
+      let totalMs = 0;
+      sessions.forEach(s => {
+        if (!s.endTime) return;
+        const sd = new Date(s.startTime);
+        if (sd.getFullYear() === year && sd.getMonth() === month) totalMs += (s.endTime - s.startTime);
+      });
+      // PR count this month (top + backoff) — compute by walking exercises
+      arr.push({ year, month, days: dayKeys.size, totalMs, label: TR_MONTHS_SHORT[month] });
+    }
+    return arr;
+  }, [logs, sessions]);
+
+  const maxDays = Math.max(...months.map(m => m.days), 1);
+  const isCurrentMonth = (m) => { const n = new Date(); return m.year === n.getFullYear() && m.month === n.getMonth(); };
+
+  const selected = selectedIdx != null ? months[selectedIdx] : null;
+
+  return (
+    <div style={{ marginTop: 28 }}>
+      <div style={S.sectionLabel}>SON 6 AY</div>
+      <div style={S.statsCard}>
+        <div style={S.barChartRow}>
+          {months.map((m, i) => {
+            const heightPct = (m.days / maxDays) * 100;
+            const active = isCurrentMonth(m);
+            const isSelected = selectedIdx === i;
+            return (
+              <button key={i} onClick={() => setSelectedIdx(isSelected ? null : i)} style={S.barColumn}>
+                <div style={{ ...S.barCount, color: isSelected ? '#FF3D3D' : (active ? '#FF3D3D' : '#888'), fontWeight: (active || isSelected) ? 800 : 600 }}>{m.days}</div>
+                <div style={S.barTrack}>
+                  <div style={{ ...S.barFill, height: `${Math.max(heightPct, 4)}%`, background: isSelected ? '#FF3D3D' : (active ? '#FF3D3D' : '#5a1f1f'), opacity: isSelected || active ? 1 : 0.7 }} />
+                </div>
+                <div style={{ ...S.barLabel, color: isSelected ? '#FF3D3D' : (active ? '#fff' : '#888'), fontWeight: (active || isSelected) ? 800 : 600 }}>{m.label}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        {selected ? (
+          <div style={S.statsDetail}>
+            <div style={S.statsDetailTitle}>{TR_MONTHS[selected.month]} {selected.year}</div>
+            <div style={S.statsDetailRow}>
+              <div style={S.statsDetailBox}>
+                <div style={S.statsDetailVal}>{selected.days}</div>
+                <div style={S.statsDetailLbl}>ANTRENMAN GÜNÜ</div>
+              </div>
+              <div style={S.statsDetailBox}>
+                <div style={S.statsDetailVal}>{selected.totalMs > 0 ? formatDurationLong(selected.totalMs) : '—'}</div>
+                <div style={S.statsDetailLbl}>TOPLAM SÜRE</div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={S.statsHint}>Detay için bir aya dokun</div>
+        )}
       </div>
     </div>
   );
@@ -836,10 +1166,13 @@ function WorkoutTimerDisplay({ startTime }) {
   return <span style={S.timerDisplay}>{formatDuration(now - startTime)}</span>;
 }
 
-function DayView({ dayType, exercises, getLastPerformance, activeSession, onStartSession, onEndSession, onBack, onSelectExercise, onAddExercise, onRemoveExercise, onReorderExercises, logDate }) {
-  const cfg = DAY_CONFIG[dayType];
+function DayView({ dayType, cfg, exercises, logsForDay, getLastPerformance, activeSession, onStartSession, onEndSession, onBack, onSelectExercise, onAddExercise, onRemoveExercise, onReorderExercises, logDate }) {
   const [editMode, setEditMode] = useState(false);
   const isBackdated = !!logDate;
+
+  // Count today's (or logDate's) sets per exercise
+  const targetDayKey = logDate || dateKey(Date.now());
+  const setsCountToday = (exName) => (logsForDay || []).filter(l => l.exerciseName === exName && l.dayType === dayType && dateKey(l.timestamp) === targetDayKey).length;
 
   // Parse logDate to a nice display string
   let backdatedLabel = '';
@@ -888,15 +1221,21 @@ function DayView({ dayType, exercises, getLastPerformance, activeSession, onStar
       <ReorderableList items={exercises} getKey={(name) => name} onReorder={onReorderExercises}
         renderItem={(name, idx, isDragging) => {
           const last = getLastPerformance(name);
+          const doneSets = setsCountToday(name);
+          const isDone = doneSets > 0;
           return (
-            <div style={{ ...S.exerciseCard, borderColor: isDragging ? cfg.accent : '#1f1f1f' }}>
+            <div style={{ ...S.exerciseCard, borderColor: isDragging ? cfg.accent : (isDone ? cfg.accentSoft : '#1f1f1f'), opacity: (!editMode && !isDone) ? 0.55 : 1, transition: 'opacity 0.2s, border-color 0.2s' }}>
               <div style={S.dragHandle}><Icon.Drag /></div>
               <button onClick={() => !editMode && !isDragging && onSelectExercise(name)} style={S.exerciseCardBtn} className="exercise-btn">
                 <div style={S.exerciseLeft}>
-                  <div style={S.exerciseName}>{name}</div>
+                  <div style={{ ...S.exerciseName, color: isDone ? '#fff' : '#bbb' }}>{name}</div>
                   {last ? <div style={S.exerciseLast}>Son: {last.sets.map(s => `${s.weight}kg × ${s.reps}`).join(' · ')}</div> : <div style={{ ...S.exerciseLast, color: '#555' }}>Henüz kayıt yok</div>}
                 </div>
-                {!editMode && <div style={{ ...S.chevron, color: cfg.accent }}>→</div>}
+                {!editMode && (
+                  isDone
+                    ? <div style={{ ...S.doneBadge, background: cfg.accentSoft, color: cfg.accent }}>✓ {doneSets} set</div>
+                    : <div style={{ ...S.chevron, color: '#555' }}>→</div>
+                )}
               </button>
               {editMode && <button onClick={() => onRemoveExercise(name)} style={S.removeBtn}><Icon.Trash /></button>}
             </div>
@@ -910,13 +1249,10 @@ function DayView({ dayType, exercises, getLastPerformance, activeSession, onStar
   );
 }
 
-function ExerciseView({ exerciseName, dayType, history, onBack, onAddLog, onDeleteLog, logDate }) {
-  const cfg = DAY_CONFIG[dayType];
+function ExerciseView({ exerciseName, cfg, history, onBack, onAddLog, onDeleteLog, logDate }) {
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
   const weightRef = useRef(null);
-  const allSets = history.flatMap(h => h.sets);
-  const allTimeMax = allSets.reduce((max, s) => s.weight > (max?.weight || 0) ? s : max, null);
   const isBackdated = !!logDate;
   let backdatedLabel = '';
   if (isBackdated) {
@@ -925,23 +1261,49 @@ function ExerciseView({ exerciseName, dayType, history, onBack, onAddLog, onDele
     backdatedLabel = `${d.getDate()} ${TR_MONTHS[d.getMonth()]}`;
   }
 
-  // Target system: previous workout day's best set
+  // Helpers
+  const isBetterSet = (a, b) => a.weight > b.weight || (a.weight === b.weight && a.reps > b.reps);
+  const bestOfSets = (sets) => sets.reduce((best, s) => !best || isBetterSet(s, best) ? s : best, null);
+
+  // Build categorized data (Top vs Back-off) across all history
+  // history is { date, timestamp, sets: [...] } per day, sorted newest first
+  // Each day's first set (by timestamp) = top, rest = back-off
+  const topAllTime = [], backoffAllTime = [];
+  history.forEach(h => {
+    const sorted = [...h.sets].sort((a, b) => a.timestamp - b.timestamp);
+    if (sorted[0]) topAllTime.push(sorted[0]);
+    sorted.slice(1).forEach(s => backoffAllTime.push(s));
+  });
+  const topPR = topAllTime.length ? bestOfSets(topAllTime) : null;
+  const backoffPR = backoffAllTime.length ? bestOfSets(backoffAllTime) : null;
+
+  // Target system: from previous workout day
   const todayOrLogKey = logDate || dateKey(Date.now());
   const targetTimestamp = logDate
     ? (() => { const p = logDate.split('-').map(Number); return new Date(p[0], p[1], p[2]).setHours(0,0,0,0); })()
     : new Date().setHours(0,0,0,0);
 
-  // history is sorted newest-first (logs sorted newest first then grouped)
   const previousEntry = history.find(h => h.timestamp < targetTimestamp);
-  const isBetterSet = (a, b) => a.weight > b.weight || (a.weight === b.weight && a.reps > b.reps);
-  const bestOf = (sets) => sets.reduce((best, s) => !best || isBetterSet(s, best) ? s : best, null);
-  const targetSet = previousEntry ? bestOf(previousEntry.sets) : null;
+  let targetTop = null, targetBackoff = null;
+  if (previousEntry) {
+    const sorted = [...previousEntry.sets].sort((a, b) => a.timestamp - b.timestamp);
+    targetTop = sorted[0] || null;
+    const backSets = sorted.slice(1);
+    targetBackoff = backSets.length ? bestOfSets(backSets) : null;
+  }
 
-  // Today's best set (if any)
+  // Today's sets (in order)
   const todayEntry = history.find(h => dateKey(h.timestamp) === todayOrLogKey);
-  const todaySets = todayEntry?.sets || [];
-  const bestToday = todaySets.length ? bestOf(todaySets) : null;
-  const beaten = !!(bestToday && targetSet && isBetterSet(bestToday, targetSet));
+  const todaySorted = todayEntry ? [...todayEntry.sets].sort((a, b) => a.timestamp - b.timestamp) : [];
+  const todayTop = todaySorted[0] || null;
+  const todayBackoffs = todaySorted.slice(1);
+  const todayBestBackoff = todayBackoffs.length ? bestOfSets(todayBackoffs) : null;
+
+  const topBeaten = !!(todayTop && targetTop && isBetterSet(todayTop, targetTop));
+  const backoffBeaten = !!(todayBestBackoff && targetBackoff && isBetterSet(todayBestBackoff, targetBackoff));
+
+  // Dynamic: show top focus if no sets yet today; backoff focus once first set is in
+  const showingBackoff = todaySorted.length > 0;
 
   const handleSubmit = () => {
     if (!weight || !reps) return;
@@ -969,26 +1331,65 @@ function ExerciseView({ exerciseName, dayType, history, onBack, onAddLog, onDele
         <div style={{ ...S.topBarTitle, color: '#fff', fontSize: 17 }}>{exerciseName}</div>
         <div style={{ width: 60 }} />
       </div>
-      {allTimeMax && (
-        <div style={{ ...S.prBox, background: cfg.accentSoft, borderColor: cfg.accent }}>
-          <Icon.Trending c={cfg.accent} />
-          <span style={{ color: cfg.accent, fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>REKOR</span>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: 16, marginLeft: 'auto' }}>{allTimeMax.weight}kg × {allTimeMax.reps}</span>
+
+      {/* TWO PRs: TOP + BACK-OFF */}
+      {(topPR || backoffPR) && (
+        <div style={{ ...S.prBoxDual, borderColor: cfg.accent, background: cfg.accentSoft }}>
+          <div style={S.prDualRow}>
+            <span style={S.prDualLabel}>TOP REKOR</span>
+            <span style={S.prDualValue}>{topPR ? `${topPR.weight}kg × ${topPR.reps}` : '—'}</span>
+          </div>
+          <div style={{ ...S.prDualRow, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <span style={S.prDualLabel}>BACK-OFF REKOR</span>
+            <span style={S.prDualValue}>{backoffPR ? `${backoffPR.weight}kg × ${backoffPR.reps}` : '—'}</span>
+          </div>
         </div>
       )}
 
-      {targetSet ? (
-        <div style={{ ...S.targetCard, borderColor: beaten ? '#4CAF50' : '#FF5252', background: beaten ? 'rgba(76,175,80,0.08)' : 'rgba(255,82,82,0.06)' }}>
-          <div style={S.targetLabel}>{beaten ? '✓ YENDİN' : 'YENMEN GEREKEN'}</div>
-          <div style={{ ...S.targetValue, color: beaten ? '#4CAF50' : '#FF5252' }}>
-            {targetSet.weight}<span style={S.targetUnit}>kg</span> × {targetSet.reps}
+      {/* DYNAMIC TARGET CARD */}
+      {!showingBackoff && targetTop ? (
+        // Phase 1: no sets yet → focus on TOP
+        <div style={{ ...S.targetCard, borderColor: topBeaten ? '#4CAF50' : '#FF5252', background: topBeaten ? 'rgba(76,175,80,0.08)' : 'rgba(255,82,82,0.06)' }}>
+          <div style={S.targetLabel}>TOP SET — YENMEN GEREKEN</div>
+          <div style={{ ...S.targetValue, color: topBeaten ? '#4CAF50' : '#FF5252' }}>
+            {targetTop.weight}<span style={S.targetUnit}>kg</span> × {targetTop.reps}
           </div>
-          {beaten ? (
-            <div style={S.targetStatus}>Bugün en iyi: <span style={{ color: '#4CAF50', fontWeight: 800 }}>{bestToday.weight}kg × {bestToday.reps}</span> 🔥</div>
-          ) : bestToday ? (
-            <div style={S.targetStatus}>Bugün en iyi: {bestToday.weight}kg × {bestToday.reps} · daha yapacak çok şey var</div>
+          <div style={S.targetStatus}>İlk setin senin ana setin. Bunu yendiğin anda back-off hedefine geçeriz.</div>
+        </div>
+      ) : showingBackoff ? (
+        // Phase 2+: focus on BACK-OFF, show top status compact
+        <div style={{ ...S.targetCard, borderColor: backoffBeaten ? '#4CAF50' : (targetBackoff ? '#FF5252' : '#1f1f1f'), background: backoffBeaten ? 'rgba(76,175,80,0.08)' : (targetBackoff ? 'rgba(255,82,82,0.06)' : '#0f0f0f') }}>
+          {/* Top set status compact strip */}
+          <div style={S.targetTopStrip}>
+            {topBeaten ? (
+              <><span style={{ color: '#4CAF50' }}>✓</span> TOP YENDİN — {todayTop.weight}kg × {todayTop.reps} <span style={{ color: '#666' }}>(hedef: {targetTop.weight}×{targetTop.reps})</span></>
+            ) : targetTop ? (
+              <><span style={{ color: '#FF5252' }}>✗</span> TOP yenmedi — {todayTop.weight}kg × {todayTop.reps} <span style={{ color: '#666' }}>(hedef: {targetTop.weight}×{targetTop.reps})</span></>
+            ) : (
+              <><span style={{ color: '#888' }}>●</span> İLK TOP — {todayTop.weight}kg × {todayTop.reps}</>
+            )}
+          </div>
+          {/* Back-off focus */}
+          {targetBackoff ? (
+            <>
+              <div style={{ ...S.targetLabel, marginTop: 12 }}>{backoffBeaten ? '✓ BACK-OFF YENDİN' : 'BACK-OFF — YENMEN GEREKEN'}</div>
+              <div style={{ ...S.targetValue, color: backoffBeaten ? '#4CAF50' : '#FF5252' }}>
+                {targetBackoff.weight}<span style={S.targetUnit}>kg</span> × {targetBackoff.reps}
+              </div>
+              {backoffBeaten ? (
+                <div style={S.targetStatus}>Bugün en iyi back-off: <span style={{ color: '#4CAF50', fontWeight: 800 }}>{todayBestBackoff.weight}kg × {todayBestBackoff.reps}</span> 🔥</div>
+              ) : todayBestBackoff ? (
+                <div style={S.targetStatus}>Bugün en iyi back-off: {todayBestBackoff.weight}kg × {todayBestBackoff.reps}</div>
+              ) : (
+                <div style={S.targetStatus}>Şimdi back-off set'i yap, geçen seferki seviyeyi geç</div>
+              )}
+            </>
           ) : (
-            <div style={S.targetStatus}>Geçen sefer bu sayı sınırındı, bugün geç</div>
+            <>
+              <div style={{ ...S.targetLabel, marginTop: 12 }}>İLK BACK-OFF</div>
+              <div style={{ ...S.targetValue, color: '#888', fontSize: 24 }}>—</div>
+              <div style={S.targetStatus}>Geçen sefer back-off set yapmamışsın. Bugün referansı sen oluştur.</div>
+            </>
           )}
         </div>
       ) : (
@@ -1002,7 +1403,9 @@ function ExerciseView({ exerciseName, dayType, history, onBack, onAddLog, onDele
       <ProgressChart history={history} color={cfg.accent} />
       <div style={S.inputCard}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <div style={{ ...S.inputLabel, marginBottom: 0 }}>YENİ SET</div>
+          <div style={{ ...S.inputLabel, marginBottom: 0 }}>
+            {showingBackoff ? `BACK-OFF SET ${todaySorted.length}` : 'TOP SET'}
+          </div>
           {isBackdated && <div style={{ fontSize: 10, color: cfg.accent, fontWeight: 700, letterSpacing: 1 }}>📅 {backdatedLabel}</div>}
         </div>
         <div style={S.inputRow}>
@@ -1023,48 +1426,95 @@ function ExerciseView({ exerciseName, dayType, history, onBack, onAddLog, onDele
       <div style={S.sectionLabel}>GEÇMİŞ</div>
       {history.length === 0 && <div style={S.emptyState}>İlk setini ekle, geçmiş burada görünecek.</div>}
       <div style={S.historyList}>
-        {history.map((session, i) => (
-          <div key={session.timestamp} style={S.historyCard}>
-            <div style={S.historyHeader}>
-              <div style={S.historyDate}><Icon.Cal /><span>{formatDate(session.timestamp)}</span></div>
-              <div style={S.historyVolume}>{session.sets.reduce((s, x) => s + x.weight * x.reps, 0).toFixed(0)}kg hacim</div>
-            </div>
-            <div style={S.setsList}>
-              {session.sets.map((set, idx) => {
-                const isCurrentDay = dateKey(session.timestamp) === todayOrLogKey;
-                const beatsTarget = isCurrentDay && targetSet && isBetterSet(set, targetSet);
-                return (
-                  <div key={set.id} style={S.setRow}>
-                    <div style={S.setIndex}>{idx + 1}</div>
-                    <div style={S.setValue}>
-                      <span style={S.setWeight}>{set.weight}</span><span style={S.setUnit}>kg</span>
-                      <span style={S.setX}>×</span><span style={S.setReps}>{set.reps}</span>
-                      {beatsTarget && <span style={S.setBeat}>✓</span>}
+        {history.map((session, i) => {
+          const sorted = [...session.sets].sort((a, b) => a.timestamp - b.timestamp);
+          return (
+            <div key={session.timestamp} style={S.historyCard}>
+              <div style={S.historyHeader}>
+                <div style={S.historyDate}><Icon.Cal /><span>{formatDate(session.timestamp)}</span></div>
+                <div style={S.historyVolume}>{session.sets.reduce((s, x) => s + x.weight * x.reps, 0).toFixed(0)}kg hacim</div>
+              </div>
+              <div style={S.setsList}>
+                {sorted.map((set, idx) => {
+                  const isTop = idx === 0;
+                  const isCurrentDay = dateKey(session.timestamp) === todayOrLogKey;
+                  // Beat-target check: top set vs targetTop, back-off vs targetBackoff
+                  const relevantTarget = isTop ? targetTop : targetBackoff;
+                  const beatsTarget = isCurrentDay && relevantTarget && isBetterSet(set, relevantTarget);
+                  return (
+                    <div key={set.id} style={S.setRow}>
+                      <div style={{ ...S.setIndex, background: isTop ? cfg.accentSoft : '#1f1f1f', color: isTop ? cfg.accent : '#888' }}>
+                        {isTop ? 'T' : idx + 1}
+                      </div>
+                      <div style={S.setValue}>
+                        <span style={S.setWeight}>{set.weight}</span><span style={S.setUnit}>kg</span>
+                        <span style={S.setX}>×</span><span style={S.setReps}>{set.reps}</span>
+                        {beatsTarget && <span style={S.setBeat}>✓</span>}
+                      </div>
+                      {i === 0 && <button onClick={() => onDeleteLog(set.id)} style={S.tinyDelBtn}>×</button>}
                     </div>
-                    {i === 0 && <button onClick={() => onDeleteLog(set.id)} style={S.tinyDelBtn}>×</button>}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function AddExerciseModal({ dayType, onClose, onAdd }) {
+function AddExerciseModal({ cfg, existingExercises, dayConfig, currentDayId, onClose, onAdd }) {
   const [name, setName] = useState('');
-  const cfg = DAY_CONFIG[dayType];
+  const [mode, setMode] = useState('new'); // 'new' | 'copy'
+
+  // Build list of exercises from OTHER days for copying
+  const copyableExercises = [];
+  const seen = new Set();
+  Object.entries(existingExercises || {}).forEach(([dayId, exList]) => {
+    if (dayId === currentDayId) return;
+    const dayName = dayConfig[dayId]?.name || dayId;
+    (exList || []).forEach(ex => {
+      const key = ex.toLowerCase();
+      if (!seen.has(key)) { seen.add(key); copyableExercises.push({ name: ex, from: dayName }); }
+    });
+  });
+
   return (
     <div style={S.modalOverlay} onClick={onClose}>
       <div style={S.modal} onClick={e => e.stopPropagation()}>
-        <div style={S.modalTitle}>Yeni Egzersiz</div>
-        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && onAdd(name)} placeholder="Örn. Cable Fly" style={S.modalInput} />
-        <div style={S.modalActions}>
-          <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
-          <button onClick={() => onAdd(name)} style={{ ...S.modalConfirm, background: cfg.gradient }}>EKLE</button>
+        <div style={S.modalTitle}>Egzersiz Ekle</div>
+
+        <div style={S.alarmDirSelect}>
+          <button onClick={() => setMode('new')} style={{ ...S.alarmDirBtn, ...(mode === 'new' ? { background: cfg.accentSoft, borderColor: cfg.accent, color: cfg.accent } : {}) }}>YENİ YAZ</button>
+          <button onClick={() => setMode('copy')} style={{ ...S.alarmDirBtn, ...(mode === 'copy' ? { background: cfg.accentSoft, borderColor: cfg.accent, color: cfg.accent } : {}) }}>KOPYALA</button>
         </div>
+
+        {mode === 'new' ? (
+          <>
+            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && name.trim() && onAdd(name)} placeholder="Örn. Cable Fly" style={S.modalInput} />
+            <div style={S.modalActions}>
+              <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
+              <button onClick={() => name.trim() && onAdd(name)} style={{ ...S.modalConfirm, background: cfg.gradient }}>EKLE</button>
+            </div>
+          </>
+        ) : (
+          <>
+            {copyableExercises.length === 0 ? (
+              <div style={{ ...S.emptyState, padding: '24px 16px', fontSize: 13 }}>Kopyalanacak egzersiz yok.<br/>Diğer günlere egzersiz ekledikçe burada görünür.</div>
+            ) : (
+              <div style={{ maxHeight: '50vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                {copyableExercises.map((ex, i) => (
+                  <button key={i} onClick={() => onAdd(ex.name)} style={S.copyExerciseBtn} className="exercise-btn">
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{ex.name}</span>
+                    <span style={{ fontSize: 10, color: '#666', fontWeight: 700, letterSpacing: 0.5 }}>{ex.from}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button onClick={onClose} style={{ ...S.modalCancel, marginTop: 4 }}>KAPAT</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1083,8 +1533,105 @@ function MenuModal({ onClose, onExport, onImport }) {
   );
 }
 
-function SessionSummaryModal({ summary, onClose }) {
-  const cfg = DAY_CONFIG[summary.dayType];
+function DayEditorModal({ editingDay, onClose, onSave, onDelete, existingExercises, dayConfig }) {
+  const isEdit = !!editingDay;
+  const [name, setName] = useState(editingDay?.name || '');
+  const [subtitle, setSubtitle] = useState(editingDay?.subtitle || '');
+  const [paletteId, setPaletteId] = useState(editingDay?.paletteId || DAY_COLOR_PALETTE[0].id);
+  const [copiedExercises, setCopiedExercises] = useState([]);
+  const [showCopySection, setShowCopySection] = useState(false);
+
+  const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId) || DAY_COLOR_PALETTE[0];
+  const previewGradient = `linear-gradient(135deg,${palette.accent},${palette.dark})`;
+
+  // Copyable exercises from existing days (for new day creation only)
+  const copyable = [];
+  const seen = new Set();
+  if (!isEdit && existingExercises) {
+    Object.entries(existingExercises).forEach(([dayId, exList]) => {
+      const dayName = dayConfig?.[dayId]?.name || dayId;
+      (exList || []).forEach(ex => {
+        const key = ex.toLowerCase();
+        if (!seen.has(key)) { seen.add(key); copyable.push({ name: ex, from: dayName }); }
+      });
+    });
+  }
+
+  const toggleCopy = (exName) => {
+    setCopiedExercises(prev => prev.includes(exName) ? prev.filter(e => e !== exName) : [...prev, exName]);
+  };
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    if (isEdit) {
+      onSave(name, subtitle, paletteId);
+    } else {
+      onSave(name, subtitle, paletteId, copiedExercises);
+    }
+  };
+
+  return (
+    <div style={S.modalOverlay} onClick={onClose}>
+      <div style={{ ...S.modal, maxWidth: 380 }} onClick={e => e.stopPropagation()}>
+        <div style={S.modalTitle}>{isEdit ? 'Günü Düzenle' : 'Yeni Gün'}</div>
+
+        {/* Preview card */}
+        <div style={{ ...S.dayPreview, background: previewGradient }}>
+          <div style={S.dayPreviewName}>{name.trim() ? name.toUpperCase() : 'GÜN ADI'}</div>
+          <div style={S.dayPreviewSub}>{subtitle.trim() || 'Alt başlık (opsiyonel)'}</div>
+        </div>
+
+        <div style={S.inputLabel}>GÜN ADI</div>
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Örn. Shoulders & Arms" style={{ ...S.modalInput, marginTop: 6, marginBottom: 12 }} />
+
+        <div style={S.inputLabel}>ALT BAŞLIK (OPSİYONEL)</div>
+        <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Örn. Omuz · Biceps · Triceps" style={{ ...S.modalInput, marginTop: 6, marginBottom: 12 }} />
+
+        <div style={S.inputLabel}>RENK</div>
+        <div style={S.colorGrid}>
+          {DAY_COLOR_PALETTE.map(p => (
+            <button key={p.id} onClick={() => setPaletteId(p.id)} style={{ ...S.colorSwatch, background: `linear-gradient(135deg,${p.accent},${p.dark})`, border: paletteId === p.id ? '3px solid #fff' : '3px solid transparent', transform: paletteId === p.id ? 'scale(1.1)' : 'scale(1)' }} />
+          ))}
+        </div>
+
+        {!isEdit && copyable.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <button onClick={() => setShowCopySection(!showCopySection)} style={S.copyToggle}>
+              {showCopySection ? '▼' : '▶'} Mevcut günlerden egzersiz kopyala {copiedExercises.length > 0 && `(${copiedExercises.length})`}
+            </button>
+            {showCopySection && (
+              <div style={{ maxHeight: '30vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+                {copyable.map((ex, i) => {
+                  const selected = copiedExercises.includes(ex.name);
+                  return (
+                    <button key={i} onClick={() => toggleCopy(ex.name)} style={{ ...S.copyExerciseBtn, borderColor: selected ? palette.accent : '#1f1f1f', background: selected ? `rgba(255,255,255,0.04)` : '#0a0a0a' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: selected ? '#fff' : '#aaa' }}>
+                        {selected ? '✓ ' : ''}{ex.name}
+                      </span>
+                      <span style={{ fontSize: 10, color: '#666', fontWeight: 700 }}>{ex.from}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div style={{ ...S.modalActions, marginTop: 16 }}>
+          <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
+          <button onClick={handleSave} disabled={!name.trim()} style={{ ...S.modalConfirm, background: name.trim() ? previewGradient : '#2a2a2a', color: name.trim() ? '#fff' : '#666' }}>{isEdit ? 'KAYDET' : 'OLUŞTUR'}</button>
+        </div>
+
+        {isEdit && onDelete && (
+          <button onClick={onDelete} style={S.deleteDayBtn}>🗑 Bu günü sil</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SessionSummaryModal({ summary, dayConfig, onClose }) {
+  const cfg = dayConfig[summary.dayType] || BUILTIN_DAYS.push;
   const diffPositive = summary.tonnageDiff != null && summary.tonnageDiff >= 0;
   return (
     <div style={S.modalOverlay} onClick={onClose}>
@@ -1127,8 +1674,9 @@ function SessionSummaryModal({ summary, onClose }) {
               <div style={S.summarySectionLabel}>YENİ REKORLAR</div>
               {summary.prs.map((pr, i) => (
                 <div key={i} style={S.summaryPRRow}>
-                  <span style={{ color: '#FFD700', fontSize: 18 }}>★</span>
+                  <span style={{ color: pr.type === 'top' ? '#FFD700' : '#C0C0C0', fontSize: 18 }}>★</span>
                   <span style={S.summaryPRName}>{pr.exercise}</span>
+                  <span style={{ ...S.summaryPRType, color: pr.type === 'top' ? '#FFD700' : '#C0C0C0' }}>{pr.type === 'top' ? 'TOP' : 'BACK-OFF'}</span>
                   <span style={S.summaryPRVal}>{pr.weight}kg × {pr.reps}</span>
                 </div>
               ))}
@@ -1139,7 +1687,7 @@ function SessionSummaryModal({ summary, onClose }) {
             <div style={S.summarySectionLabel}>BU HAFTANIN DAĞILIMI</div>
             <div style={S.summaryWeekRow}>
               {Object.entries(summary.weekDistribution).map(([type, count]) => {
-                const tcfg = DAY_CONFIG[type];
+                const tcfg = BUILTIN_DAYS[type] || { accent: '#666', name: type };
                 return (
                   <div key={type} style={{ ...S.summaryWeekBox, opacity: count > 0 ? 1 : 0.4, borderColor: count > 0 ? tcfg.accent : '#1f1f1f' }}>
                     <div style={{ ...S.summaryWeekCount, color: count > 0 ? tcfg.accent : '#444' }}>{count}</div>
@@ -2283,7 +2831,49 @@ const S = {
   targetValue: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 38, fontWeight: 900, lineHeight: 1, letterSpacing: 0.5, marginBottom: 8 },
   targetUnit: { fontSize: 18, fontWeight: 700, opacity: 0.6, marginLeft: 2 },
   targetStatus: { fontSize: 12, color: '#888', fontWeight: 500, lineHeight: 1.4 },
+  targetTopStrip: { fontSize: 11, color: '#aaa', padding: '8px 10px', background: 'rgba(0,0,0,0.25)', borderRadius: 8, marginBottom: 2, fontWeight: 600 },
+  prBoxDual: { border: '1px solid', borderRadius: 12, marginBottom: 12, overflow: 'hidden' },
+  prDualRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px' },
+  prDualLabel: { fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: '#aaa' },
+  prDualValue: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 16, fontWeight: 800, color: '#fff' },
   setBeat: { color: '#4CAF50', fontSize: 14, fontWeight: 900, marginLeft: 8 },
+  dayDetailHighlights: { display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 12px', background: '#0f0f0f', borderBottom: '1px solid #1a1a1a' },
+  dayPRBlock: { border: '1px solid', borderRadius: 10, padding: '8px 10px' },
+  dayPRBlockLabel: { fontSize: 10, fontWeight: 800, letterSpacing: 1.3, marginBottom: 6 },
+  dayPRBlockRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 0', fontSize: 12 },
+  dayPRExName: { color: '#fff', fontWeight: 600 },
+  dayPRExVal: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 0.3 },
+  dayTargetChip: { fontSize: 11, fontWeight: 700, padding: '8px 12px', borderRadius: 8, border: '1px solid', letterSpacing: 0.3, textAlign: 'center' },
+  dayHighlightChip: { fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8, border: '1px solid', letterSpacing: 0.3 },
+  customDayBadge: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 7, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: 'rgba(255,255,255,0.8)', lineHeight: 1 },
+  addDayCard: { border: '1.5px dashed #2a2a2a', borderRadius: 18, padding: 0, cursor: 'pointer', aspectRatio: '1 / 1.05', background: '#0d0d0d', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.15s ease' },
+  addDayInner: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: '#555' },
+  addDayPlus: { fontSize: 36, fontWeight: 300, lineHeight: 1 },
+  addDayText: { fontSize: 11, fontWeight: 700, letterSpacing: 1.5 },
+  doneBadge: { fontSize: 11, fontWeight: 800, padding: '5px 10px', borderRadius: 8, letterSpacing: 0.3, marginLeft: 12, whiteSpace: 'nowrap' },
+  dayPreview: { borderRadius: 14, padding: '18px 16px', marginBottom: 18, minHeight: 80, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' },
+  dayPreviewName: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 32, fontWeight: 900, color: '#fff', lineHeight: 0.95, letterSpacing: -0.5 },
+  dayPreviewSub: { fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginTop: 6 },
+  colorGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginTop: 8, marginBottom: 4 },
+  colorSwatch: { aspectRatio: '1', borderRadius: 12, cursor: 'pointer', transition: 'transform 0.15s, border 0.15s', padding: 0 },
+  copyToggle: { width: '100%', background: 'transparent', border: 'none', color: '#888', fontSize: 12, fontWeight: 600, cursor: 'pointer', textAlign: 'left', padding: '4px 0' },
+  copyExerciseBtn: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0a0a0a', border: '1px solid #1f1f1f', borderRadius: 10, padding: '11px 14px', cursor: 'pointer', width: '100%', textAlign: 'left' },
+  deleteDayBtn: { width: '100%', background: 'transparent', border: 'none', color: '#FF5252', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 14, padding: 8 },
+  statsCard: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 14, padding: '18px 14px 14px' },
+  barChartRow: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, height: 160 },
+  barColumn: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', cursor: 'pointer', height: '100%', padding: 0 },
+  barCount: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 16, lineHeight: 1, transition: 'color 0.2s' },
+  barTrack: { flex: 1, width: 10, background: '#1f1f1f', borderRadius: 6, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'hidden' },
+  barFill: { width: '100%', borderRadius: 6, transition: 'height 0.4s ease, background 0.2s, opacity 0.2s', minHeight: 6 },
+  barLabel: { fontSize: 12, transition: 'color 0.2s' },
+  statsDetail: { marginTop: 16, paddingTop: 14, borderTop: '1px solid #1f1f1f' },
+  statsDetailTitle: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: 0.3 },
+  statsDetailRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 },
+  statsDetailBox: { background: '#0f0f0f', border: '1px solid #1f1f1f', borderRadius: 10, padding: '12px 14px', textAlign: 'center' },
+  statsDetailVal: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 24, fontWeight: 800, color: '#fff', lineHeight: 1 },
+  statsDetailLbl: { fontSize: 9, color: '#666', fontWeight: 700, letterSpacing: 1, marginTop: 6 },
+  statsHint: { textAlign: 'center', color: '#555', fontSize: 11, fontWeight: 500, marginTop: 14, paddingTop: 14, borderTop: '1px solid #1f1f1f' },
+  summaryPRType: { fontSize: 9, fontWeight: 800, letterSpacing: 1, padding: '2px 6px', borderRadius: 4, border: '1px solid currentColor' },
   summaryHeader: { padding: '20px 20px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderRadius: '18px 18px 0 0' },
   summaryHeaderTitle: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 900, letterSpacing: 1, color: '#fff' },
   summaryHeaderDur: { fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: 600 },
