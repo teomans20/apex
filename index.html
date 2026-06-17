@@ -1,0 +1,2921 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>APEX</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="APEX">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0a0a">
+
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%230a0a0a'/><path d='M30 145 L90 40 L150 145' stroke='white' stroke-width='18' fill='none' stroke-linecap='round' stroke-linejoin='round'/><path d='M62 112 L118 112' stroke='white' stroke-width='14' stroke-linecap='round'/></svg>">
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230a0a0a'/><path d='M18 82 L50 22 L82 82' stroke='white' stroke-width='11' fill='none' stroke-linecap='round' stroke-linejoin='round'/><path d='M35 62 L65 62' stroke='white' stroke-width='9' stroke-linecap='round'/></svg>">
+<link rel="manifest" href='data:application/manifest+json,{"name":"APEX","short_name":"APEX","start_url":".","display":"standalone","background_color":"%230a0a0a","theme_color":"%230a0a0a","icons":[{"src":"data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 180 180%27><rect width=%27180%27 height=%27180%27 rx=%2740%27 fill=%27%230a0a0a%27/><path d=%27M30 145 L90 40 L150 145%27 stroke=%27white%27 stroke-width=%2718%27 fill=%27none%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/><path d=%27M62 112 L118 112%27 stroke=%27white%27 stroke-width=%2714%27 stroke-linecap=%27round%27/></svg>","sizes":"any","type":"image/svg+xml"}]}'>
+
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #0a0a0a; color: #fff; font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif; overscroll-behavior: none; -webkit-font-smoothing: antialiased; min-height: 100vh; padding-top: env(safe-area-inset-top); }
+  input, button { font-family: inherit; }
+  input { font-size: 16px; }
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+  .day-card { transition: transform 0.15s ease, box-shadow 0.35s ease; box-shadow: 0 0 12px var(--glow-low, transparent); }
+  .day-card:active { transform: scale(0.97); box-shadow: 0 0 40px var(--glow-high, transparent), 0 10px 60px var(--glow-high, transparent); transition: transform 0.15s ease, box-shadow 0.12s ease; }
+  .exercise-btn:active, .cal-cell:active { background: rgba(255,255,255,0.05) !important; }
+  .add-btn:active, .submit-btn:not(:disabled):active { transform: scale(0.98); }
+  .tab-btn:active { transform: scale(0.95); }
+  .pulse { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .dragging { z-index: 1000; transition: none !important; pointer-events: none; box-shadow: 0 12px 40px rgba(0,0,0,0.6); transform: scale(1.04); opacity: 0.95; }
+  .pr-overlay { animation: prFadeIn 0.4s ease-out; }
+  @keyframes prFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .pr-content { animation: prPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes prPop { 0% { transform: scale(0.3) rotate(-12deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+  .confetti { position: absolute; width: 8px; height: 14px; animation: fall linear forwards; pointer-events: none; }
+  @keyframes fall { 0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+  .period-btn { transition: all 0.15s; }
+  .period-btn.active { background: #fff !important; color: #000 !important; }
+  .toast { animation: toastIn 0.3s ease-out, toastOut 0.3s ease-in 2s forwards; }
+  @keyframes toastIn { from { transform: translateY(80px) translateX(-50%); opacity: 0; } to { transform: translateY(0) translateX(-50%); opacity: 1; } }
+  @keyframes toastOut { to { transform: translateY(80px) translateX(-50%); opacity: 0; } }
+  .spin { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #root { min-height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+const BUILTIN_DAYS = {
+  push: { name: 'PUSH', subtitle: 'Chest · Shoulders · Triceps', accent: '#FF3D3D', accentSoft: 'rgba(255,61,61,0.15)', gradient: 'linear-gradient(135deg,#FF3D3D,#8B1111)', glowLow: 'rgba(255,61,61,0.08)', glowHigh: 'rgba(255,61,61,0.55)' },
+  pull: { name: 'PULL', subtitle: 'Back · Biceps', accent: '#4A90E2', accentSoft: 'rgba(74,144,226,0.15)', gradient: 'linear-gradient(135deg,#4A90E2,#1E3A5F)', glowLow: 'rgba(74,144,226,0.08)', glowHigh: 'rgba(74,144,226,0.55)' },
+  upper: { name: 'UPPER', subtitle: 'Full upper body', accent: '#D4A547', accentSoft: 'rgba(212,165,71,0.15)', gradient: 'linear-gradient(135deg,#D4A547,#8B6914)', glowLow: 'rgba(212,165,71,0.10)', glowHigh: 'rgba(212,165,71,0.60)' },
+  leg: { name: 'LEG', subtitle: 'Legs · Glutes · Calves', accent: '#34D399', accentSoft: 'rgba(52,211,153,0.15)', gradient: 'linear-gradient(135deg,#34D399,#064E3B)', glowLow: 'rgba(52,211,153,0.08)', glowHigh: 'rgba(52,211,153,0.55)' },
+};
+
+// Premium color palette for custom days. Each entry builds a full day config.
+const DAY_COLOR_PALETTE = [
+  { id: 'teal',    accent: '#2DD4BF', dark: '#0F766E' },
+  { id: 'violet',  accent: '#A78BFA', dark: '#5B21B6' },
+  { id: 'magenta', accent: '#EC4899', dark: '#9D174D' },
+  { id: 'amber',   accent: '#F59E0B', dark: '#92400E' },
+  { id: 'indigo',  accent: '#6366F1', dark: '#312E81' },
+  { id: 'rose',    accent: '#FB7185', dark: '#9F1239' },
+  { id: 'cyan',    accent: '#22D3EE', dark: '#0E7490' },
+  { id: 'lime',    accent: '#A3E635', dark: '#3F6212' },
+  { id: 'orange',  accent: '#FB923C', dark: '#9A3412' },
+  { id: 'slate',   accent: '#94A3B8', dark: '#334155' },
+];
+
+const hexToRgb = (hex) => {
+  const h = hex.replace('#', '');
+  return { r: parseInt(h.slice(0,2),16), g: parseInt(h.slice(2,4),16), b: parseInt(h.slice(4,6),16) };
+};
+
+// Build a full day config object from a base accent + dark color
+const buildDayConfig = (name, subtitle, accent, dark) => {
+  const { r, g, b } = hexToRgb(accent);
+  return {
+    name: name.toUpperCase(),
+    subtitle: subtitle || '',
+    accent,
+    accentSoft: `rgba(${r},${g},${b},0.15)`,
+    gradient: `linear-gradient(135deg,${accent},${dark})`,
+    glowLow: `rgba(${r},${g},${b},0.08)`,
+    glowHigh: `rgba(${r},${g},${b},0.55)`,
+  };
+};
+
+// Merge built-in days with user's custom days into a single config map
+const buildDayConfigMap = (customDays) => {
+  const map = { ...BUILTIN_DAYS };
+  (customDays || []).forEach(cd => {
+    map[cd.id] = buildDayConfig(cd.name, cd.subtitle, cd.accent, cd.dark);
+  });
+  return map;
+};
+
+const DEFAULT_EXERCISES = {
+  push: ['Bench Press', 'Incline Dumbbell Press', 'Shoulder Press', 'Lateral Raise', 'Tricep Pushdown', 'Overhead Tricep Extension'],
+  pull: ['Deadlift', 'Pull-up', 'Barbell Row', 'Lat Pulldown', 'Face Pull', 'Barbell Curl', 'Hammer Curl'],
+  upper: ['Bench Press', 'Barbell Row', 'Shoulder Press', 'Pull-up', 'Barbell Curl', 'Tricep Extension'],
+  leg: ['Squat', 'Romanian Deadlift', 'Leg Press', 'Leg Curl', 'Leg Extension', 'Calf Raise'],
+};
+
+const MARKET_DEFAULTS = [
+  { symbol: 'QQQ', name: 'Nasdaq 100' },
+  { symbol: 'SPY', name: 'S&P 500' },
+  { symbol: 'GLD', name: 'Altın' },
+  { symbol: 'SLV', name: 'Gümüş' },
+];
+
+const STORAGE_KEY = 'heavy-gym-data-v1';
+const MARKET_KEY = 'heavy-market-v1';
+const AI_KEY = 'apex-ai-v1';
+const REFRESH_INTERVAL = 30000;
+
+const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
+const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const TR_MONTHS_SHORT = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+
+const Icon = {
+  Chevron: () => <span style={{fontSize:24,lineHeight:1,fontWeight:300}}>‹</span>,
+  ChevR: () => <span style={{fontSize:24,lineHeight:1,fontWeight:300}}>›</span>,
+  Plus: () => <span style={{fontSize:18,fontWeight:700}}>+</span>,
+  Trash: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
+  Drag: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+  Trending: ({c}) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+  Cal: () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  Check: () => <span style={{fontSize:16,fontWeight:900}}>✓</span>,
+  Timer: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></svg>,
+  Play: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>,
+  Stop: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>,
+  Dumbbell: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"/><path d="m21.5 21.5-1.4-1.4"/><path d="M3.9 3.9 2.5 2.5"/><path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z"/></svg>,
+  Chart: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  Spinner: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2a10 10 0 0 1 10 10" /></svg>,
+  Coach: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2 7 7 2-7 2-2 7-2-7-7-2 7-2z"/></svg>,
+  Send: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>,
+};
+
+const formatDuration = (ms) => {
+  if (!ms || ms < 0) return '00:00';
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
+};
+
+const formatDurationLong = (ms) => {
+  if (!ms || ms < 0) return '—';
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  if (h > 0) return `${h}sa ${m}dk`;
+  return `${m}dk`;
+};
+
+const haptic = (ms = 30) => { if (navigator.vibrate) navigator.vibrate(ms); };
+const dateKey = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+
+// ═══════════════════════════════════════════
+// PULL TO REFRESH
+// ═══════════════════════════════════════════
+
+function PullToRefresh({ onRefresh, children }) {
+  const [pullDistance, setPullDistance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const startY = useRef(0);
+  const pulling = useRef(false);
+
+  const handleTouchStart = (e) => {
+    if (window.scrollY <= 0 && !refreshing) {
+      startY.current = e.touches[0].clientY;
+      pulling.current = true;
+    } else { pulling.current = false; }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!pulling.current || refreshing) return;
+    const dy = e.touches[0].clientY - startY.current;
+    if (dy > 0 && window.scrollY <= 0) setPullDistance(Math.min(dy * 0.5, 80));
+    else if (dy < -10) { pulling.current = false; setPullDistance(0); }
+  };
+
+  const handleTouchEnd = async () => {
+    if (!pulling.current) return;
+    pulling.current = false;
+    if (pullDistance > 55) {
+      setRefreshing(true);
+      haptic(40);
+      try { await onRefresh(); } catch (e) {}
+      setRefreshing(false);
+      setPullDistance(0);
+    } else { setPullDistance(0); }
+  };
+
+  const indicatorOpacity = Math.min(pullDistance / 50, 1);
+  const indicatorRotation = (pullDistance / 80) * 360;
+
+  return (
+    <div onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={() => { pulling.current = false; setPullDistance(0); }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', height: refreshing ? 60 : pullDistance, transition: pulling.current ? 'none' : 'height 0.2s ease', overflow: 'hidden', pointerEvents: 'none', zIndex: 10 }}>
+        <div style={{ opacity: refreshing ? 1 : indicatorOpacity, color: '#888' }}>
+          <div style={{ transform: refreshing ? 'none' : `rotate(${indicatorRotation}deg)` }} className={refreshing ? 'spin' : ''}>
+            <Icon.Spinner />
+          </div>
+        </div>
+      </div>
+      <div style={{ transform: refreshing ? 'translateY(50px)' : `translateY(${pullDistance}px)`, transition: pulling.current ? 'none' : 'transform 0.2s ease' }}>{children}</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// REORDERABLE LIST (long-press drag)
+// ═══════════════════════════════════════════
+
+function ReorderableList({ items, onReorder, renderItem, getKey, gap = 8 }) {
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [hoverIndex, setHoverIndex] = useState(null);
+  const itemRefs = useRef([]);
+  const dragStart = useRef({ y: 0, startY: 0 });
+  const longPressTimer = useRef(null);
+  const itemHeights = useRef([]);
+
+  const cancelDrag = () => { clearTimeout(longPressTimer.current); setDragIndex(null); setHoverIndex(null); setDragOffset(0); };
+
+  const handleTouchStart = (e, index) => {
+    const touch = e.touches[0];
+    const startY = touch.clientY;
+    dragStart.current = { y: startY, startY };
+    longPressTimer.current = setTimeout(() => {
+      itemHeights.current = itemRefs.current.map(r => r ? r.offsetHeight + gap : 0);
+      setDragIndex(index); setHoverIndex(index); haptic(40);
+    }, 350);
+  };
+
+  const handleTouchMove = (e) => {
+    const touch = e.touches[0];
+    if (dragIndex === null) {
+      if (Math.abs(touch.clientY - dragStart.current.startY) > 8) clearTimeout(longPressTimer.current);
+      return;
+    }
+    e.preventDefault();
+    const dy = touch.clientY - dragStart.current.y;
+    setDragOffset(dy);
+    let h = dragIndex;
+    if (dy > 0) {
+      let acc = 0;
+      for (let i = dragIndex + 1; i < items.length; i++) {
+        acc += itemHeights.current[i] || 0;
+        if (dy > acc - itemHeights.current[i] / 2) h = i; else break;
+      }
+    } else if (dy < 0) {
+      let acc = 0;
+      for (let i = dragIndex - 1; i >= 0; i--) {
+        acc += itemHeights.current[i] || 0;
+        if (-dy > acc - itemHeights.current[i] / 2) h = i; else break;
+      }
+    }
+    if (h !== hoverIndex) { setHoverIndex(h); haptic(10); }
+  };
+
+  const handleTouchEnd = () => {
+    clearTimeout(longPressTimer.current);
+    if (dragIndex !== null && hoverIndex !== null && dragIndex !== hoverIndex) {
+      const newItems = [...items];
+      const [moved] = newItems.splice(dragIndex, 1);
+      newItems.splice(hoverIndex, 0, moved);
+      onReorder(newItems);
+    }
+    cancelDrag();
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap }}>
+      {items.map((item, index) => {
+        const isDragging = dragIndex === index;
+        let translateY = 0;
+        if (dragIndex !== null && !isDragging) {
+          if (dragIndex < hoverIndex && index > dragIndex && index <= hoverIndex) translateY = -(itemHeights.current[dragIndex] || 0);
+          else if (dragIndex > hoverIndex && index < dragIndex && index >= hoverIndex) translateY = itemHeights.current[dragIndex] || 0;
+        }
+        return (
+          <div key={getKey ? getKey(item, index) : index} ref={(el) => (itemRefs.current[index] = el)}
+            onTouchStart={(e) => handleTouchStart(e, index)} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={cancelDrag}
+            style={{ transform: isDragging ? `translateY(${dragOffset}px)` : `translateY(${translateY}px)`, transition: isDragging ? 'none' : 'transform 0.2s ease', touchAction: dragIndex !== null ? 'none' : 'pan-y' }}
+            className={isDragging ? 'dragging' : ''}>
+            {renderItem(item, index, isDragging)}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+
+function Toast({ message, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 2400); return () => clearTimeout(t); }, [onDone]);
+  return <div className="toast" style={S.toast}><Icon.Check /> {message}</div>;
+}
+
+// ═══════════════════════════════════════════
+// CONFETTI + PR CELEBRATION
+// ═══════════════════════════════════════════
+
+function Confetti({ count = 60 }) {
+  const pieces = useMemo(() => {
+    const colors = ['#FFD700', '#FF5722', '#2196F3', '#9CCC65', '#AB47BC', '#FF4081', '#fff'];
+    return Array.from({ length: count }, (_, i) => ({
+      id: i, left: Math.random() * 100, delay: Math.random() * 0.5,
+      duration: 2 + Math.random() * 2, color: colors[Math.floor(Math.random() * colors.length)],
+      rotate: Math.random() * 360,
+    }));
+  }, [count]);
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+      {pieces.map(p => <div key={p.id} className="confetti" style={{ left: `${p.left}%`, background: p.color, animationDelay: `${p.delay}s`, animationDuration: `${p.duration}s`, transform: `rotate(${p.rotate}deg)` }} />)}
+    </div>
+  );
+}
+
+function PRCelebration({ weight, reps, exerciseName, type, onClose }) {
+  useEffect(() => { haptic([50, 50, 100]); const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
+  const isTop = type === 'top';
+  const title = isTop ? 'YENİ TOP REKOR!' : 'YENİ BACK-OFF REKOR!';
+  return (
+    <div className="pr-overlay" onClick={onClose} style={S.prOverlay}>
+      <Confetti />
+      <div className="pr-content" style={S.prContent}>
+        <div style={S.prStar}>★</div>
+        <div style={S.prTitle}>{title}</div>
+        <div style={S.prExercise}>{exerciseName}</div>
+        <div style={S.prValue}>{weight}kg × {reps}</div>
+        <div style={S.prHint}>Devam etmek için dokun</div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// PROGRESS CHART
+// ═══════════════════════════════════════════
+
+function ProgressChart({ history, color }) {
+  const data = useMemo(() => history.map(s => ({
+    date: s.timestamp,
+    weight: Math.max(...s.sets.map(set => set.weight)),
+  })).reverse(), [history]);
+
+  if (data.length < 2) return null;
+  const W = 320, H = 100, PAD_X = 8, PAD_Y = 14;
+  const minW = Math.min(...data.map(d => d.weight));
+  const maxW = Math.max(...data.map(d => d.weight));
+  const range = maxW - minW || 1;
+  const minDate = data[0].date, maxDate = data[data.length - 1].date;
+  const dateRange = maxDate - minDate || 1;
+  const points = data.map(d => ({
+    x: PAD_X + ((d.date - minDate) / dateRange) * (W - 2 * PAD_X),
+    y: PAD_Y + (1 - (d.weight - minW) / range) * (H - 2 * PAD_Y), w: d.weight,
+  }));
+  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  const areaPath = `${path} L ${points[points.length - 1].x} ${H} L ${points[0].x} ${H} Z`;
+
+  return (
+    <div style={S.chartCard}>
+      <div style={S.chartHeader}>
+        <span style={S.chartTitle}>İLERLEME</span>
+        <span style={S.chartRange}>{minW}–{maxW}kg · {data.length} antrenman</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+        <defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.25" /><stop offset="100%" stopColor={color} stopOpacity="0" /></linearGradient></defs>
+        <path d={areaPath} fill="url(#areaGrad)" />
+        <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={i === points.length - 1 ? 3.5 : 2} fill={color} />)}
+      </svg>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// MONTHLY CALENDAR
+// ═══════════════════════════════════════════
+
+function MonthlyCalendar({ logs, sessions, dayConfig, onTapDay }) {
+  const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
+
+  const workoutsByDay = useMemo(() => {
+    const map = {};
+    logs.forEach(l => {
+      const k = dateKey(l.timestamp);
+      if (!map[k]) map[k] = {};
+      if (!map[k][l.dayType]) map[k][l.dayType] = { logs: [], session: null };
+      map[k][l.dayType].logs.push(l);
+    });
+    sessions.forEach(s => {
+      const k = dateKey(s.startTime);
+      if (!map[k]) map[k] = {};
+      if (!map[k][s.dayType]) map[k][s.dayType] = { logs: [], session: null };
+      map[k][s.dayType].session = s;
+    });
+    return map;
+  }, [logs, sessions]);
+
+  const year = month.getFullYear(), monthIdx = month.getMonth();
+  const firstDay = new Date(year, monthIdx, 1);
+  const lastDay = new Date(year, monthIdx + 1, 0);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+
+  const cells = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const date = new Date(year, monthIdx, d);
+    const k = `${year}-${monthIdx}-${d}`;
+    cells.push({ date, day: d, dateKey: k, workouts: workoutsByDay[k] || {} });
+  }
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const todayKey = dateKey(Date.now());
+
+  return (
+    <div style={S.calendarCard}>
+      <div style={S.calendarHeader}>
+        <button onClick={() => setMonth(new Date(year, monthIdx - 1, 1))} style={S.calendarNav}><Icon.Chevron /></button>
+        <div style={S.calendarTitle}>{TR_MONTHS[monthIdx]} {year}</div>
+        <button onClick={() => setMonth(new Date(year, monthIdx + 1, 1))} style={S.calendarNav}><Icon.ChevR /></button>
+      </div>
+      <div style={S.calendarGrid}>
+        {TR_DAYS.map(d => <div key={d} style={S.calendarDayHead}>{d}</div>)}
+        {cells.map((cell, i) => {
+          if (!cell) return <div key={i} />;
+          const types = Object.keys(cell.workouts);
+          const hasWorkout = types.length > 0;
+          const isToday = cell.dateKey === todayKey;
+          return (
+            <button key={i} onClick={() => onTapDay(cell.dateKey)} className="cal-cell"
+              style={{ ...S.calendarCell, background: hasWorkout ? '#1a1a1a' : 'transparent', border: isToday ? '1px solid #555' : '1px solid transparent', cursor: 'pointer' }}>
+              <div style={{ ...S.calendarDayNum, color: isToday ? '#fff' : (hasWorkout ? '#ccc' : '#555'), fontWeight: isToday ? 800 : 600 }}>{cell.day}</div>
+              {hasWorkout && (
+                <div style={S.calendarDots}>
+                  {types.map(t => <div key={t} style={{ ...S.calendarDot, background: (dayConfig[t]?.accent || '#666') }} />)}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DayDetailModal({ targetDateKey, data, dayConfig, onClose, onDeleteLog, onDeleteWorkout, onAddWorkout }) {
+  const { date, workouts } = useMemo(() => {
+    const parts = targetDateKey.split('-').map(Number);
+    const d = new Date(parts[0], parts[1], parts[2]);
+    const byType = {};
+    data.logs.forEach(l => {
+      if (dateKey(l.timestamp) !== targetDateKey) return;
+      if (!byType[l.dayType]) byType[l.dayType] = { logs: [], session: null };
+      byType[l.dayType].logs.push(l);
+    });
+    data.sessions.forEach(s => {
+      if (dateKey(s.startTime) !== targetDateKey) return;
+      if (!byType[s.dayType]) byType[s.dayType] = { logs: [], session: null };
+      byType[s.dayType].session = s;
+    });
+    return { date: d, workouts: byType };
+  }, [targetDateKey, data]);
+
+  // Compute Top/Back-off PR details and target hit rate for a workout day
+  const computeDayStats = (dayLogs) => {
+    const isBetter = (a, b) => a.weight > b.weight || (a.weight === b.weight && a.reps > b.reps);
+    const bestOf = (sets) => sets.reduce((best, s) => !best || isBetter(s, best) ? s : best, null);
+
+    const byExercise = {};
+    dayLogs.forEach(l => { if (!byExercise[l.exerciseName]) byExercise[l.exerciseName] = []; byExercise[l.exerciseName].push(l); });
+
+    const topPRs = []; // { exercise, weight, reps }
+    const backoffPRs = [];
+    let targetsHit = 0, targetsTotal = 0;
+    const dayStart = new Date(date).setHours(0,0,0,0);
+
+    Object.entries(byExercise).forEach(([exName, exLogs]) => {
+      const sorted = [...exLogs].sort((a, b) => a.timestamp - b.timestamp);
+      const todayTop = sorted[0];
+      const todayBackoffs = sorted.slice(1);
+      const todayBestBackoff = todayBackoffs.length ? bestOf(todayBackoffs) : null;
+
+      // Prior logs (before this day)
+      const priorLogs = data.logs.filter(l => l.exerciseName === exName && l.timestamp < dayStart);
+      if (priorLogs.length === 0) return;
+
+      // Categorize prior into top/backoff
+      const priorByDay = {};
+      priorLogs.forEach(l => { const k = dateKey(l.timestamp); if (!priorByDay[k]) priorByDay[k] = []; priorByDay[k].push(l); });
+      const priorTops = [], priorBackoffs = [];
+      Object.values(priorByDay).forEach(dl => {
+        const ds = [...dl].sort((a, b) => a.timestamp - b.timestamp);
+        if (ds[0]) priorTops.push(ds[0]);
+        ds.slice(1).forEach(s => priorBackoffs.push(s));
+      });
+      const priorTopPR = priorTops.length ? bestOf(priorTops) : null;
+      const priorBackoffPR = priorBackoffs.length ? bestOf(priorBackoffs) : null;
+
+      // PR check
+      if (todayTop && priorTopPR && isBetter(todayTop, priorTopPR)) {
+        topPRs.push({ exercise: exName, weight: todayTop.weight, reps: todayTop.reps });
+      }
+      if (todayBestBackoff && priorBackoffPR && isBetter(todayBestBackoff, priorBackoffPR)) {
+        backoffPRs.push({ exercise: exName, weight: todayBestBackoff.weight, reps: todayBestBackoff.reps });
+      }
+
+      // Target hit vs last day
+      const lastDayLogs = Object.values(priorByDay).sort((a, b) => b[0].timestamp - a[0].timestamp)[0];
+      if (!lastDayLogs) return;
+      const lastSorted = [...lastDayLogs].sort((a, b) => a.timestamp - b.timestamp);
+      const lastTop = lastSorted[0];
+      const lastBackoffs = lastSorted.slice(1);
+      const lastBestBackoff = lastBackoffs.length ? bestOf(lastBackoffs) : null;
+
+      if (lastTop && todayTop) { targetsTotal++; if (isBetter(todayTop, lastTop)) targetsHit++; }
+      if (lastBestBackoff && todayBestBackoff) { targetsTotal++; if (isBetter(todayBestBackoff, lastBestBackoff)) targetsHit++; }
+    });
+
+    return { topPRs, backoffPRs, targetsHit, targetsTotal };
+  };
+
+  const weekday = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][date.getDay()];
+  const todayKey = dateKey(Date.now());
+  const isPast = targetDateKey !== todayKey && new Date(date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0);
+  const isFuture = new Date(date).setHours(0,0,0,0) > new Date().setHours(0,0,0,0);
+  const hasWorkouts = Object.keys(workouts).length > 0;
+
+  return (
+    <div style={S.modalOverlay} onClick={onClose}>
+      <div style={{ ...S.modal, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+        <div style={S.dayDetailDate}>
+          <div style={S.dayDetailDay}>{date.getDate()} {TR_MONTHS[date.getMonth()]}</div>
+          <div style={S.dayDetailWeekday}>
+            {weekday}
+            {isPast && <span style={{ color: '#888', marginLeft: 8 }}>· Geçmiş gün</span>}
+            {isFuture && <span style={{ color: '#888', marginLeft: 8 }}>· İleri tarih</span>}
+          </div>
+        </div>
+
+        {Object.entries(workouts).map(([dayType, w]) => {
+          const cfg = dayConfig[dayType] || BUILTIN_DAYS.push;
+          const duration = w.session?.endTime ? w.session.endTime - w.session.startTime : null;
+          const volume = w.logs.reduce((s, l) => s + l.weight * l.reps, 0);
+          const dayStats = computeDayStats(w.logs);
+          const byExercise = {};
+          w.logs.forEach(l => { if (!byExercise[l.exerciseName]) byExercise[l.exerciseName] = []; byExercise[l.exerciseName].push(l); });
+          // Sort by timestamp so sets are in order
+          Object.values(byExercise).forEach(list => list.sort((a, b) => a.timestamp - b.timestamp));
+          return (
+            <div key={dayType} style={{ ...S.dayDetailSection, borderColor: cfg.accent }}>
+              <div style={{ ...S.dayDetailHeader, background: cfg.gradient }}>
+                <span style={S.dayDetailLabel}>{cfg.name} DAY</span>
+                <button onClick={() => { if (confirm(`${cfg.name} antrenmanını tamamen silmek istiyor musun?`)) onDeleteWorkout(targetDateKey, dayType); }} style={S.dayDetailDel}>
+                  <Icon.Trash />
+                </button>
+              </div>
+              <div style={S.dayDetailStats}>
+                <div style={S.dayStatBox}><div style={S.dayStatVal}>{duration ? formatDurationLong(duration) : '—'}</div><div style={S.dayStatLbl}>SÜRE</div></div>
+                <div style={S.dayStatBox}><div style={S.dayStatVal}>{w.logs.length}</div><div style={S.dayStatLbl}>SET</div></div>
+                <div style={S.dayStatBox}><div style={S.dayStatVal}>{(volume/1000).toFixed(1)}t</div><div style={S.dayStatLbl}>HACİM</div></div>
+              </div>
+              {(dayStats.topPRs.length > 0 || dayStats.backoffPRs.length > 0 || dayStats.targetsTotal > 0) && (
+                <div style={S.dayDetailHighlights}>
+                  {dayStats.topPRs.length > 0 && (
+                    <div style={{ ...S.dayPRBlock, background: 'rgba(255,215,0,0.08)', borderColor: 'rgba(255,215,0,0.35)' }}>
+                      <div style={{ ...S.dayPRBlockLabel, color: '#FFD700' }}>★ TOP REKORLAR ({dayStats.topPRs.length})</div>
+                      {dayStats.topPRs.map((pr, i) => (
+                        <div key={i} style={S.dayPRBlockRow}>
+                          <span style={S.dayPRExName}>{pr.exercise}</span>
+                          <span style={{ ...S.dayPRExVal, color: '#FFD700' }}>{pr.weight}kg × {pr.reps}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {dayStats.backoffPRs.length > 0 && (
+                    <div style={{ ...S.dayPRBlock, background: 'rgba(192,192,192,0.06)', borderColor: 'rgba(192,192,192,0.25)' }}>
+                      <div style={{ ...S.dayPRBlockLabel, color: '#C0C0C0' }}>★ BACK-OFF REKORLAR ({dayStats.backoffPRs.length})</div>
+                      {dayStats.backoffPRs.map((pr, i) => (
+                        <div key={i} style={S.dayPRBlockRow}>
+                          <span style={S.dayPRExName}>{pr.exercise}</span>
+                          <span style={{ ...S.dayPRExVal, color: '#C0C0C0' }}>{pr.weight}kg × {pr.reps}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {dayStats.targetsTotal > 0 && (
+                    <div style={{ ...S.dayTargetChip, background: dayStats.targetsHit === dayStats.targetsTotal ? 'rgba(76,175,80,0.12)' : '#1a1a1a', borderColor: dayStats.targetsHit === dayStats.targetsTotal ? '#4CAF50' : '#2a2a2a', color: dayStats.targetsHit === dayStats.targetsTotal ? '#4CAF50' : '#aaa' }}>
+                      🎯 {dayStats.targetsHit}/{dayStats.targetsTotal} hedef tutturuldu
+                    </div>
+                  )}
+                </div>
+              )}
+              <div style={S.dayDetailExercises}>
+                {Object.entries(byExercise).map(([name, list]) => (
+                  <div key={name} style={S.dayDetailExercise}>
+                    <div style={S.dayDetailExName}>{name}</div>
+                    <div style={S.dayDetailExSetList}>
+                      {list.map((l, idx) => (
+                        <div key={l.id} style={S.dayDetailExSetItem}>
+                          <div style={S.dayDetailSetLeft}>
+                            <span style={{ ...S.dayDetailSetIdx, color: idx === 0 ? '#FFD700' : '#666' }}>{idx === 0 ? 'T' : idx + 1}</span>
+                            <span style={S.dayDetailSetVal}>{l.weight}<span style={S.dayDetailSetUnit}>kg</span> × {l.reps}</span>
+                          </div>
+                          <button onClick={() => onDeleteLog(l.id)} style={S.dayDetailSetDel}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
+        <div style={S.addWorkoutSection}>
+          <div style={S.addWorkoutLabel}>{hasWorkouts ? 'YENİ ANTRENMAN EKLE' : 'BU GÜNE ANTRENMAN EKLE'}</div>
+          <div style={S.addWorkoutGrid}>
+            {Object.entries(dayConfig).map(([key, cfg]) => (
+              <button key={key} onClick={() => onAddWorkout(targetDateKey, key)} style={{ ...S.addWorkoutBtn, background: cfg.gradient }}>
+                + {cfg.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button onClick={onClose} style={{ ...S.modalCancel, marginTop: 12 }}>KAPAT</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// APP ROOT
+// ═══════════════════════════════════════════
+
+function App() {
+  const [tab, setTab] = useState('workout');
+  return (
+    <div style={S.app}>
+      <div style={S.content}>
+        {tab === 'workout' && <WorkoutTab />}
+        {tab === 'markets' && <MarketsTab />}
+        {tab === 'coach' && <CoachTab />}
+      </div>
+      <BottomTabs tab={tab} onChange={setTab} />
+    </div>
+  );
+}
+
+function BottomTabs({ tab, onChange }) {
+  return (
+    <div style={S.tabBar}>
+      <button onClick={() => onChange('workout')} style={{ ...S.tabBtn, color: tab === 'workout' ? '#fff' : '#555' }} className="tab-btn">
+        <Icon.Dumbbell /><span style={S.tabLabel}>ANTRENMAN</span>
+      </button>
+      <button onClick={() => onChange('markets')} style={{ ...S.tabBtn, color: tab === 'markets' ? '#fff' : '#555' }} className="tab-btn">
+        <Icon.Chart /><span style={S.tabLabel}>PİYASA</span>
+      </button>
+      <button onClick={() => onChange('coach')} style={{ ...S.tabBtn, color: tab === 'coach' ? '#fff' : '#555' }} className="tab-btn">
+        <Icon.Coach /><span style={S.tabLabel}>KOÇ</span>
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// WORKOUT TAB
+// ═══════════════════════════════════════════
+
+function WorkoutTab() {
+  const [view, setView] = useState('home');
+  const [currentDay, setCurrentDay] = useState(null);
+  const [currentExercise, setCurrentExercise] = useState(null);
+  const [data, setData] = useState({ exercises: DEFAULT_EXERCISES, logs: [], sessions: [], customDays: [] });
+  const [showAddExercise, setShowAddExercise] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [prCelebration, setPrCelebration] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [dayDetailKey, setDayDetailKey] = useState(null);
+  const [logDate, setLogDate] = useState(null); // null = today; "YYYY-M-D" string = backdated
+  const [sessionSummary, setSessionSummary] = useState(null);
+  const [showAddDay, setShowAddDay] = useState(false);
+  const [editDayId, setEditDayId] = useState(null); // custom day being edited
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setData({ exercises: { ...DEFAULT_EXERCISES, ...(parsed.exercises || {}) }, logs: parsed.logs || [], sessions: parsed.sessions || [], customDays: parsed.customDays || [] });
+      }
+    } catch (e) {}
+  }, []);
+
+  // Build the merged day config (built-in + custom) — used everywhere
+  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays), [data.customDays]);
+
+  const saveData = (newData) => {
+    setData(newData);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newData)); } catch (e) {}
+  };
+
+  // Custom day management
+  const addCustomDay = (name, subtitle, paletteId, exercises) => {
+    const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId) || DAY_COLOR_PALETTE[0];
+    const id = 'custom_' + Date.now().toString(36);
+    const newDay = { id, name: name.trim(), subtitle: (subtitle || '').trim(), accent: palette.accent, dark: palette.dark, paletteId: palette.id };
+    const newExercises = { ...data.exercises, [id]: exercises || [] };
+    saveData({ ...data, customDays: [...(data.customDays || []), newDay], exercises: newExercises });
+    setShowAddDay(false);
+  };
+
+  const updateCustomDay = (id, name, subtitle, paletteId) => {
+    const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId) || DAY_COLOR_PALETTE[0];
+    const newCustomDays = (data.customDays || []).map(d => d.id === id ? { ...d, name: name.trim(), subtitle: (subtitle || '').trim(), accent: palette.accent, dark: palette.dark, paletteId: palette.id } : d);
+    saveData({ ...data, customDays: newCustomDays });
+    setEditDayId(null);
+  };
+
+  const deleteCustomDay = (id) => {
+    const newCustomDays = (data.customDays || []).filter(d => d.id !== id);
+    const newExercises = { ...data.exercises };
+    delete newExercises[id];
+    // Also remove logs and sessions for this day type
+    const newLogs = data.logs.filter(l => l.dayType !== id);
+    const newSessions = data.sessions.filter(s => s.dayType !== id);
+    saveData({ ...data, customDays: newCustomDays, exercises: newExercises, logs: newLogs, sessions: newSessions });
+    setEditDayId(null);
+  };
+
+  // Helpers for set categorization (1st set of a day = top, rest = back-off)
+  const isBetterSet = (a, b) => a.weight > b.weight || (a.weight === b.weight && a.reps > b.reps);
+  const bestOfSets = (sets) => sets.reduce((best, s) => !best || isBetterSet(s, best) ? s : best, null);
+
+  // Group an exercise's logs by day, return { topSets: [], backoffSets: [] } for all-time
+  const getCategorizedSets = (exerciseName) => {
+    const byDay = {};
+    data.logs.filter(l => l.exerciseName === exerciseName).forEach(l => {
+      const k = dateKey(l.timestamp);
+      if (!byDay[k]) byDay[k] = [];
+      byDay[k].push(l);
+    });
+    const topSets = [], backoffSets = [];
+    Object.values(byDay).forEach(dayLogs => {
+      const sorted = [...dayLogs].sort((a, b) => a.timestamp - b.timestamp);
+      if (sorted[0]) topSets.push(sorted[0]);
+      sorted.slice(1).forEach(s => backoffSets.push(s));
+    });
+    return { topSets, backoffSets };
+  };
+
+  const getTopPR = (exerciseName) => {
+    const { topSets } = getCategorizedSets(exerciseName);
+    return topSets.length ? bestOfSets(topSets) : null;
+  };
+  const getBackoffPR = (exerciseName) => {
+    const { backoffSets } = getCategorizedSets(exerciseName);
+    return backoffSets.length ? bestOfSets(backoffSets) : null;
+  };
+
+  const addLog = (exerciseName, weight, reps) => {
+    const w = parseFloat(weight), r = parseInt(reps);
+    let timestamp;
+    const targetDayKey = logDate || dateKey(Date.now());
+    const existingSetsToday = data.logs.filter(l => l.exerciseName === exerciseName && dateKey(l.timestamp) === targetDayKey).length;
+    const setType = existingSetsToday === 0 ? 'top' : 'backoff';
+
+    // Get the relevant PR BEFORE adding the new log
+    const previousPR = setType === 'top' ? getTopPR(exerciseName) : getBackoffPR(exerciseName);
+
+    if (logDate) {
+      const parts = logDate.split('-').map(Number);
+      timestamp = new Date(parts[0], parts[1], parts[2], 12, 0, 0).getTime() + (existingSetsToday * 60000) + Math.floor(Math.random() * 1000);
+    } else {
+      timestamp = Date.now();
+    }
+    const newLog = { id: Date.now().toString() + Math.random(), exerciseName, dayType: currentDay, weight: w, reps: r, timestamp };
+    saveData({ ...data, logs: [...data.logs, newLog] });
+
+    // Only celebrate PR for today's entries; need at least one prior PR in the same category
+    if (!logDate && previousPR) {
+      const newSet = { weight: w, reps: r };
+      const isNewPR = isBetterSet(newSet, previousPR);
+      if (isNewPR) {
+        setPrCelebration({ weight: w, reps: r, exerciseName, type: setType });
+      }
+    }
+  };
+
+  const deleteLog = (id) => saveData({ ...data, logs: data.logs.filter(l => l.id !== id) });
+
+  const deleteWorkoutDay = (targetDateKey, dayType) => {
+    const newLogs = data.logs.filter(l => !(dateKey(l.timestamp) === targetDateKey && l.dayType === dayType));
+    const newSessions = data.sessions.filter(s => !(dateKey(s.startTime) === targetDateKey && s.dayType === dayType));
+    saveData({ ...data, logs: newLogs, sessions: newSessions });
+  };
+
+  const addExercise = (name) => {
+    if (!name.trim()) return;
+    saveData({ ...data, exercises: { ...data.exercises, [currentDay]: [...(data.exercises[currentDay] || []), name.trim()] } });
+  };
+
+  const removeExercise = (name) => saveData({ ...data, exercises: { ...data.exercises, [currentDay]: data.exercises[currentDay].filter(e => e !== name) } });
+  const reorderExercises = (newOrder) => saveData({ ...data, exercises: { ...data.exercises, [currentDay]: newOrder } });
+  const getActiveSession = () => data.sessions.find(s => s.dayType === currentDay && !s.endTime);
+
+  const startSession = () => {
+    const newSession = { id: Date.now().toString(), dayType: currentDay, startTime: Date.now(), endTime: null };
+    saveData({ ...data, sessions: [...data.sessions, newSession] });
+    haptic(50);
+  };
+
+  const endSession = () => {
+    const active = getActiveSession();
+    if (!active) return;
+    const endTime = Date.now();
+    const updatedSessions = data.sessions.map(s => s.id === active.id ? { ...s, endTime } : s);
+    const newData = { ...data, sessions: updatedSessions };
+    saveData(newData);
+    haptic([30, 30, 50]);
+
+    // Build summary
+    const endedSession = { ...active, endTime };
+    const summary = computeSessionSummary(endedSession, newData);
+    if (summary.setCount === 0) {
+      setToast(`Antrenman kaydedildi · ${formatDurationLong(endTime - active.startTime)}`);
+    } else {
+      setSessionSummary(summary);
+    }
+  };
+
+  const computeSessionSummary = (session, src) => {
+    const isBetter = (a, b) => a.weight > b.weight || (a.weight === b.weight && a.reps > b.reps);
+    const bestOf = (sets) => sets.reduce((best, s) => !best || isBetter(s, best) ? s : best, null);
+
+    // Categorize all logs of an exercise into top + backoff (1st set of a day = top, rest = backoff)
+    const categorize = (logs) => {
+      const byDay = {};
+      logs.forEach(l => { const k = dateKey(l.timestamp); if (!byDay[k]) byDay[k] = []; byDay[k].push(l); });
+      const tops = [], backs = [];
+      Object.values(byDay).forEach(dayLogs => {
+        const sorted = [...dayLogs].sort((a, b) => a.timestamp - b.timestamp);
+        if (sorted[0]) tops.push(sorted[0]);
+        sorted.slice(1).forEach(s => backs.push(s));
+      });
+      return { tops, backs };
+    };
+
+    const sessionLogs = src.logs.filter(l => l.timestamp >= session.startTime && l.timestamp <= session.endTime);
+    const totalTonnage = sessionLogs.reduce((s, l) => s + l.weight * l.reps, 0);
+    const duration = session.endTime - session.startTime;
+
+    // Previous session of same day type
+    const previousSession = src.sessions
+      .filter(s => s.dayType === session.dayType && s.id !== session.id && s.endTime)
+      .sort((a, b) => b.startTime - a.startTime)[0];
+    let previousTonnage = null;
+    if (previousSession) {
+      const prevLogs = src.logs.filter(l => l.timestamp >= previousSession.startTime && l.timestamp <= previousSession.endTime);
+      previousTonnage = prevLogs.reduce((s, l) => s + l.weight * l.reps, 0);
+    }
+
+    const exercisesToday = [...new Set(sessionLogs.map(l => l.exerciseName))];
+    const prs = []; // each: { exercise, weight, reps, type: 'top'|'backoff' }
+    let targetsHit = 0, targetsTotal = 0;
+
+    exercisesToday.forEach(exName => {
+      const exSessionLogs = sessionLogs.filter(l => l.exerciseName === exName).sort((a, b) => a.timestamp - b.timestamp);
+      const todayTop = exSessionLogs[0];
+      const todayBackoffs = exSessionLogs.slice(1);
+      const todayBestBackoff = todayBackoffs.length ? bestOf(todayBackoffs) : null;
+
+      // All prior logs of this exercise before this session
+      const allPriorLogs = src.logs.filter(l => l.exerciseName === exName && l.timestamp < session.startTime);
+      const { tops: priorTops, backs: priorBacks } = categorize(allPriorLogs);
+      const priorTopPR = priorTops.length ? bestOf(priorTops) : null;
+      const priorBackoffPR = priorBacks.length ? bestOf(priorBacks) : null;
+
+      // TOP PR check
+      if (todayTop && priorTopPR && isBetter(todayTop, priorTopPR)) {
+        prs.push({ exercise: exName, weight: todayTop.weight, reps: todayTop.reps, type: 'top' });
+      }
+      // BACK-OFF PR check
+      if (todayBestBackoff && priorBackoffPR && isBetter(todayBestBackoff, priorBackoffPR)) {
+        prs.push({ exercise: exName, weight: todayBestBackoff.weight, reps: todayBestBackoff.reps, type: 'backoff' });
+      }
+
+      // Target hit: compare today's top to last workout day's top, today's backoff to last workout day's backoff
+      if (allPriorLogs.length === 0) return;
+      const priorByDay = {};
+      allPriorLogs.forEach(l => { const k = dateKey(l.timestamp); if (!priorByDay[k]) priorByDay[k] = []; priorByDay[k].push(l); });
+      const lastDayLogs = Object.values(priorByDay).sort((a, b) => b[0].timestamp - a[0].timestamp)[0];
+      if (!lastDayLogs) return;
+      const lastDaySorted = [...lastDayLogs].sort((a, b) => a.timestamp - b.timestamp);
+      const lastDayTop = lastDaySorted[0];
+      const lastDayBackoffs = lastDaySorted.slice(1);
+      const lastDayBestBackoff = lastDayBackoffs.length ? bestOf(lastDayBackoffs) : null;
+
+      if (lastDayTop && todayTop) {
+        targetsTotal++;
+        if (isBetter(todayTop, lastDayTop)) targetsHit++;
+      }
+      if (lastDayBestBackoff && todayBestBackoff) {
+        targetsTotal++;
+        if (isBetter(todayBestBackoff, lastDayBestBackoff)) targetsHit++;
+      }
+    });
+
+    // This week's day type distribution
+    const weekStart = Date.now() - 7 * 86400000;
+    const weekLogs = src.logs.filter(l => l.timestamp >= weekStart);
+    const weekDistribution = { push: new Set(), pull: new Set(), upper: new Set(), leg: new Set() };
+    weekLogs.forEach(l => weekDistribution[l.dayType]?.add(dateKey(l.timestamp)));
+
+    return {
+      dayType: session.dayType,
+      duration,
+      totalTonnage,
+      previousTonnage,
+      tonnageDiff: previousTonnage > 0 ? ((totalTonnage - previousTonnage) / previousTonnage) * 100 : null,
+      prs,
+      targetsHit, targetsTotal,
+      setCount: sessionLogs.length,
+      weekDistribution: {
+        push: weekDistribution.push.size,
+        pull: weekDistribution.pull.size,
+        upper: weekDistribution.upper.size,
+        leg: weekDistribution.leg.size,
+      },
+    };
+  };
+
+  const exportData = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `apex-backup-${new Date().toISOString().split('T')[0]}.json`; a.click();
+    URL.revokeObjectURL(url);
+    setShowMenu(false);
+  };
+
+  const importData = () => {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.json';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const imp = JSON.parse(ev.target.result);
+          if (imp.exercises && imp.logs) {
+            saveData({ exercises: { ...DEFAULT_EXERCISES, ...imp.exercises }, logs: imp.logs, sessions: imp.sessions || [], customDays: imp.customDays || [] });
+            alert('Yedek yüklendi!');
+          }
+        } catch { alert('Dosya okunamadı.'); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+    setShowMenu(false);
+  };
+
+  const getLastPerformance = (exerciseName) => {
+    const logs = data.logs.filter(l => l.exerciseName === exerciseName).sort((a, b) => b.timestamp - a.timestamp);
+    if (logs.length === 0) return null;
+    const lastDate = new Date(logs[0].timestamp).toDateString();
+    return { date: logs[0].timestamp, sets: logs.filter(l => new Date(l.timestamp).toDateString() === lastDate).sort((a, b) => a.timestamp - b.timestamp) };
+  };
+
+  const getHistoryGrouped = (exerciseName) => {
+    const logs = data.logs.filter(l => l.exerciseName === exerciseName).sort((a, b) => b.timestamp - a.timestamp);
+    const grouped = {};
+    logs.forEach(log => { const d = new Date(log.timestamp).toDateString(); if (!grouped[d]) grouped[d] = []; grouped[d].push(log); });
+    return Object.entries(grouped).map(([date, list]) => ({ date, timestamp: list[0].timestamp, sets: list.sort((a, b) => a.timestamp - b.timestamp) }));
+  };
+
+  const startBackdatedWorkout = (targetDateKey, dayType) => {
+    const todayKey = dateKey(Date.now());
+    setCurrentDay(dayType);
+    setLogDate(targetDateKey === todayKey ? null : targetDateKey);
+    setDayDetailKey(null);
+    setView('day');
+  };
+
+  return (
+    <>
+      {view === 'home' && <HomeView onSelectDay={(d) => { setCurrentDay(d); setLogDate(null); setView('day'); }} data={data} dayConfig={dayConfig} onMenu={() => setShowMenu(true)} onTapCalendarDay={setDayDetailKey} onAddDay={() => setShowAddDay(true)} onEditDay={setEditDayId} />}
+      {view === 'day' && <DayView dayType={currentDay} cfg={dayConfig[currentDay]} exercises={data.exercises[currentDay] || []} logsForDay={data.logs} getLastPerformance={getLastPerformance} activeSession={getActiveSession()} onStartSession={startSession} onEndSession={endSession} onBack={() => { setView('home'); setLogDate(null); }} onSelectExercise={(e) => { setCurrentExercise(e); setView('exercise'); }} onAddExercise={() => setShowAddExercise(true)} onRemoveExercise={removeExercise} onReorderExercises={reorderExercises} logDate={logDate} />}
+      {view === 'exercise' && <ExerciseView exerciseName={currentExercise} cfg={dayConfig[currentDay]} history={getHistoryGrouped(currentExercise)} onBack={() => setView('day')} onAddLog={(w, r) => addLog(currentExercise, w, r)} onDeleteLog={deleteLog} logDate={logDate} />}
+      {showAddExercise && <AddExerciseModal cfg={dayConfig[currentDay]} existingExercises={data.exercises} dayConfig={dayConfig} currentDayId={currentDay} onClose={() => setShowAddExercise(false)} onAdd={(n) => { addExercise(n); setShowAddExercise(false); }} />}
+      {showMenu && <MenuModal onClose={() => setShowMenu(false)} onExport={exportData} onImport={importData} />}
+      {showAddDay && <DayEditorModal onClose={() => setShowAddDay(false)} onSave={addCustomDay} existingExercises={data.exercises} dayConfig={dayConfig} />}
+      {editDayId && <DayEditorModal editingDay={data.customDays.find(d => d.id === editDayId)} onClose={() => setEditDayId(null)} onSave={(name, sub, pal) => updateCustomDay(editDayId, name, sub, pal)} onDelete={() => { if (confirm('Bu günü ve tüm kayıtlarını silmek istiyor musun?')) deleteCustomDay(editDayId); }} />}
+      {prCelebration && <PRCelebration {...prCelebration} cfg={dayConfig[prCelebration.dayType] || dayConfig[currentDay]} onClose={() => setPrCelebration(null)} />}
+      {dayDetailKey && <DayDetailModal targetDateKey={dayDetailKey} data={data} dayConfig={dayConfig} onClose={() => setDayDetailKey(null)} onDeleteLog={deleteLog} onDeleteWorkout={deleteWorkoutDay} onAddWorkout={startBackdatedWorkout} />}
+      {sessionSummary && <SessionSummaryModal summary={sessionSummary} dayConfig={dayConfig} onClose={() => setSessionSummary(null)} />}
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+    </>
+  );
+}
+
+function HomeView({ onSelectDay, data, dayConfig, onMenu, onTapCalendarDay, onAddDay, onEditDay }) {
+  const todayLogs = data.logs.filter(l => dateKey(l.timestamp) === dateKey(Date.now()));
+  const totalSessions = new Set(data.logs.map(l => dateKey(l.timestamp))).size;
+  const totalVolume = data.logs.reduce((s, l) => s + l.weight * l.reps, 0);
+  const customIds = (data.customDays || []).map(d => d.id);
+
+  // Long-press handling for custom day cards
+  const pressTimer = useRef(null);
+  const startPress = (id) => { pressTimer.current = setTimeout(() => { haptic(40); onEditDay(id); }, 550); };
+  const cancelPress = () => { clearTimeout(pressTimer.current); };
+
+  return (
+    <div style={S.screen}>
+      <div style={S.header}>
+        <div style={S.brand}><Icon.Dumbbell /><span style={S.brandText}>APEX</span></div>
+        <button onClick={onMenu} style={S.menuBtn}>•••</button>
+      </div>
+      <div style={S.date}>{new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+      <div style={S.statsRow}>
+        <div style={S.statBox}><div style={S.statValue}>{todayLogs.length}</div><div style={S.statLabel}>BUGÜN SET</div></div>
+        <div style={S.statBox}><div style={S.statValue}>{totalSessions}</div><div style={S.statLabel}>ANTRENMAN</div></div>
+        <div style={S.statBox}><div style={S.statValue}>{(totalVolume / 1000).toFixed(1)}t</div><div style={S.statLabel}>TOPLAM HACİM</div></div>
+      </div>
+      <div style={S.sectionLabel}>BUGÜN HANGİSİ?</div>
+      <div style={S.dayGrid}>
+        {Object.entries(dayConfig).map(([key, cfg]) => {
+          const isCustom = customIds.includes(key);
+          return (
+            <button key={key} onClick={() => onSelectDay(key)}
+              onTouchStart={isCustom ? () => startPress(key) : undefined}
+              onTouchEnd={isCustom ? cancelPress : undefined}
+              onTouchMove={isCustom ? cancelPress : undefined}
+              style={{ ...S.dayCard, background: cfg.gradient, '--glow-low': cfg.glowLow, '--glow-high': cfg.glowHigh }} className="day-card">
+              <div style={S.dayCardInner}>
+                <div style={S.dayCardName}>{cfg.name}</div>
+                <div style={S.dayCardSubtitle}>{cfg.subtitle}</div>
+              </div>
+              {isCustom && <div style={S.customDayBadge} onClick={(e) => { e.stopPropagation(); onEditDay(key); }}>⋯</div>}
+            </button>
+          );
+        })}
+        <button onClick={onAddDay} style={S.addDayCard} className="day-card">
+          <div style={S.addDayInner}>
+            <div style={S.addDayPlus}>+</div>
+            <div style={S.addDayText}>GÜN EKLE</div>
+          </div>
+        </button>
+      </div>
+      <div style={{ ...S.sectionLabel, marginTop: 28 }}>TAKVİM</div>
+      <MonthlyCalendar logs={data.logs} sessions={data.sessions} dayConfig={dayConfig} onTapDay={onTapCalendarDay} />
+      <div style={S.legend}>
+        {Object.entries(dayConfig).map(([k, cfg]) => (
+          <div key={k} style={S.legendItem}><div style={{ ...S.legendDot, background: cfg.accent }} /><span style={S.legendLabel}>{cfg.name}</span></div>
+        ))}
+      </div>
+      <SixMonthStats logs={data.logs} sessions={data.sessions} />
+    </div>
+  );
+}
+
+function SixMonthStats({ logs, sessions }) {
+  const [selectedIdx, setSelectedIdx] = useState(null);
+
+  // Build last 6 months (including current), oldest → newest
+  const months = useMemo(() => {
+    const now = new Date();
+    const arr = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear(), month = d.getMonth();
+      // Workout days this month (unique dateKeys from logs)
+      const dayKeys = new Set();
+      logs.forEach(l => {
+        const ld = new Date(l.timestamp);
+        if (ld.getFullYear() === year && ld.getMonth() === month) dayKeys.add(dateKey(l.timestamp));
+      });
+      // Total duration from completed sessions this month
+      let totalMs = 0;
+      sessions.forEach(s => {
+        if (!s.endTime) return;
+        const sd = new Date(s.startTime);
+        if (sd.getFullYear() === year && sd.getMonth() === month) totalMs += (s.endTime - s.startTime);
+      });
+      // PR count this month (top + backoff) — compute by walking exercises
+      arr.push({ year, month, days: dayKeys.size, totalMs, label: TR_MONTHS_SHORT[month] });
+    }
+    return arr;
+  }, [logs, sessions]);
+
+  const maxDays = Math.max(...months.map(m => m.days), 1);
+  const isCurrentMonth = (m) => { const n = new Date(); return m.year === n.getFullYear() && m.month === n.getMonth(); };
+
+  const selected = selectedIdx != null ? months[selectedIdx] : null;
+
+  return (
+    <div style={{ marginTop: 28 }}>
+      <div style={S.sectionLabel}>SON 6 AY</div>
+      <div style={S.statsCard}>
+        <div style={S.barChartRow}>
+          {months.map((m, i) => {
+            const heightPct = (m.days / maxDays) * 100;
+            const active = isCurrentMonth(m);
+            const isSelected = selectedIdx === i;
+            return (
+              <button key={i} onClick={() => setSelectedIdx(isSelected ? null : i)} style={S.barColumn}>
+                <div style={{ ...S.barCount, color: isSelected ? '#FF3D3D' : (active ? '#FF3D3D' : '#888'), fontWeight: (active || isSelected) ? 800 : 600 }}>{m.days}</div>
+                <div style={S.barTrack}>
+                  <div style={{ ...S.barFill, height: `${Math.max(heightPct, 4)}%`, background: isSelected ? '#FF3D3D' : (active ? '#FF3D3D' : '#5a1f1f'), opacity: isSelected || active ? 1 : 0.7 }} />
+                </div>
+                <div style={{ ...S.barLabel, color: isSelected ? '#FF3D3D' : (active ? '#fff' : '#888'), fontWeight: (active || isSelected) ? 800 : 600 }}>{m.label}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        {selected ? (
+          <div style={S.statsDetail}>
+            <div style={S.statsDetailTitle}>{TR_MONTHS[selected.month]} {selected.year}</div>
+            <div style={S.statsDetailRow}>
+              <div style={S.statsDetailBox}>
+                <div style={S.statsDetailVal}>{selected.days}</div>
+                <div style={S.statsDetailLbl}>ANTRENMAN GÜNÜ</div>
+              </div>
+              <div style={S.statsDetailBox}>
+                <div style={S.statsDetailVal}>{selected.totalMs > 0 ? formatDurationLong(selected.totalMs) : '—'}</div>
+                <div style={S.statsDetailLbl}>TOPLAM SÜRE</div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={S.statsHint}>Detay için bir aya dokun</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WorkoutTimerDisplay({ startTime }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, []);
+  return <span style={S.timerDisplay}>{formatDuration(now - startTime)}</span>;
+}
+
+function DayView({ dayType, cfg, exercises, logsForDay, getLastPerformance, activeSession, onStartSession, onEndSession, onBack, onSelectExercise, onAddExercise, onRemoveExercise, onReorderExercises, logDate }) {
+  const [editMode, setEditMode] = useState(false);
+  const isBackdated = !!logDate;
+
+  // Count today's (or logDate's) sets per exercise
+  const targetDayKey = logDate || dateKey(Date.now());
+  const setsCountToday = (exName) => (logsForDay || []).filter(l => l.exerciseName === exName && l.dayType === dayType && dateKey(l.timestamp) === targetDayKey).length;
+
+  // Parse logDate to a nice display string
+  let backdatedLabel = '';
+  if (isBackdated) {
+    const parts = logDate.split('-').map(Number);
+    const d = new Date(parts[0], parts[1], parts[2]);
+    const wd = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][d.getDay()];
+    backdatedLabel = `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${wd}`;
+  }
+
+  return (
+    <div style={S.screen}>
+      <div style={S.topBar}>
+        <button onClick={onBack} style={S.iconBtn}><Icon.Chevron /></button>
+        <div style={S.topBarTitle}><span style={{ color: cfg.accent, fontWeight: 800 }}>{cfg.name}</span><span style={{ color: '#666', marginLeft: 8, fontSize: 13, fontWeight: 500 }}>DAY</span></div>
+        <button onClick={() => setEditMode(!editMode)} style={S.editBtn}>{editMode ? 'BİTTİ' : 'DÜZENLE'}</button>
+      </div>
+
+      {isBackdated ? (
+        <div style={{ ...S.backdateBanner, borderColor: cfg.accent }}>
+          <Icon.Cal />
+          <div>
+            <div style={S.backdateLabel}>GEÇMİŞ TARİHE KAYIT</div>
+            <div style={S.backdateDate}>{backdatedLabel}</div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ ...S.timerCard, borderColor: activeSession ? cfg.accent : '#1f1f1f' }}>
+          <div style={S.timerLeft}>
+            <Icon.Timer />
+            <div>
+              <div style={S.timerLabel}>{activeSession ? 'ANTRENMAN' : 'HAZIRSIN MI?'}</div>
+              {activeSession ? <WorkoutTimerDisplay startTime={activeSession.startTime} /> : <div style={{ ...S.timerDisplay, color: '#666' }}>00:00</div>}
+            </div>
+          </div>
+          {activeSession ? (
+            <button onClick={onEndSession} style={{ ...S.timerBtn, background: '#FF5252', color: '#fff' }}><Icon.Stop /> BİTİR</button>
+          ) : (
+            <button onClick={onStartSession} style={{ ...S.timerBtn, background: cfg.gradient, color: '#fff' }}><Icon.Play /> BAŞLA</button>
+          )}
+        </div>
+      )}
+
+      {editMode && <div style={S.hintBox}>Sürüklemek için uzun bas. Silmek için sağdaki butona dokun.</div>}
+      {!editMode && exercises.length > 1 && <div style={S.hintBoxSmall}>İpucu: Sırayı değiştirmek için kart üzerinde uzun bas.</div>}
+      <ReorderableList items={exercises} getKey={(name) => name} onReorder={onReorderExercises}
+        renderItem={(name, idx, isDragging) => {
+          const last = getLastPerformance(name);
+          const doneSets = setsCountToday(name);
+          const isDone = doneSets > 0;
+          return (
+            <div style={{ ...S.exerciseCard, borderColor: isDragging ? cfg.accent : (isDone ? cfg.accentSoft : '#1f1f1f'), opacity: (!editMode && !isDone) ? 0.55 : 1, transition: 'opacity 0.2s, border-color 0.2s' }}>
+              <div style={S.dragHandle}><Icon.Drag /></div>
+              <button onClick={() => !editMode && !isDragging && onSelectExercise(name)} style={S.exerciseCardBtn} className="exercise-btn">
+                <div style={S.exerciseLeft}>
+                  <div style={{ ...S.exerciseName, color: isDone ? '#fff' : '#bbb' }}>{name}</div>
+                  {last ? <div style={S.exerciseLast}>Son: {last.sets.map(s => `${s.weight}kg × ${s.reps}`).join(' · ')}</div> : <div style={{ ...S.exerciseLast, color: '#555' }}>Henüz kayıt yok</div>}
+                </div>
+                {!editMode && (
+                  isDone
+                    ? <div style={{ ...S.doneBadge, background: cfg.accentSoft, color: cfg.accent }}>✓ {doneSets} set</div>
+                    : <div style={{ ...S.chevron, color: '#555' }}>→</div>
+                )}
+              </button>
+              {editMode && <button onClick={() => onRemoveExercise(name)} style={S.removeBtn}><Icon.Trash /></button>}
+            </div>
+          );
+        }} />
+      {exercises.length === 0 && <div style={S.emptyState}>Henüz egzersiz yok.<br />Aşağıdan ekleyebilirsin.</div>}
+      <button onClick={onAddExercise} style={{ ...S.addBtn, borderColor: cfg.accent, color: cfg.accent, marginTop: 16 }} className="add-btn">
+        <Icon.Plus /> EGZERSİZ EKLE
+      </button>
+    </div>
+  );
+}
+
+function ExerciseView({ exerciseName, cfg, history, onBack, onAddLog, onDeleteLog, logDate }) {
+  const [weight, setWeight] = useState('');
+  const [reps, setReps] = useState('');
+  const weightRef = useRef(null);
+  const isBackdated = !!logDate;
+  let backdatedLabel = '';
+  if (isBackdated) {
+    const parts = logDate.split('-').map(Number);
+    const d = new Date(parts[0], parts[1], parts[2]);
+    backdatedLabel = `${d.getDate()} ${TR_MONTHS[d.getMonth()]}`;
+  }
+
+  // Helpers
+  const isBetterSet = (a, b) => a.weight > b.weight || (a.weight === b.weight && a.reps > b.reps);
+  const bestOfSets = (sets) => sets.reduce((best, s) => !best || isBetterSet(s, best) ? s : best, null);
+
+  // Build categorized data (Top vs Back-off) across all history
+  // history is { date, timestamp, sets: [...] } per day, sorted newest first
+  // Each day's first set (by timestamp) = top, rest = back-off
+  const topAllTime = [], backoffAllTime = [];
+  history.forEach(h => {
+    const sorted = [...h.sets].sort((a, b) => a.timestamp - b.timestamp);
+    if (sorted[0]) topAllTime.push(sorted[0]);
+    sorted.slice(1).forEach(s => backoffAllTime.push(s));
+  });
+  const topPR = topAllTime.length ? bestOfSets(topAllTime) : null;
+  const backoffPR = backoffAllTime.length ? bestOfSets(backoffAllTime) : null;
+
+  // Target system: from previous workout day
+  const todayOrLogKey = logDate || dateKey(Date.now());
+  const targetTimestamp = logDate
+    ? (() => { const p = logDate.split('-').map(Number); return new Date(p[0], p[1], p[2]).setHours(0,0,0,0); })()
+    : new Date().setHours(0,0,0,0);
+
+  const previousEntry = history.find(h => h.timestamp < targetTimestamp);
+  let targetTop = null, targetBackoff = null;
+  if (previousEntry) {
+    const sorted = [...previousEntry.sets].sort((a, b) => a.timestamp - b.timestamp);
+    targetTop = sorted[0] || null;
+    const backSets = sorted.slice(1);
+    targetBackoff = backSets.length ? bestOfSets(backSets) : null;
+  }
+
+  // Today's sets (in order)
+  const todayEntry = history.find(h => dateKey(h.timestamp) === todayOrLogKey);
+  const todaySorted = todayEntry ? [...todayEntry.sets].sort((a, b) => a.timestamp - b.timestamp) : [];
+  const todayTop = todaySorted[0] || null;
+  const todayBackoffs = todaySorted.slice(1);
+  const todayBestBackoff = todayBackoffs.length ? bestOfSets(todayBackoffs) : null;
+
+  const topBeaten = !!(todayTop && targetTop && isBetterSet(todayTop, targetTop));
+  const backoffBeaten = !!(todayBestBackoff && targetBackoff && isBetterSet(todayBestBackoff, targetBackoff));
+
+  // Dynamic: show top focus if no sets yet today; backoff focus once first set is in
+  const showingBackoff = todaySorted.length > 0;
+
+  const handleSubmit = () => {
+    if (!weight || !reps) return;
+    const normalizedWeight = weight.replace(',', '.');
+    const w = parseFloat(normalizedWeight);
+    if (!w || w <= 0) return;
+    onAddLog(normalizedWeight, reps);
+    setWeight(''); setReps('');
+    weightRef.current?.focus();
+  };
+
+  const formatDate = (ts) => {
+    const d = new Date(ts), today = new Date();
+    const diff = Math.floor((today - d) / 86400000);
+    if (diff === 0) return 'Bugün';
+    if (diff === 1) return 'Dün';
+    if (diff < 7) return `${diff} gün önce`;
+    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+  };
+
+  return (
+    <div style={S.screen}>
+      <div style={S.topBar}>
+        <button onClick={onBack} style={S.iconBtn}><Icon.Chevron /></button>
+        <div style={{ ...S.topBarTitle, color: '#fff', fontSize: 17 }}>{exerciseName}</div>
+        <div style={{ width: 60 }} />
+      </div>
+
+      {/* TWO PRs: TOP + BACK-OFF */}
+      {(topPR || backoffPR) && (
+        <div style={{ ...S.prBoxDual, borderColor: cfg.accent, background: cfg.accentSoft }}>
+          <div style={S.prDualRow}>
+            <span style={S.prDualLabel}>TOP REKOR</span>
+            <span style={S.prDualValue}>{topPR ? `${topPR.weight}kg × ${topPR.reps}` : '—'}</span>
+          </div>
+          <div style={{ ...S.prDualRow, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <span style={S.prDualLabel}>BACK-OFF REKOR</span>
+            <span style={S.prDualValue}>{backoffPR ? `${backoffPR.weight}kg × ${backoffPR.reps}` : '—'}</span>
+          </div>
+        </div>
+      )}
+
+      {/* DYNAMIC TARGET CARD */}
+      {!showingBackoff && targetTop ? (
+        // Phase 1: no sets yet → focus on TOP
+        <div style={{ ...S.targetCard, borderColor: topBeaten ? '#4CAF50' : '#FF5252', background: topBeaten ? 'rgba(76,175,80,0.08)' : 'rgba(255,82,82,0.06)' }}>
+          <div style={S.targetLabel}>TOP SET — YENMEN GEREKEN</div>
+          <div style={{ ...S.targetValue, color: topBeaten ? '#4CAF50' : '#FF5252' }}>
+            {targetTop.weight}<span style={S.targetUnit}>kg</span> × {targetTop.reps}
+          </div>
+          <div style={S.targetStatus}>İlk setin senin ana setin. Bunu yendiğin anda back-off hedefine geçeriz.</div>
+        </div>
+      ) : showingBackoff ? (
+        // Phase 2+: focus on BACK-OFF, show top status compact
+        <div style={{ ...S.targetCard, borderColor: backoffBeaten ? '#4CAF50' : (targetBackoff ? '#FF5252' : '#1f1f1f'), background: backoffBeaten ? 'rgba(76,175,80,0.08)' : (targetBackoff ? 'rgba(255,82,82,0.06)' : '#0f0f0f') }}>
+          {/* Top set status compact strip */}
+          <div style={S.targetTopStrip}>
+            {topBeaten ? (
+              <><span style={{ color: '#4CAF50' }}>✓</span> TOP YENDİN — {todayTop.weight}kg × {todayTop.reps} <span style={{ color: '#666' }}>(hedef: {targetTop.weight}×{targetTop.reps})</span></>
+            ) : targetTop ? (
+              <><span style={{ color: '#FF5252' }}>✗</span> TOP yenmedi — {todayTop.weight}kg × {todayTop.reps} <span style={{ color: '#666' }}>(hedef: {targetTop.weight}×{targetTop.reps})</span></>
+            ) : (
+              <><span style={{ color: '#888' }}>●</span> İLK TOP — {todayTop.weight}kg × {todayTop.reps}</>
+            )}
+          </div>
+          {/* Back-off focus */}
+          {targetBackoff ? (
+            <>
+              <div style={{ ...S.targetLabel, marginTop: 12 }}>{backoffBeaten ? '✓ BACK-OFF YENDİN' : 'BACK-OFF — YENMEN GEREKEN'}</div>
+              <div style={{ ...S.targetValue, color: backoffBeaten ? '#4CAF50' : '#FF5252' }}>
+                {targetBackoff.weight}<span style={S.targetUnit}>kg</span> × {targetBackoff.reps}
+              </div>
+              {backoffBeaten ? (
+                <div style={S.targetStatus}>Bugün en iyi back-off: <span style={{ color: '#4CAF50', fontWeight: 800 }}>{todayBestBackoff.weight}kg × {todayBestBackoff.reps}</span> 🔥</div>
+              ) : todayBestBackoff ? (
+                <div style={S.targetStatus}>Bugün en iyi back-off: {todayBestBackoff.weight}kg × {todayBestBackoff.reps}</div>
+              ) : (
+                <div style={S.targetStatus}>Şimdi back-off set'i yap, geçen seferki seviyeyi geç</div>
+              )}
+            </>
+          ) : (
+            <>
+              <div style={{ ...S.targetLabel, marginTop: 12 }}>İLK BACK-OFF</div>
+              <div style={{ ...S.targetValue, color: '#888', fontSize: 24 }}>—</div>
+              <div style={S.targetStatus}>Geçen sefer back-off set yapmamışsın. Bugün referansı sen oluştur.</div>
+            </>
+          )}
+        </div>
+      ) : (
+        <div style={{ ...S.targetCard, borderColor: '#1f1f1f', background: '#0f0f0f' }}>
+          <div style={S.targetLabel}>İLK SEFER</div>
+          <div style={{ ...S.targetValue, color: '#666', fontSize: 24 }}>—</div>
+          <div style={S.targetStatus}>Bu egzersiz için ilk antrenmanın. Bugün referansı sen oluştur.</div>
+        </div>
+      )}
+
+      <ProgressChart history={history} color={cfg.accent} />
+      <div style={S.inputCard}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ ...S.inputLabel, marginBottom: 0 }}>
+            {showingBackoff ? `BACK-OFF SET ${todaySorted.length}` : 'TOP SET'}
+          </div>
+          {isBackdated && <div style={{ fontSize: 10, color: cfg.accent, fontWeight: 700, letterSpacing: 1 }}>📅 {backdatedLabel}</div>}
+        </div>
+        <div style={S.inputRow}>
+          <div style={S.inputGroup}>
+            <input ref={weightRef} type="text" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value.replace(/[^0-9.,]/g, '').replace(/([.,].*)[.,]/g, '$1'))} placeholder="0" style={S.numInput} />
+            <div style={S.unit}>KG</div>
+          </div>
+          <div style={S.times}>×</div>
+          <div style={S.inputGroup}>
+            <input type="number" inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} placeholder="0" style={S.numInput} />
+            <div style={S.unit}>TEKRAR</div>
+          </div>
+        </div>
+        <button onClick={handleSubmit} disabled={!weight || !reps} style={{ ...S.submitBtn, background: weight && reps ? cfg.gradient : '#2a2a2a', color: weight && reps ? '#fff' : '#666' }} className="submit-btn">
+          <Icon.Check /> KAYDET
+        </button>
+      </div>
+      <div style={S.sectionLabel}>GEÇMİŞ</div>
+      {history.length === 0 && <div style={S.emptyState}>İlk setini ekle, geçmiş burada görünecek.</div>}
+      <div style={S.historyList}>
+        {history.map((session, i) => {
+          const sorted = [...session.sets].sort((a, b) => a.timestamp - b.timestamp);
+          return (
+            <div key={session.timestamp} style={S.historyCard}>
+              <div style={S.historyHeader}>
+                <div style={S.historyDate}><Icon.Cal /><span>{formatDate(session.timestamp)}</span></div>
+                <div style={S.historyVolume}>{session.sets.reduce((s, x) => s + x.weight * x.reps, 0).toFixed(0)}kg hacim</div>
+              </div>
+              <div style={S.setsList}>
+                {sorted.map((set, idx) => {
+                  const isTop = idx === 0;
+                  const isCurrentDay = dateKey(session.timestamp) === todayOrLogKey;
+                  // Beat-target check: top set vs targetTop, back-off vs targetBackoff
+                  const relevantTarget = isTop ? targetTop : targetBackoff;
+                  const beatsTarget = isCurrentDay && relevantTarget && isBetterSet(set, relevantTarget);
+                  return (
+                    <div key={set.id} style={S.setRow}>
+                      <div style={{ ...S.setIndex, background: isTop ? cfg.accentSoft : '#1f1f1f', color: isTop ? cfg.accent : '#888' }}>
+                        {isTop ? 'T' : idx + 1}
+                      </div>
+                      <div style={S.setValue}>
+                        <span style={S.setWeight}>{set.weight}</span><span style={S.setUnit}>kg</span>
+                        <span style={S.setX}>×</span><span style={S.setReps}>{set.reps}</span>
+                        {beatsTarget && <span style={S.setBeat}>✓</span>}
+                      </div>
+                      {i === 0 && <button onClick={() => onDeleteLog(set.id)} style={S.tinyDelBtn}>×</button>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AddExerciseModal({ cfg, existingExercises, dayConfig, currentDayId, onClose, onAdd }) {
+  const [name, setName] = useState('');
+  const [mode, setMode] = useState('new'); // 'new' | 'copy'
+
+  // Build list of exercises from OTHER days for copying
+  const copyableExercises = [];
+  const seen = new Set();
+  Object.entries(existingExercises || {}).forEach(([dayId, exList]) => {
+    if (dayId === currentDayId) return;
+    const dayName = dayConfig[dayId]?.name || dayId;
+    (exList || []).forEach(ex => {
+      const key = ex.toLowerCase();
+      if (!seen.has(key)) { seen.add(key); copyableExercises.push({ name: ex, from: dayName }); }
+    });
+  });
+
+  return (
+    <div style={S.modalOverlay} onClick={onClose}>
+      <div style={S.modal} onClick={e => e.stopPropagation()}>
+        <div style={S.modalTitle}>Egzersiz Ekle</div>
+
+        <div style={S.alarmDirSelect}>
+          <button onClick={() => setMode('new')} style={{ ...S.alarmDirBtn, ...(mode === 'new' ? { background: cfg.accentSoft, borderColor: cfg.accent, color: cfg.accent } : {}) }}>YENİ YAZ</button>
+          <button onClick={() => setMode('copy')} style={{ ...S.alarmDirBtn, ...(mode === 'copy' ? { background: cfg.accentSoft, borderColor: cfg.accent, color: cfg.accent } : {}) }}>KOPYALA</button>
+        </div>
+
+        {mode === 'new' ? (
+          <>
+            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && name.trim() && onAdd(name)} placeholder="Örn. Cable Fly" style={S.modalInput} />
+            <div style={S.modalActions}>
+              <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
+              <button onClick={() => name.trim() && onAdd(name)} style={{ ...S.modalConfirm, background: cfg.gradient }}>EKLE</button>
+            </div>
+          </>
+        ) : (
+          <>
+            {copyableExercises.length === 0 ? (
+              <div style={{ ...S.emptyState, padding: '24px 16px', fontSize: 13 }}>Kopyalanacak egzersiz yok.<br/>Diğer günlere egzersiz ekledikçe burada görünür.</div>
+            ) : (
+              <div style={{ maxHeight: '50vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                {copyableExercises.map((ex, i) => (
+                  <button key={i} onClick={() => onAdd(ex.name)} style={S.copyExerciseBtn} className="exercise-btn">
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{ex.name}</span>
+                    <span style={{ fontSize: 10, color: '#666', fontWeight: 700, letterSpacing: 0.5 }}>{ex.from}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button onClick={onClose} style={{ ...S.modalCancel, marginTop: 4 }}>KAPAT</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MenuModal({ onClose, onExport, onImport }) {
+  return (
+    <div style={S.modalOverlay} onClick={onClose}>
+      <div style={S.modal} onClick={e => e.stopPropagation()}>
+        <div style={S.modalTitle}>Veri</div>
+        <button onClick={onExport} style={S.menuItem}>📤 Yedek Dışa Aktar</button>
+        <button onClick={onImport} style={S.menuItem}>📥 Yedek Yükle</button>
+        <button onClick={onClose} style={{ ...S.modalCancel, marginTop: 8 }}>KAPAT</button>
+      </div>
+    </div>
+  );
+}
+
+function DayEditorModal({ editingDay, onClose, onSave, onDelete, existingExercises, dayConfig }) {
+  const isEdit = !!editingDay;
+  const [name, setName] = useState(editingDay?.name || '');
+  const [subtitle, setSubtitle] = useState(editingDay?.subtitle || '');
+  const [paletteId, setPaletteId] = useState(editingDay?.paletteId || DAY_COLOR_PALETTE[0].id);
+  const [copiedExercises, setCopiedExercises] = useState([]);
+  const [showCopySection, setShowCopySection] = useState(false);
+
+  const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId) || DAY_COLOR_PALETTE[0];
+  const previewGradient = `linear-gradient(135deg,${palette.accent},${palette.dark})`;
+
+  // Copyable exercises from existing days (for new day creation only)
+  const copyable = [];
+  const seen = new Set();
+  if (!isEdit && existingExercises) {
+    Object.entries(existingExercises).forEach(([dayId, exList]) => {
+      const dayName = dayConfig?.[dayId]?.name || dayId;
+      (exList || []).forEach(ex => {
+        const key = ex.toLowerCase();
+        if (!seen.has(key)) { seen.add(key); copyable.push({ name: ex, from: dayName }); }
+      });
+    });
+  }
+
+  const toggleCopy = (exName) => {
+    setCopiedExercises(prev => prev.includes(exName) ? prev.filter(e => e !== exName) : [...prev, exName]);
+  };
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    if (isEdit) {
+      onSave(name, subtitle, paletteId);
+    } else {
+      onSave(name, subtitle, paletteId, copiedExercises);
+    }
+  };
+
+  return (
+    <div style={S.modalOverlay} onClick={onClose}>
+      <div style={{ ...S.modal, maxWidth: 380 }} onClick={e => e.stopPropagation()}>
+        <div style={S.modalTitle}>{isEdit ? 'Günü Düzenle' : 'Yeni Gün'}</div>
+
+        {/* Preview card */}
+        <div style={{ ...S.dayPreview, background: previewGradient }}>
+          <div style={S.dayPreviewName}>{name.trim() ? name.toUpperCase() : 'GÜN ADI'}</div>
+          <div style={S.dayPreviewSub}>{subtitle.trim() || 'Alt başlık (opsiyonel)'}</div>
+        </div>
+
+        <div style={S.inputLabel}>GÜN ADI</div>
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Örn. Shoulders & Arms" style={{ ...S.modalInput, marginTop: 6, marginBottom: 12 }} />
+
+        <div style={S.inputLabel}>ALT BAŞLIK (OPSİYONEL)</div>
+        <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Örn. Omuz · Biceps · Triceps" style={{ ...S.modalInput, marginTop: 6, marginBottom: 12 }} />
+
+        <div style={S.inputLabel}>RENK</div>
+        <div style={S.colorGrid}>
+          {DAY_COLOR_PALETTE.map(p => (
+            <button key={p.id} onClick={() => setPaletteId(p.id)} style={{ ...S.colorSwatch, background: `linear-gradient(135deg,${p.accent},${p.dark})`, border: paletteId === p.id ? '3px solid #fff' : '3px solid transparent', transform: paletteId === p.id ? 'scale(1.1)' : 'scale(1)' }} />
+          ))}
+        </div>
+
+        {!isEdit && copyable.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <button onClick={() => setShowCopySection(!showCopySection)} style={S.copyToggle}>
+              {showCopySection ? '▼' : '▶'} Mevcut günlerden egzersiz kopyala {copiedExercises.length > 0 && `(${copiedExercises.length})`}
+            </button>
+            {showCopySection && (
+              <div style={{ maxHeight: '30vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+                {copyable.map((ex, i) => {
+                  const selected = copiedExercises.includes(ex.name);
+                  return (
+                    <button key={i} onClick={() => toggleCopy(ex.name)} style={{ ...S.copyExerciseBtn, borderColor: selected ? palette.accent : '#1f1f1f', background: selected ? `rgba(255,255,255,0.04)` : '#0a0a0a' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: selected ? '#fff' : '#aaa' }}>
+                        {selected ? '✓ ' : ''}{ex.name}
+                      </span>
+                      <span style={{ fontSize: 10, color: '#666', fontWeight: 700 }}>{ex.from}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div style={{ ...S.modalActions, marginTop: 16 }}>
+          <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
+          <button onClick={handleSave} disabled={!name.trim()} style={{ ...S.modalConfirm, background: name.trim() ? previewGradient : '#2a2a2a', color: name.trim() ? '#fff' : '#666' }}>{isEdit ? 'KAYDET' : 'OLUŞTUR'}</button>
+        </div>
+
+        {isEdit && onDelete && (
+          <button onClick={onDelete} style={S.deleteDayBtn}>🗑 Bu günü sil</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SessionSummaryModal({ summary, dayConfig, onClose }) {
+  const cfg = dayConfig[summary.dayType] || BUILTIN_DAYS.push;
+  const diffPositive = summary.tonnageDiff != null && summary.tonnageDiff >= 0;
+  return (
+    <div style={S.modalOverlay} onClick={onClose}>
+      <div style={{ ...S.modal, maxWidth: 420, padding: 0 }} onClick={e => e.stopPropagation()}>
+        <div style={{ ...S.summaryHeader, background: cfg.gradient }}>
+          <div style={S.summaryHeaderTitle}>{cfg.name} TAMAMLANDI</div>
+          <div style={S.summaryHeaderDur}>{formatDurationLong(summary.duration)}</div>
+        </div>
+
+        <div style={{ padding: 20 }}>
+          <div style={S.summaryHero}>
+            <div style={S.summaryHeroValue}>{(summary.totalTonnage/1000).toFixed(1)}<span style={S.summaryHeroUnit}>t</span></div>
+            <div style={S.summaryHeroLabel}>TOPLAM HACİM</div>
+            {summary.tonnageDiff != null && (
+              <div style={{ ...S.summaryDiff, color: diffPositive ? '#4CAF50' : '#FF5252' }}>
+                {diffPositive ? '▲' : '▼'} {Math.abs(summary.tonnageDiff).toFixed(0)}% önceki {cfg.name} gününe göre
+              </div>
+            )}
+          </div>
+
+          <div style={S.summaryStatsGrid}>
+            <div style={S.summaryStatBox}>
+              <div style={S.summaryStatValue}>{summary.setCount}</div>
+              <div style={S.summaryStatLabel}>SET</div>
+            </div>
+            <div style={S.summaryStatBox}>
+              <div style={{ ...S.summaryStatValue, color: summary.prs.length > 0 ? '#FFD700' : '#fff' }}>{summary.prs.length}</div>
+              <div style={S.summaryStatLabel}>PR</div>
+            </div>
+            <div style={S.summaryStatBox}>
+              <div style={{ ...S.summaryStatValue, color: summary.targetsHit === summary.targetsTotal && summary.targetsTotal > 0 ? '#4CAF50' : '#fff' }}>
+                {summary.targetsHit}<span style={{ color: '#666', fontSize: 20 }}>/{summary.targetsTotal}</span>
+              </div>
+              <div style={S.summaryStatLabel}>HEDEF</div>
+            </div>
+          </div>
+
+          {summary.prs.length > 0 && (
+            <div style={S.summaryPRs}>
+              <div style={S.summarySectionLabel}>YENİ REKORLAR</div>
+              {summary.prs.map((pr, i) => (
+                <div key={i} style={S.summaryPRRow}>
+                  <span style={{ color: pr.type === 'top' ? '#FFD700' : '#C0C0C0', fontSize: 18 }}>★</span>
+                  <span style={S.summaryPRName}>{pr.exercise}</span>
+                  <span style={{ ...S.summaryPRType, color: pr.type === 'top' ? '#FFD700' : '#C0C0C0' }}>{pr.type === 'top' ? 'TOP' : 'BACK-OFF'}</span>
+                  <span style={S.summaryPRVal}>{pr.weight}kg × {pr.reps}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={S.summaryWeek}>
+            <div style={S.summarySectionLabel}>BU HAFTANIN DAĞILIMI</div>
+            <div style={S.summaryWeekRow}>
+              {Object.entries(summary.weekDistribution).map(([type, count]) => {
+                const tcfg = BUILTIN_DAYS[type] || { accent: '#666', name: type };
+                return (
+                  <div key={type} style={{ ...S.summaryWeekBox, opacity: count > 0 ? 1 : 0.4, borderColor: count > 0 ? tcfg.accent : '#1f1f1f' }}>
+                    <div style={{ ...S.summaryWeekCount, color: count > 0 ? tcfg.accent : '#444' }}>{count}</div>
+                    <div style={S.summaryWeekDay}>{tcfg.name}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <button onClick={onClose} style={{ ...S.submitBtn, background: cfg.gradient, marginTop: 18 }} className="submit-btn">
+            <Icon.Check /> TAMAM
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// MARKETS TAB
+// ═══════════════════════════════════════════
+
+function MarketsTab() {
+  const [apiKey, setApiKey] = useState(null);
+  const [twelveKey, setTwelveKey] = useState(null);
+  const [watchlist, setWatchlist] = useState([]);
+  const [alarms, setAlarms] = useState([]);
+  const [quotes, setQuotes] = useState({});
+  const [loading, setLoading] = useState({});
+  const [lastRefresh, setLastRefresh] = useState(null);
+  const [showAddTicker, setShowAddTicker] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [detailSymbol, setDetailSymbol] = useState(null);
+  const [showAlarmModal, setShowAlarmModal] = useState(null); // null | symbol
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(MARKET_KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        setApiKey(p.apiKey || null);
+        setTwelveKey(p.twelveKey || null);
+        setWatchlist(p.watchlist || []);
+        // Migrate old alarm format (triggered:bool) to new (state:string + fireCount)
+        const migratedAlarms = (p.alarms || []).map(a => {
+          if (a.state) return a; // already new format
+          return {
+            id: a.id, symbol: a.symbol, direction: a.direction, price: a.price, createdAt: a.createdAt,
+            state: a.triggered ? 'fired' : 'armed',
+            lastFiredAt: a.triggeredAt || null,
+            lastFirePrice: a.triggerPrice || null,
+            fireCount: a.triggered ? 1 : 0,
+          };
+        });
+        setAlarms(migratedAlarms);
+      }
+    } catch (e) {}
+  }, []);
+
+  const saveMarketData = (newApiKey, newTwelveKey, newWatchlist, newAlarms) => {
+    try { localStorage.setItem(MARKET_KEY, JSON.stringify({ apiKey: newApiKey, twelveKey: newTwelveKey, watchlist: newWatchlist, alarms: newAlarms })); } catch (e) {}
+  };
+
+  const fetchQuote = useCallback(async (symbol) => {
+    if (!apiKey) return null;
+    try {
+      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`);
+      const data = await res.json();
+      if (data.c !== undefined && data.c !== 0) return data;
+      return { error: true };
+    } catch (e) { return { error: true }; }
+  }, [apiKey]);
+
+  const refreshAll = useCallback(async () => {
+    if (!apiKey) return;
+    const allSymbols = [...MARKET_DEFAULTS.map(d => d.symbol), ...watchlist];
+    const loadingState = {};
+    allSymbols.forEach(s => loadingState[s] = true);
+    setLoading(loadingState);
+    const results = await Promise.all(allSymbols.map(async (s) => [s, await fetchQuote(s)]));
+    const newQuotes = {};
+    results.forEach(([s, q]) => { if (q) newQuotes[s] = q; });
+    setQuotes(prev => ({ ...prev, ...newQuotes }));
+    setLoading({});
+    setLastRefresh(Date.now());
+  }, [apiKey, watchlist, fetchQuote]);
+
+  useEffect(() => {
+    if (!apiKey) return;
+    refreshAll();
+    const interval = setInterval(refreshAll, REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [apiKey, watchlist, refreshAll]);
+
+  const addToWatchlist = async (symbol) => {
+    const sym = symbol.trim().toUpperCase();
+    if (!sym || watchlist.includes(sym) || MARKET_DEFAULTS.some(d => d.symbol === sym)) { setShowAddTicker(false); return; }
+    const quote = await fetchQuote(sym);
+    if (!quote || quote.error) { alert(`"${sym}" bulunamadı.`); return; }
+    const newWatchlist = [...watchlist, sym];
+    setWatchlist(newWatchlist); setQuotes(prev => ({ ...prev, [sym]: quote }));
+    saveMarketData(apiKey, twelveKey, newWatchlist, alarms); setShowAddTicker(false);
+  };
+
+  const removeFromWatchlist = (symbol) => { const n = watchlist.filter(s => s !== symbol); setWatchlist(n); saveMarketData(apiKey, twelveKey, n, alarms); };
+  const reorderWatchlist = (newOrder) => { setWatchlist(newOrder); saveMarketData(apiKey, twelveKey, newOrder, alarms); };
+  const saveApiKey = (key) => { setApiKey(key); saveMarketData(key, twelveKey, watchlist, alarms); setShowSettings(false); };
+  const saveTwelveKey = (key) => { setTwelveKey(key); saveMarketData(apiKey, key, watchlist, alarms); };
+
+  const createAlarm = (symbol, direction, price) => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      try { Notification.requestPermission(); } catch (e) {}
+    }
+    const newAlarm = {
+      id: Date.now().toString() + Math.random(),
+      symbol, direction, price: parseFloat(price),
+      createdAt: Date.now(),
+      state: 'armed',
+      lastFiredAt: null,
+      lastFirePrice: null,
+      fireCount: 0,
+    };
+    const newAlarms = [...alarms, newAlarm];
+    setAlarms(newAlarms);
+    saveMarketData(apiKey, twelveKey, watchlist, newAlarms);
+    setShowAlarmModal(null);
+  };
+
+  const deleteAlarm = (id) => {
+    const newAlarms = alarms.filter(a => a.id !== id);
+    setAlarms(newAlarms);
+    saveMarketData(apiKey, twelveKey, watchlist, newAlarms);
+  };
+
+  // Check alarms whenever quotes update — armed alarms fire when condition met,
+  // fired alarms re-arm when price moves 0.5% away from threshold
+  useEffect(() => {
+    if (!alarms.length) return;
+    const REARM_BUFFER_PCT = 0.5;
+    let anyChange = false;
+
+    const newAlarms = alarms.map(a => {
+      const q = quotes[a.symbol];
+      if (!q || q.error || q.c == null) return a;
+      const conditionMet = a.direction === 'above' ? q.c >= a.price : q.c <= a.price;
+
+      if (a.state === 'armed' && conditionMet) {
+        anyChange = true;
+        const dirText = a.direction === 'above' ? '↑ üstüne çıktı' : '↓ altına düştü';
+        const body = `${a.symbol}: $${q.c.toFixed(2)} (alarm: $${a.price.toFixed(2)})`;
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try { new Notification(`${a.symbol} ${dirText}`, { body, tag: a.id + '-' + Date.now() }); } catch (e) {}
+        }
+        haptic([100, 60, 100, 60, 100]);
+        return { ...a, state: 'fired', lastFiredAt: Date.now(), lastFirePrice: q.c, fireCount: (a.fireCount || 0) + 1 };
+      }
+
+      if (a.state === 'fired') {
+        const buffer = a.price * (REARM_BUFFER_PCT / 100);
+        const reArmed = a.direction === 'above' ? q.c < (a.price - buffer) : q.c > (a.price + buffer);
+        if (reArmed) {
+          anyChange = true;
+          return { ...a, state: 'armed' };
+        }
+      }
+      return a;
+    });
+
+    if (anyChange) {
+      setAlarms(newAlarms);
+      saveMarketData(apiKey, twelveKey, watchlist, newAlarms);
+    }
+  }, [quotes]);
+
+  if (!apiKey) return <ApiKeySetup onSave={saveApiKey} />;
+
+  const alarmModalNode = showAlarmModal ? <AlarmModal symbol={showAlarmModal} currentPrice={quotes[showAlarmModal]?.c} onClose={() => setShowAlarmModal(null)} onCreate={createAlarm} /> : null;
+
+  if (detailSymbol) {
+    const defaultEntry = MARKET_DEFAULTS.find(d => d.symbol === detailSymbol);
+    const symbolAlarms = alarms.filter(a => a.symbol === detailSymbol);
+    return (
+      <>
+        <StockDetailView symbol={detailSymbol} label={defaultEntry?.name} quote={quotes[detailSymbol]} twelveKey={twelveKey} onSaveTwelveKey={saveTwelveKey} alarms={symbolAlarms} onCreateAlarmClick={() => setShowAlarmModal(detailSymbol)} onDeleteAlarm={deleteAlarm} onBack={() => setDetailSymbol(null)} />
+        {alarmModalNode}
+      </>
+    );
+  }
+
+  return (
+    <PullToRefresh onRefresh={refreshAll}>
+      <div style={S.screen}>
+        <div style={S.header}>
+          <div style={S.brand}><Icon.Chart /><span style={S.brandText}>PİYASA</span></div>
+          <button onClick={() => setShowSettings(true)} style={S.menuBtn}>•••</button>
+        </div>
+        <div style={S.marketStatus}>
+          {lastRefresh ? (
+            <>
+              <span style={{ ...S.statusDot, background: '#4CAF50' }} className="pulse" />
+              Son: {new Date(lastRefresh).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · Aşağı çekerek yenile
+            </>
+          ) : 'Yükleniyor...'}
+        </div>
+        <div style={S.sectionLabel}>ENDEKS & EMTİA</div>
+        <div style={S.tickerList}>
+          {MARKET_DEFAULTS.map(d => (
+            <TickerCard key={d.symbol} symbol={d.symbol} label={d.name} quote={quotes[d.symbol]} loading={loading[d.symbol]} onTap={() => setDetailSymbol(d.symbol)} />
+          ))}
+        </div>
+
+        {alarms.length > 0 && (
+          <>
+            <div style={{ ...S.sectionLabel, marginTop: 24 }}>ALARMLAR ({alarms.filter(a => a.state === 'fired').length > 0 ? `${alarms.filter(a => a.state === 'fired').length} TETİKLENDİ` : `${alarms.length} AKTİF`})</div>
+            <div style={S.alarmList}>
+              {alarms.slice().sort((a,b) => (b.state === 'fired' ? 1 : 0) - (a.state === 'fired' ? 1 : 0)).map(a => (
+                <AlarmRow key={a.id} alarm={a} currentPrice={quotes[a.symbol]?.c} onDelete={deleteAlarm} showSymbol />
+              ))}
+            </div>
+          </>
+        )}
+
+        <div style={{ ...S.sectionLabel, marginTop: 24 }}>WATCHLİSTİM</div>
+        {watchlist.length === 0 ? (
+          <div style={S.emptyState}>Henüz hisse eklemedin.<br />Aşağıdan istediğin ticker'ı ekle.</div>
+        ) : (
+          <>
+            {watchlist.length > 1 && <div style={S.hintBoxSmall}>İpucu: Sırayı değiştirmek için kart üzerinde uzun bas.</div>}
+            <ReorderableList items={watchlist} getKey={(sym) => sym} onReorder={reorderWatchlist}
+              renderItem={(sym, idx, isDragging) => (
+                <TickerCard symbol={sym} quote={quotes[sym]} loading={loading[sym]} onRemove={() => removeFromWatchlist(sym)} onTap={() => !isDragging && setDetailSymbol(sym)} draggable />
+              )} />
+          </>
+        )}
+        <button onClick={() => setShowAddTicker(true)} style={{ ...S.addBtn, borderColor: '#4CAF50', color: '#4CAF50', marginTop: 12 }} className="add-btn">
+          <Icon.Plus /> HİSSE EKLE
+        </button>
+        {showAddTicker && <AddTickerModal onClose={() => setShowAddTicker(false)} onAdd={addToWatchlist} />}
+        {showSettings && <MarketSettingsModal apiKey={apiKey} onClose={() => setShowSettings(false)} onSave={saveApiKey} />}
+        {alarmModalNode}
+      </div>
+    </PullToRefresh>
+  );
+}
+
+function TickerCard({ symbol, label, quote, loading, onRemove, onTap, draggable }) {
+  const isUp = quote && quote.d >= 0;
+  const color = isUp ? '#4CAF50' : '#FF5252';
+  const hasError = quote?.error;
+  return (
+    <div style={S.tickerCard}>
+      {draggable && <div style={S.dragHandle}><Icon.Drag /></div>}
+      <button onClick={onTap} style={S.tickerBtn}>
+        <div style={S.tickerLeft}>
+          <div style={S.tickerSymbol}>{symbol}</div>
+          {label && <div style={S.tickerLabel}>{label}</div>}
+        </div>
+        <div style={S.tickerRight}>
+          {hasError ? <div style={S.tickerError}>Veri yok</div>
+            : loading && !quote ? <div style={S.tickerLoading}>…</div>
+            : quote ? (
+              <>
+                <div style={S.tickerPrice}>${quote.c?.toFixed(2)}</div>
+                <div style={{ ...S.tickerChange, color }}>{isUp ? '▲' : '▼'} {Math.abs(quote.d).toFixed(2)} ({Math.abs(quote.dp).toFixed(2)}%)</div>
+              </>
+            ) : <div style={S.tickerLoading}>…</div>}
+        </div>
+      </button>
+      {onRemove && <button onClick={onRemove} style={S.tickerRemove}>×</button>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// STOCK DETAIL — CHART via Netlify Function
+// ═══════════════════════════════════════════
+
+const PERIODS = [
+  { key: '1D', label: '1G', interval: '5min', outputsize: 78 },
+  { key: '1W', label: '1H', interval: '1h', outputsize: 40 },
+  { key: '1M', label: '1A', interval: '1day', outputsize: 22 },
+  { key: '3M', label: '3A', interval: '1day', outputsize: 65 },
+  { key: '1Y', label: '1Y', interval: '1day', outputsize: 252 },
+];
+
+function StockDetailView({ symbol, label, quote, twelveKey, onSaveTwelveKey, alarms, onCreateAlarmClick, onDeleteAlarm, onBack }) {
+  const [period, setPeriod] = useState('1D');
+  const [candles, setCandles] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showTwelveSetup, setShowTwelveSetup] = useState(false);
+
+  useEffect(() => {
+    if (!twelveKey) { setLoading(false); return; }
+    let cancelled = false;
+    const p = PERIODS.find(x => x.key === period);
+    const url = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=${p.interval}&outputsize=${p.outputsize}&apikey=${twelveKey}`;
+    setLoading(true); setError(null); setCandles(null);
+
+    fetch(url)
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return;
+        if (d.status === 'error' || d.code) {
+          setError(d.message || 'Veri alınamadı'); return;
+        }
+        if (!d.values || d.values.length < 2) { setError('Bu aralık için veri yok'); return; }
+        // Twelve Data returns newest first; reverse for chronological
+        const reversed = [...d.values].reverse();
+        const closes = reversed.map(v => parseFloat(v.close));
+        const timestamps = reversed.map(v => new Date(v.datetime).getTime() / 1000);
+        setCandles({ closes, timestamps });
+      })
+      .catch(e => { if (!cancelled) setError('Bağlantı hatası'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [symbol, period, twelveKey]);
+
+  const isUp = quote && quote.d >= 0;
+  const color = isUp ? '#4CAF50' : '#FF5252';
+
+  return (
+    <div style={S.screen}>
+      <div style={S.topBar}>
+        <button onClick={onBack} style={S.iconBtn}><Icon.Chevron /></button>
+        <div style={{ ...S.topBarTitle, color: '#fff' }}>{symbol}</div>
+        <div style={{ width: 60 }} />
+      </div>
+      {label && <div style={{ textAlign: 'center', color: '#888', fontSize: 13, marginBottom: 16 }}>{label}</div>}
+      {quote && !quote.error && (
+        <div style={S.detailPriceBox}>
+          <div style={S.detailPrice}>${quote.c?.toFixed(2)}</div>
+          <div style={{ ...S.detailChange, color }}>{isUp ? '▲' : '▼'} {Math.abs(quote.d).toFixed(2)} ({Math.abs(quote.dp).toFixed(2)}%)</div>
+        </div>
+      )}
+
+      {!twelveKey ? (
+        <TwelveDataSetup onSave={(k) => { onSaveTwelveKey(k); setShowTwelveSetup(false); }} />
+      ) : (
+        <>
+          <div style={S.periodBar}>
+            {PERIODS.map(p => (
+              <button key={p.key} onClick={() => setPeriod(p.key)} style={{ ...S.periodBtn, ...(period === p.key ? S.periodBtnActive : {}) }} className={`period-btn ${period === p.key ? 'active' : ''}`}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div style={S.chartContainer}>
+            {loading ? <div style={S.chartLoading}>Yükleniyor...</div>
+              : error ? <div style={S.chartError}>{error}</div>
+              : candles ? <CandleChart candles={candles} color={color} /> : null}
+          </div>
+        </>
+      )}
+
+      {quote && !quote.error && (
+        <div style={S.statsGrid}>
+          <div style={S.statSmall}><div style={S.statSmallLabel}>AÇILIŞ</div><div style={S.statSmallValue}>${quote.o?.toFixed(2)}</div></div>
+          <div style={S.statSmall}><div style={S.statSmallLabel}>YÜKSEK</div><div style={S.statSmallValue}>${quote.h?.toFixed(2)}</div></div>
+          <div style={S.statSmall}><div style={S.statSmallLabel}>DÜŞÜK</div><div style={S.statSmallValue}>${quote.l?.toFixed(2)}</div></div>
+          <div style={S.statSmall}><div style={S.statSmallLabel}>ÖN. KAPANIŞ</div><div style={S.statSmallValue}>${quote.pc?.toFixed(2)}</div></div>
+        </div>
+      )}
+
+      <div style={{ ...S.sectionLabel, marginTop: 24 }}>ALARMLAR</div>
+      {alarms && alarms.length > 0 ? (
+        <div style={S.alarmList}>
+          {alarms.slice().sort((a,b) => (b.state === 'fired' ? 1 : 0) - (a.state === 'fired' ? 1 : 0)).map(a => (
+            <AlarmRow key={a.id} alarm={a} currentPrice={quote?.c} onDelete={onDeleteAlarm} />
+          ))}
+        </div>
+      ) : (
+        <div style={{ ...S.emptyState, padding: '20px 16px', fontSize: 13 }}>Henüz alarm yok.<br/>Aşağıdan kurabilirsin.</div>
+      )}
+      <button onClick={onCreateAlarmClick} style={{ ...S.addBtn, borderColor: '#FFB300', color: '#FFB300', marginTop: 10 }} className="add-btn">
+        🔔 ALARM EKLE
+      </button>
+    </div>
+  );
+}
+
+function TwelveDataSetup({ onSave }) {
+  const [key, setKey] = useState('');
+  return (
+    <div style={S.setupCard}>
+      <div style={S.setupTitle}>Grafik İçin Son Adım</div>
+      <div style={S.setupText}>
+        Grafik verisi için Twelve Data'dan ücretsiz bir API anahtarı al. Finnhub gibi — kart bilgisi yok, 1 dakika sürer. Bir kez ayarlarsın, bir daha sormaz.
+      </div>
+      <ol style={S.setupSteps}>
+        <li><strong>twelvedata.com/signup</strong> aç</li>
+        <li>E-postanla kayıt ol</li>
+        <li>Dashboard'da gördüğün API anahtarını kopyala</li>
+        <li>Aşağıya yapıştır</li>
+      </ol>
+      <a href="https://twelvedata.com/signup" target="_blank" rel="noopener" style={S.setupLinkBtn}>→ Twelve Data'ya git</a>
+      <div style={{ marginTop: 20 }}>
+        <div style={S.inputLabel}>API ANAHTARI</div>
+        <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxx" style={{ ...S.modalInput, marginBottom: 12, marginTop: 8 }} />
+        <button onClick={() => key.trim() && onSave(key.trim())} disabled={!key.trim()} style={{ ...S.submitBtn, background: key.trim() ? 'linear-gradient(135deg,#4CAF50,#2E7D32)' : '#2a2a2a', color: key.trim() ? '#fff' : '#666' }} className="submit-btn">
+          <Icon.Check /> KAYDET
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CandleChart({ candles, color }) {
+  const { closes, timestamps } = candles;
+  const W = 360, H = 200, PAD_X = 4, PAD_Y = 20;
+  const min = Math.min(...closes), max = Math.max(...closes);
+  const range = max - min || 1;
+  const points = closes.map((c, i) => ({
+    x: PAD_X + (i / (closes.length - 1)) * (W - 2 * PAD_X),
+    y: PAD_Y + (1 - (c - min) / range) * (H - 2 * PAD_Y),
+  }));
+  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  const areaPath = `${path} L ${points[points.length - 1].x} ${H} L ${points[0].x} ${H} Z`;
+
+  const svgRef = useRef(null);
+  const [activeIdx, setActiveIdx] = useState(null);
+
+  const handleTouch = (e) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const touch = e.touches?.[0] || e.changedTouches?.[0];
+    if (!touch) return;
+    const ratio = (touch.clientX - rect.left) / rect.width;
+    const idx = Math.max(0, Math.min(closes.length - 1, Math.round(ratio * (closes.length - 1))));
+    setActiveIdx(idx);
+  };
+
+  const handleTouchEnd = () => setActiveIdx(null);
+
+  const active = activeIdx != null ? { idx: activeIdx, ...points[activeIdx], price: closes[activeIdx], ts: timestamps?.[activeIdx] } : null;
+  const startPrice = closes[0];
+  const diff = active ? active.price - startPrice : 0;
+  const diffPct = active ? (diff / startPrice) * 100 : 0;
+  const diffColor = diff >= 0 ? '#4CAF50' : '#FF5252';
+
+  const fmtDate = (ts) => {
+    if (!ts) return '';
+    const d = new Date(ts * 1000);
+    const sameDay = closes.length <= 80; // intraday
+    if (sameDay) return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: closes.length > 200 ? 'numeric' : undefined });
+  };
+
+  return (
+    <div style={{ width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', minHeight: 28, marginBottom: 4, padding: '0 4px' }}>
+        {active ? (
+          <>
+            <div>
+              <span style={{ fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 800, color: '#fff' }}>${active.price.toFixed(2)}</span>
+              <span style={{ fontSize: 11, color: diffColor, fontWeight: 700, marginLeft: 8 }}>{diff >= 0 ? '+' : ''}{diff.toFixed(2)} ({diffPct >= 0 ? '+' : ''}{diffPct.toFixed(2)}%)</span>
+            </div>
+            <span style={{ fontSize: 11, color: '#888', fontWeight: 600 }}>{fmtDate(active.ts)}</span>
+          </>
+        ) : (
+          <span style={{ fontSize: 10, color: '#555', fontWeight: 600, letterSpacing: 0.5 }}>Grafiğe dokunup kaydır</span>
+        )}
+      </div>
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block', touchAction: 'none' }}
+        onTouchStart={handleTouch} onTouchMove={handleTouch} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}>
+        <defs>
+          <linearGradient id="stockGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <text x={W - 4} y={12} textAnchor="end" fill="#666" fontSize="9" fontWeight="600">${max.toFixed(2)}</text>
+        <text x={W - 4} y={H - 4} textAnchor="end" fill="#666" fontSize="9" fontWeight="600">${min.toFixed(2)}</text>
+        <path d={areaPath} fill="url(#stockGrad)" />
+        <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        {active && (
+          <>
+            <line x1={active.x} y1={PAD_Y} x2={active.x} y2={H} stroke="#666" strokeWidth="0.8" strokeDasharray="3 3" />
+            <circle cx={active.x} cy={active.y} r="5" fill={color} stroke="#0a0a0a" strokeWidth="2" />
+          </>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+function ApiKeySetup({ onSave }) {
+  const [key, setKey] = useState('');
+  return (
+    <div style={S.screen}>
+      <div style={S.header}><div style={S.brand}><Icon.Chart /><span style={S.brandText}>PİYASA</span></div></div>
+      <div style={S.setupCard}>
+        <div style={S.setupTitle}>İlk Kurulum</div>
+        <div style={S.setupText}>Canlı piyasa verisi için Finnhub'dan ücretsiz bir API anahtarı al. Kart bilgisi istemiyor, 30 saniye sürer.</div>
+        <ol style={S.setupSteps}>
+          <li><strong>finnhub.io</strong> aç, "Get free API key" tıkla</li>
+          <li>E-postanla kayıt ol, doğrula</li>
+          <li>Dashboard'da gördüğün API anahtarını kopyala</li>
+          <li>Aşağıya yapıştır</li>
+        </ol>
+        <a href="https://finnhub.io/register" target="_blank" rel="noopener" style={S.setupLinkBtn}>→ Finnhub'a git</a>
+        <div style={{ marginTop: 24 }}>
+          <div style={S.inputLabel}>API ANAHTARI</div>
+          <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="cxxxxxxxxxxxxxxxxxx" style={{ ...S.modalInput, marginBottom: 12, marginTop: 8 }} />
+          <button onClick={() => key.trim() && onSave(key.trim())} disabled={!key.trim()} style={{ ...S.submitBtn, background: key.trim() ? 'linear-gradient(135deg,#4CAF50,#2E7D32)' : '#2a2a2a', color: key.trim() ? '#fff' : '#666' }} className="submit-btn">
+            <Icon.Check /> KAYDET VE BAŞLA
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddTickerModal({ onClose, onAdd }) {
+  const [sym, setSym] = useState('');
+  return (
+    <div style={S.modalOverlay} onClick={onClose}>
+      <div style={S.modal} onClick={e => e.stopPropagation()}>
+        <div style={S.modalTitle}>Hisse Ekle</div>
+        <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>Amerikan hisse sembolü gir (örn. AAPL, NVDA, TSLA, MSFT)</div>
+        <input autoFocus value={sym} onChange={(e) => setSym(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && onAdd(sym)} placeholder="AAPL" style={{ ...S.modalInput, textTransform: 'uppercase', fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: 2, textAlign: 'center' }} />
+        <div style={S.modalActions}>
+          <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
+          <button onClick={() => onAdd(sym)} style={{ ...S.modalConfirm, background: 'linear-gradient(135deg,#4CAF50,#2E7D32)' }}>EKLE</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MarketSettingsModal({ apiKey, onClose, onSave }) {
+  const [key, setKey] = useState(apiKey);
+  return (
+    <div style={S.modalOverlay} onClick={onClose}>
+      <div style={S.modal} onClick={e => e.stopPropagation()}>
+        <div style={S.modalTitle}>Piyasa Ayarları</div>
+        <div style={S.inputLabel}>API ANAHTARI</div>
+        <input value={key} onChange={(e) => setKey(e.target.value)} style={{ ...S.modalInput, marginTop: 8 }} />
+        <div style={S.modalActions}>
+          <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
+          <button onClick={() => onSave(key.trim())} style={{ ...S.modalConfirm, background: 'linear-gradient(135deg,#4CAF50,#2E7D32)' }}>KAYDET</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AlarmModal({ symbol, currentPrice, onClose, onCreate }) {
+  const [direction, setDirection] = useState('above');
+  const [price, setPrice] = useState(currentPrice ? currentPrice.toFixed(2) : '');
+
+  const handleSubmit = () => {
+    const normalized = price.replace(',', '.');
+    const p = parseFloat(normalized);
+    if (!p || p <= 0) return;
+    onCreate(symbol, direction, p);
+  };
+
+  const notifSupported = typeof window !== 'undefined' && 'Notification' in window;
+  const notifGranted = notifSupported && Notification.permission === 'granted';
+  const notifDenied = notifSupported && Notification.permission === 'denied';
+  const validPrice = parseFloat(price.replace(',', '.')) > 0;
+
+  return (
+    <div style={S.modalOverlay} onClick={onClose}>
+      <div style={S.modal} onClick={e => e.stopPropagation()}>
+        <div style={S.modalTitle}>{symbol} Alarmı</div>
+        {currentPrice && <div style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>Şu anki fiyat: <span style={{color:'#fff', fontWeight: 700}}>${currentPrice.toFixed(2)}</span></div>}
+
+        <div style={S.alarmDirSelect}>
+          <button onClick={() => setDirection('above')} style={{ ...S.alarmDirBtn, ...(direction === 'above' ? { background: 'rgba(76,175,80,0.2)', borderColor: '#4CAF50', color: '#4CAF50' } : {}) }}>↑ ÜSTÜNDE</button>
+          <button onClick={() => setDirection('below')} style={{ ...S.alarmDirBtn, ...(direction === 'below' ? { background: 'rgba(255,82,82,0.2)', borderColor: '#FF5252', color: '#FF5252' } : {}) }}>↓ ALTINDA</button>
+        </div>
+
+        <div style={S.inputLabel}>FİYAT ($)</div>
+        <input value={price} onChange={e => setPrice(e.target.value.replace(/[^0-9.,]/g, '').replace(/([.,].*)[.,]/g, '$1'))} type="text" inputMode="decimal" style={{ ...S.modalInput, fontSize: 28, fontWeight: 800, textAlign: 'center', fontFamily: "'Big Shoulders Display',sans-serif", marginTop: 6 }} />
+
+        {!notifGranted && (
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 14, lineHeight: 1.5, padding: '10px 12px', background: '#0a0a0a', borderRadius: 8, border: '1px solid #1f1f1f' }}>
+            {notifDenied
+              ? 'ℹ️ Bildirim izni kapalı. Sadece uygulama açıkken alarm görülür.'
+              : 'ℹ️ Kayıttan sonra telefon bildirim izni isteyecek. İzin verirsen alarm her ortamda çalar.'}
+          </div>
+        )}
+
+        <div style={S.modalActions}>
+          <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
+          <button onClick={handleSubmit} disabled={!validPrice} style={{ ...S.modalConfirm, background: validPrice ? (direction === 'above' ? 'linear-gradient(135deg,#4CAF50,#2E7D32)' : 'linear-gradient(135deg,#FF5252,#C62828)') : '#2a2a2a', color: validPrice ? '#fff' : '#666' }}>
+            ALARM KUR
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AlarmRow({ alarm, currentPrice, onDelete, showSymbol }) {
+  const dir = alarm.direction === 'above';
+  const isFired = alarm.state === 'fired';
+  const dirColor = isFired ? '#FFD700' : (dir ? '#4CAF50' : '#FF5252');
+  let distancePct = null;
+  if (currentPrice && !isFired) {
+    distancePct = dir ? ((alarm.price - currentPrice) / currentPrice) * 100 : ((currentPrice - alarm.price) / currentPrice) * 100;
+  }
+  const fmtAgo = (ts) => {
+    if (!ts) return '';
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'az önce';
+    if (mins < 60) return `${mins} dk önce`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} sa önce`;
+    return `${Math.floor(hours/24)} gün önce`;
+  };
+
+  return (
+    <div style={{ ...S.alarmRow, background: isFired ? 'rgba(255,215,0,0.08)' : '#141414', borderColor: isFired ? '#FFD700' : '#1f1f1f' }}>
+      <div style={{ ...S.alarmIcon, color: dirColor }}>{isFired ? '🔔' : (dir ? '▲' : '▼')}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {showSymbol && <div style={S.alarmSymbol}>{alarm.symbol}</div>}
+        <div style={S.alarmCondition}>
+          <span style={{ color: dirColor, fontWeight: 700 }}>${alarm.price.toFixed(2)}</span>
+          <span style={{ color: '#888', marginLeft: 4 }}>{dir ? 'üstünde' : 'altında'}</span>
+          {alarm.fireCount > 1 && <span style={{ color: '#666', marginLeft: 6, fontSize: 11 }}>· {alarm.fireCount}. kez</span>}
+        </div>
+        {isFired ? (
+          <div style={S.alarmTriggered}>Tetiklendi · ${alarm.lastFirePrice?.toFixed(2)} · {fmtAgo(alarm.lastFiredAt)}</div>
+        ) : alarm.fireCount > 0 ? (
+          <div style={S.alarmDistance}>Hazır · Son tetik: {fmtAgo(alarm.lastFiredAt)}{distancePct != null ? ` · ${distancePct.toFixed(2)}% uzakta` : ''}</div>
+        ) : distancePct != null ? (
+          <div style={S.alarmDistance}>{distancePct > 0 ? `${distancePct.toFixed(2)}% uzakta` : 'Tetiklenmek üzere'}</div>
+        ) : (
+          <div style={S.alarmDistance}>Fiyat bekleniyor...</div>
+        )}
+      </div>
+      <button onClick={() => onDelete(alarm.id)} style={S.alarmDel}>×</button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// COACH TAB (AI assistant via Groq)
+// ═══════════════════════════════════════════
+
+const COACH_MODEL = 'llama-3.3-70b-versatile';
+const COACH_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+const SYSTEM_PROMPT = `Sen APEX adlı kişisel takip uygulamasının yapay zeka koçusun. Türkçe konuşuyorsun.
+
+Karakterin: Bilgili, dengeli bir arkadaş gibi. Doğrudan ve dürüst ama nazik. Kuvvet antrenmanı, hipertrofi ve progressive overload konularında bilgilisin. Aynı zamanda Amerikan borsası ve yatırım hakkında temel bilgilere sahipsin. Saçma motivasyon sloganları kullanmıyorsun ama gerektiğinde teşvik ediyorsun.
+
+Kurallar:
+- Cevaplar KISA ve ÖZ — gerektiğinde 2-3 cümle, listeler madde madde
+- Kullanıcının verisine bakıp SOMUT konuş; "X kg yaptın, hedef Y" gibi gerçek sayılar kullan
+- Bilmediğin şeyleri uydurma — "şu an verim yok" de
+- Kesin tıbbi/finansal tavsiye verme; "şunu düşünebilirsin", "iyi bir yaklaşım olabilir" tonu kullan
+- Emojileri ölçülü kullan (en fazla 1-2 mesaj başına)
+- Cevaplarda markdown kullanma, düz metin yaz
+- Kullanıcı seni "dostum"/"brom" diye çağırırsa sen de samimi konuş`;
+
+function buildCoachContext() {
+  const lines = [];
+  let gym = null, market = null;
+  try { gym = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) {}
+  try { market = JSON.parse(localStorage.getItem(MARKET_KEY) || '{}'); } catch (e) {}
+
+  const now = Date.now();
+  const fmtDate = (ts) => {
+    const d = new Date(ts);
+    const days = Math.floor((now - ts) / 86400000);
+    if (days === 0) return 'Bugün';
+    if (days === 1) return 'Dün';
+    if (days < 7) return `${days} gün önce`;
+    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+  };
+
+  lines.push(`Tarih: ${new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`);
+  lines.push('');
+
+  // Workout data
+  if (gym?.logs?.length) {
+    const logs = gym.logs;
+    const sessions = gym.sessions || [];
+    const totalDays = new Set(logs.map(l => dateKey(l.timestamp))).size;
+    const totalVolume = logs.reduce((s, l) => s + l.weight * l.reps, 0);
+    lines.push('=== ANTRENMAN VERİSİ ===');
+    lines.push(`Toplam antrenman günü: ${totalDays}, Toplam hacim: ${(totalVolume/1000).toFixed(1)} ton`);
+
+    // Last 14 days
+    const fourteenAgo = now - 14 * 86400000;
+    const recentLogs = logs.filter(l => l.timestamp >= fourteenAgo);
+    if (recentLogs.length) {
+      const byDay = {};
+      recentLogs.forEach(l => {
+        const k = dateKey(l.timestamp);
+        if (!byDay[k]) byDay[k] = { dayType: l.dayType, ts: l.timestamp, exercises: {} };
+        if (!byDay[k].exercises[l.exerciseName]) byDay[k].exercises[l.exerciseName] = [];
+        byDay[k].exercises[l.exerciseName].push({ w: l.weight, r: l.reps });
+      });
+      lines.push('Son 14 gün:');
+      Object.values(byDay).sort((a,b) => b.ts - a.ts).forEach(day => {
+        const sess = sessions.find(s => dateKey(s.startTime) === dateKey(day.ts) && s.dayType === day.dayType);
+        const dur = sess?.endTime ? `${Math.round((sess.endTime - sess.startTime) / 60000)}dk` : '';
+        const exerciseLines = Object.entries(day.exercises).map(([name, sets]) =>
+          `    ${name}: ${sets.map(s => `${s.w}kg×${s.r}`).join(', ')}`
+        );
+        lines.push(`  ${fmtDate(day.ts)} - ${day.dayType.toUpperCase()}${dur ? ' (' + dur + ')' : ''}`);
+        exerciseLines.forEach(l => lines.push(l));
+      });
+    } else {
+      lines.push('Son 14 günde antrenman kaydı yok.');
+    }
+
+    // All-time PRs (top weight per exercise)
+    const prs = {};
+    logs.forEach(l => {
+      const cur = prs[l.exerciseName];
+      if (!cur || l.weight > cur.weight || (l.weight === cur.weight && l.reps > cur.reps)) {
+        prs[l.exerciseName] = { weight: l.weight, reps: l.reps, ts: l.timestamp };
+      }
+    });
+    const sortedPRs = Object.entries(prs).sort((a,b) => b[1].weight - a[1].weight).slice(0, 15);
+    if (sortedPRs.length) {
+      lines.push('Tüm zamanların PR\'ları:');
+      sortedPRs.forEach(([name, pr]) => {
+        lines.push(`  ${name}: ${pr.weight}kg × ${pr.reps} (${fmtDate(pr.ts)})`);
+      });
+    }
+  } else {
+    lines.push('=== ANTRENMAN VERİSİ ===\nHenüz antrenman verisi yok.');
+  }
+  lines.push('');
+
+  // Market data
+  if (market?.watchlist?.length || market?.alarms?.length) {
+    lines.push('=== PİYASA ===');
+    if (market.watchlist?.length) {
+      lines.push(`Watchlist: ${market.watchlist.join(', ')}`);
+    }
+    if (market.alarms?.length) {
+      const armed = market.alarms.filter(a => a.state === 'armed');
+      const fired = market.alarms.filter(a => a.state === 'fired');
+      if (armed.length) {
+        lines.push('Aktif alarmlar:');
+        armed.forEach(a => lines.push(`  ${a.symbol}: $${a.price} ${a.direction === 'above' ? 'üstüne çıkarsa' : 'altına düşerse'}`));
+      }
+      if (fired.length) {
+        lines.push(`${fired.length} tetiklenmiş alarm var.`);
+      }
+    }
+  }
+
+  return lines.join('\n');
+}
+
+const QUICK_PROMPTS = [
+  { icon: '📊', text: 'Bu hafta nasıl gidiyorum?' },
+  { icon: '🏋️', text: 'Bench Press\'imi nasıl ilerletebilirim?' },
+  { icon: '🗓️', text: 'Yarın için program öner' },
+  { icon: '🔥', text: 'Hangi egzersizde platodayım?' },
+  { icon: '💪', text: 'Bana motivasyon ver' },
+  { icon: '📈', text: 'Watchlist\'imdeki durum nedir?' },
+];
+
+function CoachTab() {
+  const [apiKey, setApiKey] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(AI_KEY);
+      if (raw) { const p = JSON.parse(raw); setApiKey(p.apiKey || null); setMessages(p.messages || []); }
+    } catch (e) {}
+  }, []);
+
+  const saveAi = (newKey, newMessages) => {
+    try { localStorage.setItem(AI_KEY, JSON.stringify({ apiKey: newKey, messages: newMessages })); } catch (e) {}
+  };
+
+  useEffect(() => {
+    // Auto-scroll to bottom on new messages
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, loading]);
+
+  const send = async (textOverride) => {
+    const text = (textOverride ?? input).trim();
+    if (!text || loading || !apiKey) return;
+    setError(null);
+    const userMsg = { role: 'user', content: text };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const ctx = buildCoachContext();
+      const sys = SYSTEM_PROMPT + '\n\n=== KULLANICININ GÜNCEL VERİLERİ ===\n' + ctx;
+      // Send only last 10 messages to save tokens (plus the system prompt with full context)
+      const chatHistory = newMessages.slice(-10);
+      const res = await fetch(COACH_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: COACH_MODEL,
+          messages: [{ role: 'system', content: sys }, ...chatHistory],
+          temperature: 0.7,
+          max_tokens: 800,
+        })
+      });
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('API anahtarı geçersiz. Ayarlardan kontrol et.');
+        if (res.status === 429) throw new Error('Çok hızlı istek attın, biraz bekle.');
+        throw new Error(`Hata ${res.status}`);
+      }
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content;
+      if (!reply) throw new Error('Boş cevap geldi');
+      const updated = [...newMessages, { role: 'assistant', content: reply }];
+      setMessages(updated);
+      saveAi(apiKey, updated);
+    } catch (e) {
+      setError(e.message || 'Bir şey ters gitti');
+      // Revert: remove the user message that didn't get a reply
+      setMessages(messages);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearChat = () => {
+    if (confirm('Sohbet geçmişini silmek istiyor musun?')) {
+      setMessages([]);
+      saveAi(apiKey, []);
+    }
+  };
+
+  const saveApiKey = (key) => {
+    setApiKey(key);
+    saveAi(key, messages);
+    setShowSettings(false);
+  };
+
+  if (!apiKey) return <CoachSetup onSave={saveApiKey} />;
+
+  return (
+    <div style={S.coachContainer}>
+      <div style={S.coachHeader}>
+        <div style={S.brand}><Icon.Coach /><span style={S.brandText}>KOÇ</span></div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {messages.length > 0 && <button onClick={clearChat} style={S.menuBtn} title="Temizle">🗑</button>}
+          <button onClick={() => setShowSettings(true)} style={S.menuBtn}>•••</button>
+        </div>
+      </div>
+
+      <div ref={scrollRef} style={S.chatScroll}>
+        {messages.length === 0 ? (
+          <div style={S.coachWelcome}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>✨</div>
+            <div style={S.coachWelcomeTitle}>Sana nasıl yardım edebilirim?</div>
+            <div style={S.coachWelcomeText}>
+              Antrenman geçmişine, PR'larına ve watchlist'ine erişimim var. Doğrudan soru sor veya aşağıdakilerden birini dene:
+            </div>
+            <div style={S.quickPromptList}>
+              {QUICK_PROMPTS.map((p, i) => (
+                <button key={i} onClick={() => send(p.text)} style={S.quickPromptBtn} className="exercise-btn">
+                  <span style={{ fontSize: 18 }}>{p.icon}</span>
+                  <span>{p.text}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={S.messageList}>
+            {messages.map((m, i) => (
+              <div key={i} style={m.role === 'user' ? S.msgUserWrap : S.msgAiWrap}>
+                <div style={m.role === 'user' ? S.msgUser : S.msgAi}>{m.content}</div>
+              </div>
+            ))}
+            {loading && (
+              <div style={S.msgAiWrap}>
+                <div style={S.msgAi}>
+                  <span className="pulse">●</span> <span className="pulse" style={{ animationDelay: '0.2s' }}>●</span> <span className="pulse" style={{ animationDelay: '0.4s' }}>●</span>
+                </div>
+              </div>
+            )}
+            {error && <div style={S.msgError}>⚠ {error}</div>}
+          </div>
+        )}
+      </div>
+
+      <div style={S.chatInputBar}>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+          placeholder="Bir şey sor..."
+          style={S.chatInput}
+          disabled={loading}
+        />
+        <button onClick={() => send()} disabled={!input.trim() || loading} style={{ ...S.chatSendBtn, opacity: input.trim() && !loading ? 1 : 0.4 }}>
+          <Icon.Send />
+        </button>
+      </div>
+
+      {showSettings && <CoachSettingsModal apiKey={apiKey} onClose={() => setShowSettings(false)} onSave={saveApiKey} />}
+    </div>
+  );
+}
+
+function CoachSetup({ onSave }) {
+  const [key, setKey] = useState('');
+  return (
+    <div style={S.screen}>
+      <div style={S.header}><div style={S.brand}><Icon.Coach /><span style={S.brandText}>KOÇ</span></div></div>
+      <div style={S.setupCard}>
+        <div style={S.setupTitle}>AI Koç Kurulumu</div>
+        <div style={S.setupText}>
+          Koç senin verilerine bakıp soruları cevaplar. Bunu yapabilmesi için Groq'tan ücretsiz bir API anahtarı al — kart bilgisi istemiyor, 30 saniye sürer.
+        </div>
+        <ol style={S.setupSteps}>
+          <li><strong>console.groq.com/keys</strong> aç</li>
+          <li>"Sign in" → e-postanla kayıt ol</li>
+          <li>"Create API Key" tıkla, isim ver (örn. "apex")</li>
+          <li>Anahtarı kopyala (sadece bir kere gösterilir, kaydet)</li>
+          <li>Aşağıya yapıştır</li>
+        </ol>
+        <a href="https://console.groq.com/keys" target="_blank" rel="noopener" style={S.setupLinkBtn}>→ Groq'a git</a>
+        <div style={{ marginTop: 24 }}>
+          <div style={S.inputLabel}>API ANAHTARI</div>
+          <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="gsk_xxxxxxxxxx" style={{ ...S.modalInput, marginBottom: 12, marginTop: 8 }} />
+          <button onClick={() => key.trim() && onSave(key.trim())} disabled={!key.trim()} style={{ ...S.submitBtn, background: key.trim() ? 'linear-gradient(135deg,#9C27B0,#6A1B9A)' : '#2a2a2a', color: key.trim() ? '#fff' : '#666' }} className="submit-btn">
+            <Icon.Check /> KAYDET VE BAŞLA
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CoachSettingsModal({ apiKey, onClose, onSave }) {
+  const [key, setKey] = useState(apiKey);
+  return (
+    <div style={S.modalOverlay} onClick={onClose}>
+      <div style={S.modal} onClick={e => e.stopPropagation()}>
+        <div style={S.modalTitle}>Koç Ayarları</div>
+        <div style={S.inputLabel}>GROQ API ANAHTARI</div>
+        <input value={key} onChange={(e) => setKey(e.target.value)} style={{ ...S.modalInput, marginTop: 8 }} />
+        <div style={S.modalActions}>
+          <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
+          <button onClick={() => onSave(key.trim())} style={{ ...S.modalConfirm, background: 'linear-gradient(135deg,#9C27B0,#6A1B9A)' }}>KAYDET</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// STYLES
+// ═══════════════════════════════════════════
+
+const S = {
+  app: { minHeight: '100vh', background: '#0a0a0a', color: '#fff' },
+  content: { paddingBottom: 90, position: 'relative' },
+  screen: { maxWidth: 480, margin: '0 auto', padding: '16px 16px 32px' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 4px 4px' },
+  brand: { display: 'flex', alignItems: 'center', gap: 8 },
+  brandText: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 900, letterSpacing: 2 },
+  menuBtn: { background: 'transparent', border: 'none', color: '#666', fontSize: 18, cursor: 'pointer', padding: 8, letterSpacing: 2 },
+  date: { color: '#666', fontSize: 13, fontWeight: 500, textTransform: 'capitalize', padding: '0 4px 24px' },
+  statsRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 32 },
+  statBox: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 14, padding: '14px 10px', textAlign: 'center' },
+  statValue: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 28, fontWeight: 800, color: '#fff', lineHeight: 1 },
+  statLabel: { fontSize: 9, color: '#666', fontWeight: 700, letterSpacing: 1.2, marginTop: 6 },
+  sectionLabel: { fontSize: 11, color: '#666', fontWeight: 700, letterSpacing: 1.5, marginBottom: 14, marginTop: 8 },
+  dayGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 },
+  dayCard: { border: 'none', borderRadius: 18, padding: 0, cursor: 'pointer', aspectRatio: '1 / 1.05', color: '#fff', overflow: 'hidden', position: 'relative' },
+  dayCardInner: { height: '100%', padding: 18, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', textAlign: 'left' },
+  dayCardName: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 44, fontWeight: 900, lineHeight: 0.9, letterSpacing: -0.5 },
+  dayCardSubtitle: { fontSize: 11, fontWeight: 600, opacity: 0.85, marginTop: 8, letterSpacing: 0.3 },
+  topBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingTop: 4 },
+  topBarTitle: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 24, fontWeight: 800, letterSpacing: 1, flex: 1, textAlign: 'center' },
+  iconBtn: { background: 'transparent', border: 'none', cursor: 'pointer', padding: 8, width: 60, textAlign: 'left', color: '#fff' },
+  editBtn: { background: 'transparent', border: 'none', color: '#888', fontSize: 11, fontWeight: 700, letterSpacing: 1, cursor: 'pointer', padding: 8, width: 60, textAlign: 'right' },
+  timerCard: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 16, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, transition: 'border-color 0.3s' },
+  timerLeft: { display: 'flex', alignItems: 'center', gap: 12, color: '#888' },
+  timerLabel: { fontSize: 9, color: '#666', fontWeight: 700, letterSpacing: 1.3, marginBottom: 2 },
+  timerDisplay: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 26, fontWeight: 800, color: '#fff', lineHeight: 1, letterSpacing: 0.5 },
+  timerBtn: { border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 12, fontWeight: 800, letterSpacing: 1.2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 },
+  hintBox: { background: '#0f0f0f', border: '1px solid #1a1a1a', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#888', marginBottom: 12, textAlign: 'center' },
+  hintBoxSmall: { fontSize: 11, color: '#555', marginBottom: 10, textAlign: 'center', fontStyle: 'italic' },
+  exerciseCard: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 14, overflow: 'hidden', display: 'flex', alignItems: 'stretch', transition: 'border-color 0.2s' },
+  exerciseCardBtn: { flex: 1, background: 'transparent', border: 'none', padding: '14px 16px 14px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', color: '#fff', textAlign: 'left' },
+  dragHandle: { padding: '0 10px 0 14px', display: 'flex', alignItems: 'center', cursor: 'grab', flexShrink: 0 },
+  exerciseLeft: { flex: 1 },
+  exerciseName: { fontSize: 15, fontWeight: 700, marginBottom: 4 },
+  exerciseLast: { fontSize: 12, color: '#888', fontWeight: 500 },
+  chevron: { fontSize: 18, fontWeight: 700, marginLeft: 12 },
+  removeBtn: { background: 'transparent', border: 'none', borderLeft: '1px solid #1f1f1f', padding: '0 16px', cursor: 'pointer', color: '#FF5252' },
+  addBtn: { width: '100%', background: 'transparent', border: '1.5px dashed', borderRadius: 14, padding: '14px', fontSize: 12, fontWeight: 700, letterSpacing: 1.2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  emptyState: { textAlign: 'center', color: '#555', padding: '32px 16px', fontSize: 14, background: '#0f0f0f', border: '1px solid #1a1a1a', borderRadius: 14, lineHeight: 1.6 },
+  prBox: { display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', borderRadius: 12, border: '1px solid', marginBottom: 12 },
+  chartCard: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 14, padding: '14px 14px 8px', marginBottom: 16 },
+  chartHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  chartTitle: { fontSize: 10, color: '#666', fontWeight: 700, letterSpacing: 1.5 },
+  chartRange: { fontSize: 10, color: '#888', fontWeight: 600 },
+  inputCard: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 18, padding: 18, marginBottom: 24 },
+  inputLabel: { fontSize: 10, color: '#666', fontWeight: 700, letterSpacing: 1.5, marginBottom: 14 },
+  inputRow: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 },
+  inputGroup: { flex: 1, background: '#0a0a0a', border: '1px solid #1f1f1f', borderRadius: 12, padding: '10px 14px', textAlign: 'center' },
+  numInput: { width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: 32, fontWeight: 800, textAlign: 'center', fontFamily: "'Big Shoulders Display',sans-serif", outline: 'none' },
+  unit: { fontSize: 10, color: '#666', fontWeight: 700, letterSpacing: 1.5, marginTop: 2 },
+  times: { fontSize: 24, color: '#444', fontWeight: 300 },
+  submitBtn: { width: '100%', border: 'none', borderRadius: 12, padding: '14px', fontSize: 13, fontWeight: 800, letterSpacing: 1.5, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.15s' },
+  historyList: { display: 'flex', flexDirection: 'column', gap: 10 },
+  historyCard: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 14, padding: '14px 16px' },
+  historyHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid #1f1f1f' },
+  historyDate: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#aaa', fontWeight: 600 },
+  historyVolume: { fontSize: 11, color: '#666', fontWeight: 600 },
+  setsList: { display: 'flex', flexDirection: 'column', gap: 6 },
+  setRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0' },
+  setIndex: { width: 22, height: 22, background: '#1f1f1f', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#888', fontWeight: 700 },
+  setValue: { flex: 1, display: 'flex', alignItems: 'baseline', gap: 4 },
+  setWeight: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 20, fontWeight: 800, color: '#fff' },
+  setUnit: { fontSize: 11, color: '#666', fontWeight: 700, marginRight: 6 },
+  setX: { fontSize: 14, color: '#444', margin: '0 4px' },
+  setReps: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 20, fontWeight: 800, color: '#fff' },
+  tinyDelBtn: { background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, color: '#666', fontSize: 18, lineHeight: 1 },
+  modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16, paddingTop: '5vh', zIndex: 100, overflowY: 'auto' },
+  modal: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 18, padding: 24, width: '100%', maxWidth: 360, maxHeight: '90vh', overflowY: 'auto' },
+  modalTitle: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: 0.5, marginBottom: 16 },
+  modalInput: { width: '100%', background: '#0a0a0a', border: '1px solid #1f1f1f', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 15, outline: 'none', marginBottom: 16 },
+  modalActions: { display: 'flex', gap: 10 },
+  modalCancel: { flex: 1, background: 'transparent', border: '1px solid #2a2a2a', color: '#888', borderRadius: 10, padding: '12px', fontSize: 12, fontWeight: 700, letterSpacing: 1.2, cursor: 'pointer' },
+  modalConfirm: { flex: 1, border: 'none', color: '#fff', borderRadius: 10, padding: '12px', fontSize: 12, fontWeight: 800, letterSpacing: 1.2, cursor: 'pointer' },
+  menuItem: { width: '100%', background: '#0a0a0a', border: '1px solid #1f1f1f', color: '#fff', borderRadius: 10, padding: '14px', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 8, textAlign: 'left' },
+  tabBar: { position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(20px)', borderTop: '1px solid #1f1f1f', display: 'flex', justifyContent: 'space-around', padding: '8px 0 calc(8px + env(safe-area-inset-bottom))', zIndex: 50 },
+  tabBtn: { background: 'transparent', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 24px', cursor: 'pointer', transition: 'all 0.15s' },
+  tabLabel: { fontSize: 10, fontWeight: 800, letterSpacing: 1.2 },
+  marketStatus: { display: 'flex', alignItems: 'center', gap: 8, color: '#666', fontSize: 11, fontWeight: 500, padding: '0 4px 20px' },
+  statusDot: { width: 6, height: 6, borderRadius: '50%', display: 'inline-block' },
+  tickerList: { display: 'flex', flexDirection: 'column', gap: 8 },
+  tickerCard: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 14, display: 'flex', alignItems: 'stretch', position: 'relative', overflow: 'hidden' },
+  tickerBtn: { flex: 1, background: 'transparent', border: 'none', padding: '14px 16px 14px 4px', display: 'flex', alignItems: 'center', gap: 12, color: '#fff', cursor: 'pointer', textAlign: 'left' },
+  tickerLeft: { flex: 1, minWidth: 0 },
+  tickerSymbol: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 18, fontWeight: 800, letterSpacing: 0.5, color: '#fff' },
+  tickerLabel: { fontSize: 11, color: '#888', fontWeight: 500, marginTop: 2 },
+  tickerRight: { textAlign: 'right' },
+  tickerPrice: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1 },
+  tickerChange: { fontSize: 11, fontWeight: 700, marginTop: 4, letterSpacing: 0.3 },
+  tickerLoading: { color: '#444', fontSize: 24, fontWeight: 700 },
+  tickerError: { color: '#FF5252', fontSize: 11, fontWeight: 600 },
+  tickerRemove: { position: 'absolute', top: 4, right: 6, background: 'transparent', border: 'none', color: '#444', fontSize: 18, cursor: 'pointer', padding: 4, lineHeight: 1, zIndex: 2 },
+  setupCard: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 18, padding: 24, marginTop: 16 },
+  setupTitle: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 24, fontWeight: 800, letterSpacing: 0.5, marginBottom: 12 },
+  setupText: { fontSize: 14, color: '#aaa', lineHeight: 1.6, marginBottom: 16 },
+  setupSteps: { fontSize: 13, color: '#ccc', lineHeight: 1.8, paddingLeft: 20, marginBottom: 16 },
+  setupLinkBtn: { display: 'block', textAlign: 'center', background: 'linear-gradient(135deg,#4CAF50,#2E7D32)', color: '#fff', textDecoration: 'none', borderRadius: 12, padding: '12px', fontSize: 13, fontWeight: 800, letterSpacing: 1 },
+  detailPriceBox: { textAlign: 'center', marginBottom: 20 },
+  detailPrice: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 48, fontWeight: 800, lineHeight: 1, marginBottom: 4 },
+  detailChange: { fontSize: 14, fontWeight: 700 },
+  periodBar: { display: 'flex', gap: 6, marginBottom: 14, background: '#141414', border: '1px solid #1f1f1f', borderRadius: 10, padding: 4 },
+  periodBtn: { flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '8px', borderRadius: 7, fontSize: 11, fontWeight: 800, letterSpacing: 1, cursor: 'pointer' },
+  periodBtnActive: { background: '#fff', color: '#000' },
+  chartContainer: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 14, padding: 12, minHeight: 220, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  chartLoading: { color: '#666', fontSize: 13, fontWeight: 600 },
+  chartError: { color: '#888', fontSize: 13, textAlign: 'center', lineHeight: 1.5, padding: '20px' },
+  statsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 },
+  statSmall: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 10, padding: '12px 14px' },
+  statSmallLabel: { fontSize: 9, color: '#666', fontWeight: 700, letterSpacing: 1.2, marginBottom: 4 },
+  statSmallValue: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 18, fontWeight: 800, color: '#fff' },
+  prOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, cursor: 'pointer' },
+  prContent: { textAlign: 'center', padding: 32, position: 'relative', zIndex: 201 },
+  prStar: { fontSize: 80, color: '#FFD700', textShadow: '0 0 40px rgba(255,215,0,0.6)', marginBottom: 8 },
+  prTitle: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 48, fontWeight: 900, color: '#fff', letterSpacing: 2, marginBottom: 12, textShadow: '0 4px 30px rgba(255,215,0,0.3)' },
+  prExercise: { fontSize: 16, color: '#aaa', fontWeight: 600, marginBottom: 8 },
+  prValue: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 36, fontWeight: 800, color: '#FFD700', marginBottom: 24, letterSpacing: 1 },
+  prHint: { fontSize: 11, color: '#666', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' },
+  toast: { position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 12, padding: '12px 20px', fontSize: 13, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8, zIndex: 300, boxShadow: '0 8px 30px rgba(0,0,0,0.5)' },
+  calendarCard: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 14, padding: 14 },
+  calendarHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  calendarNav: { background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', padding: 8, fontSize: 18, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  calendarTitle: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 18, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase' },
+  calendarGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 },
+  calendarDayHead: { fontSize: 10, color: '#555', fontWeight: 800, textAlign: 'center', padding: '6px 0', letterSpacing: 1 },
+  calendarCell: { aspectRatio: '1 / 1', borderRadius: 8, padding: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', position: 'relative', transition: 'background 0.15s' },
+  calendarDayNum: { fontSize: 13, fontWeight: 600 },
+  calendarDots: { display: 'flex', gap: 2, marginTop: 'auto', paddingBottom: 2, flexWrap: 'wrap', justifyContent: 'center' },
+  calendarDot: { width: 5, height: 5, borderRadius: '50%' },
+  legend: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginTop: 14, padding: '12px 0' },
+  legendItem: { display: 'flex', alignItems: 'center', gap: 5 },
+  legendDot: { width: 8, height: 8, borderRadius: '50%' },
+  legendLabel: { fontSize: 10, color: '#888', fontWeight: 700, letterSpacing: 0.5 },
+  dayDetailDate: { textAlign: 'center', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #1f1f1f' },
+  dayDetailDay: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 32, fontWeight: 900, color: '#fff', lineHeight: 1 },
+  dayDetailWeekday: { fontSize: 12, color: '#888', fontWeight: 500, marginTop: 4, textTransform: 'capitalize' },
+  dayDetailSection: { border: '1px solid', borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
+  dayDetailHeader: { padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  dayDetailLabel: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 1.5, color: '#fff' },
+  dayDetailDel: { background: 'rgba(0,0,0,0.25)', border: 'none', color: '#fff', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  dayDetailStats: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, background: '#1f1f1f' },
+  dayStatBox: { background: '#141414', padding: '10px 8px', textAlign: 'center' },
+  dayStatVal: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 16, fontWeight: 800, color: '#fff' },
+  dayStatLbl: { fontSize: 8, color: '#666', fontWeight: 700, letterSpacing: 1, marginTop: 2 },
+  dayDetailExercises: { padding: '8px 12px', background: '#0f0f0f' },
+  dayDetailExercise: { padding: '10px 0', borderBottom: '1px solid #1a1a1a' },
+  dayDetailExName: { fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 6 },
+  dayDetailExSetList: { display: 'flex', flexDirection: 'column', gap: 4 },
+  dayDetailExSetItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: '#141414', borderRadius: 6 },
+  dayDetailSetLeft: { display: 'flex', alignItems: 'center', gap: 10 },
+  dayDetailSetIdx: { fontSize: 10, color: '#666', fontWeight: 700, minWidth: 14 },
+  dayDetailSetVal: { fontSize: 13, color: '#fff', fontWeight: 700, fontFamily: "'Big Shoulders Display',sans-serif", letterSpacing: 0.3 },
+  dayDetailSetUnit: { fontSize: 10, color: '#888', fontWeight: 600, marginLeft: 1 },
+  dayDetailSetDel: { background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px' },
+  addWorkoutSection: { marginTop: 16, padding: '14px 0 0', borderTop: '1px solid #1f1f1f' },
+  addWorkoutLabel: { fontSize: 10, color: '#666', fontWeight: 700, letterSpacing: 1.5, marginBottom: 10, textAlign: 'center' },
+  addWorkoutGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 },
+  addWorkoutBtn: { border: 'none', borderRadius: 10, padding: '12px 8px', color: '#fff', fontSize: 13, fontWeight: 800, letterSpacing: 1, cursor: 'pointer', fontFamily: "'Big Shoulders Display',sans-serif" },
+  backdateBanner: { display: 'flex', alignItems: 'center', gap: 12, background: '#141414', border: '1px solid', borderRadius: 14, padding: '14px 16px', marginBottom: 20, color: '#aaa' },
+  backdateLabel: { fontSize: 9, color: '#888', fontWeight: 700, letterSpacing: 1.3, marginBottom: 2 },
+  backdateDate: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: 0.3 },
+  alarmList: { display: 'flex', flexDirection: 'column', gap: 8 },
+  alarmRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, border: '1px solid', transition: 'background 0.2s, border-color 0.2s' },
+  alarmIcon: { fontSize: 18, fontWeight: 700, minWidth: 24, textAlign: 'center' },
+  alarmSymbol: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 0.5, color: '#fff', marginBottom: 2 },
+  alarmCondition: { fontSize: 13, fontWeight: 600 },
+  alarmTriggered: { fontSize: 11, color: '#FFD700', fontWeight: 700, marginTop: 3, letterSpacing: 0.3 },
+  alarmDistance: { fontSize: 11, color: '#666', fontWeight: 500, marginTop: 3 },
+  alarmDel: { background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', fontSize: 22, lineHeight: 1, padding: '4px 8px', flexShrink: 0 },
+  alarmDirSelect: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 },
+  alarmDirBtn: { background: '#0a0a0a', border: '1px solid #1f1f1f', color: '#666', borderRadius: 10, padding: '12px', fontSize: 12, fontWeight: 800, letterSpacing: 1, cursor: 'pointer', transition: 'all 0.15s' },
+  targetCard: { border: '2px solid', borderRadius: 16, padding: '16px 18px', marginBottom: 14, transition: 'all 0.2s' },
+  targetLabel: { fontSize: 10, fontWeight: 800, letterSpacing: 2, color: '#aaa', marginBottom: 6 },
+  targetValue: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 38, fontWeight: 900, lineHeight: 1, letterSpacing: 0.5, marginBottom: 8 },
+  targetUnit: { fontSize: 18, fontWeight: 700, opacity: 0.6, marginLeft: 2 },
+  targetStatus: { fontSize: 12, color: '#888', fontWeight: 500, lineHeight: 1.4 },
+  targetTopStrip: { fontSize: 11, color: '#aaa', padding: '8px 10px', background: 'rgba(0,0,0,0.25)', borderRadius: 8, marginBottom: 2, fontWeight: 600 },
+  prBoxDual: { border: '1px solid', borderRadius: 12, marginBottom: 12, overflow: 'hidden' },
+  prDualRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px' },
+  prDualLabel: { fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: '#aaa' },
+  prDualValue: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 16, fontWeight: 800, color: '#fff' },
+  setBeat: { color: '#4CAF50', fontSize: 14, fontWeight: 900, marginLeft: 8 },
+  dayDetailHighlights: { display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 12px', background: '#0f0f0f', borderBottom: '1px solid #1a1a1a' },
+  dayPRBlock: { border: '1px solid', borderRadius: 10, padding: '8px 10px' },
+  dayPRBlockLabel: { fontSize: 10, fontWeight: 800, letterSpacing: 1.3, marginBottom: 6 },
+  dayPRBlockRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 0', fontSize: 12 },
+  dayPRExName: { color: '#fff', fontWeight: 600 },
+  dayPRExVal: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 0.3 },
+  dayTargetChip: { fontSize: 11, fontWeight: 700, padding: '8px 12px', borderRadius: 8, border: '1px solid', letterSpacing: 0.3, textAlign: 'center' },
+  dayHighlightChip: { fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8, border: '1px solid', letterSpacing: 0.3 },
+  customDayBadge: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 7, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: 'rgba(255,255,255,0.8)', lineHeight: 1 },
+  addDayCard: { border: '1.5px dashed #2a2a2a', borderRadius: 18, padding: 0, cursor: 'pointer', aspectRatio: '1 / 1.05', background: '#0d0d0d', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.15s ease' },
+  addDayInner: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: '#555' },
+  addDayPlus: { fontSize: 36, fontWeight: 300, lineHeight: 1 },
+  addDayText: { fontSize: 11, fontWeight: 700, letterSpacing: 1.5 },
+  doneBadge: { fontSize: 11, fontWeight: 800, padding: '5px 10px', borderRadius: 8, letterSpacing: 0.3, marginLeft: 12, whiteSpace: 'nowrap' },
+  dayPreview: { borderRadius: 14, padding: '18px 16px', marginBottom: 18, minHeight: 80, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' },
+  dayPreviewName: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 32, fontWeight: 900, color: '#fff', lineHeight: 0.95, letterSpacing: -0.5 },
+  dayPreviewSub: { fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginTop: 6 },
+  colorGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginTop: 8, marginBottom: 4 },
+  colorSwatch: { aspectRatio: '1', borderRadius: 12, cursor: 'pointer', transition: 'transform 0.15s, border 0.15s', padding: 0 },
+  copyToggle: { width: '100%', background: 'transparent', border: 'none', color: '#888', fontSize: 12, fontWeight: 600, cursor: 'pointer', textAlign: 'left', padding: '4px 0' },
+  copyExerciseBtn: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0a0a0a', border: '1px solid #1f1f1f', borderRadius: 10, padding: '11px 14px', cursor: 'pointer', width: '100%', textAlign: 'left' },
+  deleteDayBtn: { width: '100%', background: 'transparent', border: 'none', color: '#FF5252', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 14, padding: 8 },
+  statsCard: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 14, padding: '18px 14px 14px' },
+  barChartRow: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, height: 160 },
+  barColumn: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', cursor: 'pointer', height: '100%', padding: 0 },
+  barCount: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 16, lineHeight: 1, transition: 'color 0.2s' },
+  barTrack: { flex: 1, width: 10, background: '#1f1f1f', borderRadius: 6, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'hidden' },
+  barFill: { width: '100%', borderRadius: 6, transition: 'height 0.4s ease, background 0.2s, opacity 0.2s', minHeight: 6 },
+  barLabel: { fontSize: 12, transition: 'color 0.2s' },
+  statsDetail: { marginTop: 16, paddingTop: 14, borderTop: '1px solid #1f1f1f' },
+  statsDetailTitle: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: 0.3 },
+  statsDetailRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 },
+  statsDetailBox: { background: '#0f0f0f', border: '1px solid #1f1f1f', borderRadius: 10, padding: '12px 14px', textAlign: 'center' },
+  statsDetailVal: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 24, fontWeight: 800, color: '#fff', lineHeight: 1 },
+  statsDetailLbl: { fontSize: 9, color: '#666', fontWeight: 700, letterSpacing: 1, marginTop: 6 },
+  statsHint: { textAlign: 'center', color: '#555', fontSize: 11, fontWeight: 500, marginTop: 14, paddingTop: 14, borderTop: '1px solid #1f1f1f' },
+  summaryPRType: { fontSize: 9, fontWeight: 800, letterSpacing: 1, padding: '2px 6px', borderRadius: 4, border: '1px solid currentColor' },
+  summaryHeader: { padding: '20px 20px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderRadius: '18px 18px 0 0' },
+  summaryHeaderTitle: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 900, letterSpacing: 1, color: '#fff' },
+  summaryHeaderDur: { fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: 600 },
+  summaryHero: { textAlign: 'center', padding: '10px 0 18px', borderBottom: '1px solid #1f1f1f', marginBottom: 16 },
+  summaryHeroValue: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 56, fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: -1 },
+  summaryHeroUnit: { fontSize: 28, color: '#888', marginLeft: 4 },
+  summaryHeroLabel: { fontSize: 10, color: '#666', fontWeight: 700, letterSpacing: 1.5, marginTop: 6 },
+  summaryDiff: { fontSize: 12, fontWeight: 700, marginTop: 10, letterSpacing: 0.3 },
+  summaryStatsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 },
+  summaryStatBox: { background: '#0f0f0f', border: '1px solid #1f1f1f', borderRadius: 12, padding: '14px 8px', textAlign: 'center' },
+  summaryStatValue: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 30, fontWeight: 800, color: '#fff', lineHeight: 1 },
+  summaryStatLabel: { fontSize: 9, color: '#666', fontWeight: 700, letterSpacing: 1.2, marginTop: 6 },
+  summaryPRs: { background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: 12, padding: '12px 14px', marginBottom: 16 },
+  summaryPRRow: { display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0', fontSize: 13 },
+  summaryPRName: { color: '#fff', fontWeight: 600, flex: 1 },
+  summaryPRVal: { color: '#FFD700', fontWeight: 800, fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 15 },
+  summaryWeek: { marginBottom: 4 },
+  summarySectionLabel: { fontSize: 10, color: '#666', fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 },
+  summaryWeekRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 },
+  summaryWeekBox: { background: '#0f0f0f', border: '1px solid', borderRadius: 10, padding: '10px 4px', textAlign: 'center', transition: 'all 0.2s' },
+  summaryWeekCount: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 800, lineHeight: 1 },
+  summaryWeekDay: { fontSize: 9, color: '#888', fontWeight: 700, letterSpacing: 0.5, marginTop: 4 },
+  coachContainer: { maxWidth: 480, margin: '0 auto', height: 'calc(100vh - 90px)', display: 'flex', flexDirection: 'column', padding: '12px 12px 0' },
+  coachHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 4px 12px', flexShrink: 0 },
+  chatScroll: { flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '0 2px' },
+  coachWelcome: { textAlign: 'center', padding: '24px 8px 16px' },
+  coachWelcomeTitle: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 8 },
+  coachWelcomeText: { fontSize: 13, color: '#888', lineHeight: 1.5, marginBottom: 20 },
+  quickPromptList: { display: 'flex', flexDirection: 'column', gap: 8 },
+  quickPromptBtn: { background: '#141414', border: '1px solid #1f1f1f', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 500, textAlign: 'left', width: '100%' },
+  messageList: { display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 12 },
+  msgUserWrap: { display: 'flex', justifyContent: 'flex-end' },
+  msgUser: { maxWidth: '85%', background: 'linear-gradient(135deg,#9C27B0,#6A1B9A)', color: '#fff', padding: '10px 14px', borderRadius: '14px 14px 4px 14px', fontSize: 14, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word' },
+  msgAiWrap: { display: 'flex', justifyContent: 'flex-start' },
+  msgAi: { maxWidth: '85%', background: '#1a1a1a', color: '#fff', padding: '10px 14px', borderRadius: '14px 14px 14px 4px', fontSize: 14, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word', border: '1px solid #1f1f1f' },
+  msgError: { background: 'rgba(255,82,82,0.1)', color: '#FF5252', padding: '10px 14px', borderRadius: 12, fontSize: 12, textAlign: 'center', border: '1px solid rgba(255,82,82,0.3)' },
+  chatInputBar: { display: 'flex', gap: 8, padding: '12px 0 8px', borderTop: '1px solid #1f1f1f', flexShrink: 0, background: '#0a0a0a' },
+  chatInput: { flex: 1, background: '#141414', border: '1px solid #1f1f1f', borderRadius: 22, padding: '11px 16px', color: '#fff', fontSize: 14, outline: 'none' },
+  chatSendBtn: { background: 'linear-gradient(135deg,#9C27B0,#6A1B9A)', border: 'none', color: '#fff', width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'opacity 0.15s' },
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
