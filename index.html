@@ -253,7 +253,7 @@ const getExerciseMuscles = (exerciseName, customMap) => {
 };
 
 const STORAGE_KEY = 'heavy-gym-data-v1';
-const APP_VERSION = '2.0'; // İlerleme sekmesi + Firebase
+const APP_VERSION = '2.1'; // Crosshair grafik
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -2641,37 +2641,62 @@ function ProgressTab({ authUser }) {
 }
 
 // Tek hareket derin grafik ekranı
+// Tek hareket derin grafik ekranı — gerçek seans değerleri + crosshair (borsa mantığı)
 function ExerciseProgressDetail({ es, onBack }) {
   const [period, setPeriod] = useState('6A'); // 1A 3A 6A 1Y TÜM
+  const [touchIdx, setTouchIdx] = useState(null); // crosshair için seçili nokta
+  const svgRef = React.useRef(null);
   const periodMs = { '1A': 30, '3A': 90, '6A': 180, '1Y': 365, 'TÜM': 99999 };
   const now = Date.now();
   const cutoff = now - periodMs[period] * 86400000;
-  const points = es.curve.filter(p => p.ts >= cutoff);
+  // GERÇEK SEANS değerleri (sessionWeight) — iniş çıkışlı
+  const points = es.curve.filter(p => p.ts >= cutoff).map(p => ({ ts: p.ts, weight: p.sessionWeight, reps: p.sessionReps, prWeight: p.weight }));
 
-  // Grafik için min/max
+  // min/max gerçek seans ağırlıklarına göre
   const weights = points.map(p => p.weight);
-  const minW = Math.min(...weights, es.weight);
-  const maxW = Math.max(...weights, es.weight);
-  const range = maxW - minW || 1;
+  const minW = points.length ? Math.min(...weights) : 0;
+  const maxW = points.length ? Math.max(...weights) : 1;
+  const range = (maxW - minW) || 1;
 
-  // 6 ay önceki vs şimdi kazanç
+  // 6 ay önceki vs şimdi kazanç (rekor bazlı)
   const sixMonthAgo = now - 180 * 86400000;
   const oldPoint = es.curve.find(p => p.ts >= sixMonthAgo) || es.curve[0];
   const gain = es.weight - (oldPoint ? oldPoint.weight : es.weight);
 
-  // SVG path oluştur
-  const W = 300, H = 160, padL = 10, padR = 10, padT = 20, padB = 20;
+  // SVG geometri
+  const W = 300, H = 170, padL = 34, padR = 12, padT = 16, padB = 24;
   const plotW = W - padL - padR, plotH = H - padT - padB;
   const xFor = (i) => points.length <= 1 ? padL + plotW / 2 : padL + (i / (points.length - 1)) * plotW;
   const yFor = (w) => padT + plotH - ((w - minW) / range) * plotH;
+
   let linePath = '', areaPath = '';
   points.forEach((p, i) => {
     const x = xFor(i), y = yFor(p.weight);
     linePath += (i === 0 ? `M${x} ${y}` : ` L${x} ${y}`);
   });
-  if (points.length > 0) {
-    areaPath = linePath + ` L${xFor(points.length-1)} ${padT+plotH} L${xFor(0)} ${padT+plotH} Z`;
-  }
+  if (points.length > 0) areaPath = linePath + ` L${xFor(points.length-1)} ${padT+plotH} L${xFor(0)} ${padT+plotH} Z`;
+
+  // Y ekseni etiketleri (3 seviye: min, orta, max)
+  const yLabels = [maxW, (maxW + minW) / 2, minW].map(v => Math.round(v * 10) / 10);
+
+  // X ekseni etiketleri (baş, orta, son)
+  const fmtDate = (ts) => new Date(ts).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+
+  // Dokunma → en yakın noktayı bul
+  const handleTouch = (clientX) => {
+    if (!svgRef.current || points.length === 0) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const relX = ((clientX - rect.left) / rect.width) * W; // SVG koordinatına çevir
+    // En yakın nokta indexini bul
+    let nearest = 0, minDist = Infinity;
+    points.forEach((p, i) => {
+      const d = Math.abs(xFor(i) - relX);
+      if (d < minDist) { minDist = d; nearest = i; }
+    });
+    setTouchIdx(nearest);
+  };
+
+  const active = touchIdx !== null && points[touchIdx] ? points[touchIdx] : null;
 
   return (
     <div style={S.screen}>
@@ -2697,35 +2722,70 @@ function ExerciseProgressDetail({ es, onBack }) {
 
       <div style={S.periodToggle}>
         {['1A','3A','6A','1Y','TÜM'].map(p => (
-          <button key={p} onClick={() => setPeriod(p)} style={{ ...S.periodBtn, ...(period === p ? S.periodBtnActive : {}) }}>{p}</button>
+          <button key={p} onClick={() => { setPeriod(p); setTouchIdx(null); }} style={{ ...S.periodBtn, ...(period === p ? S.periodBtnActive : {}) }}>{p}</button>
         ))}
       </div>
 
       <div style={{ ...S.progCard, padding: 14 }}>
+        {/* Crosshair balonu */}
+        {active && (
+          <div style={S.crosshairTip}>
+            <span style={S.crosshairDate}>{fmtDate(active.ts)}</span>
+            <span style={S.crosshairVal}>{active.weight}kg × {active.reps}</span>
+          </div>
+        )}
         {points.length >= 2 ? (
-          <svg viewBox="0 0 300 160" style={{ width: '100%', display: 'block' }}>
+          <svg ref={svgRef} viewBox="0 0 300 170" style={{ width: '100%', display: 'block', touchAction: 'none' }}
+            onTouchStart={(e) => handleTouch(e.touches[0].clientX)}
+            onTouchMove={(e) => { e.preventDefault(); handleTouch(e.touches[0].clientX); }}
+            onTouchEnd={() => setTouchIdx(null)}
+            onMouseDown={(e) => handleTouch(e.clientX)}
+            onMouseMove={(e) => { if (e.buttons === 1) handleTouch(e.clientX); }}
+            onMouseUp={() => setTouchIdx(null)}
+            onMouseLeave={() => setTouchIdx(null)}
+          >
             <defs>
               <linearGradient id="exfill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stopColor="#FF3D3D" stopOpacity="0.35"/>
                 <stop offset="1" stopColor="#FF3D3D" stopOpacity="0"/>
               </linearGradient>
             </defs>
-            <line x1="0" y1="50" x2="300" y2="50" stroke="#1a1a1a" strokeWidth="1"/>
-            <line x1="0" y1="90" x2="300" y2="90" stroke="#1a1a1a" strokeWidth="1"/>
-            <line x1="0" y1="130" x2="300" y2="130" stroke="#1a1a1a" strokeWidth="1"/>
+            {/* Y grid + etiketler */}
+            {yLabels.map((v, i) => {
+              const y = padT + (i / 2) * plotH;
+              return (
+                <g key={i}>
+                  <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="#1a1a1a" strokeWidth="1"/>
+                  <text x={padL - 6} y={y + 3} fill="#666" fontSize="9" textAnchor="end">{v}</text>
+                </g>
+              );
+            })}
+            {/* Alan + çizgi */}
             <path d={areaPath} fill="url(#exfill)"/>
-            <path d={linePath} fill="none" stroke="#FF3D3D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d={linePath} fill="none" stroke="#FF3D3D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            {/* Noktalar */}
             {points.map((p, i) => (
-              <circle key={i} cx={xFor(i)} cy={yFor(p.weight)} r={i === points.length-1 ? 5 : 3} fill={i === points.length-1 ? '#fff' : '#FF3D3D'} stroke={i === points.length-1 ? '#FF3D3D' : 'none'} strokeWidth="2"/>
+              <circle key={i} cx={xFor(i)} cy={yFor(p.weight)} r={i === points.length-1 ? 4 : 2.5} fill={i === points.length-1 ? '#fff' : '#FF3D3D'} stroke={i === points.length-1 ? '#FF3D3D' : 'none'} strokeWidth="2"/>
             ))}
+            {/* Crosshair dikey çizgi + vurgu noktası */}
+            {active && (
+              <g>
+                <line x1={xFor(touchIdx)} y1={padT} x2={xFor(touchIdx)} y2={padT + plotH} stroke="#fff" strokeWidth="1" strokeDasharray="3 3" opacity="0.6"/>
+                <circle cx={xFor(touchIdx)} cy={yFor(active.weight)} r="6" fill="#fff" stroke="#FF3D3D" strokeWidth="2.5"/>
+              </g>
+            )}
+            {/* X ekseni etiketleri */}
+            <text x={padL} y={H - 6} fill="#666" fontSize="9" textAnchor="start">{fmtDate(points[0].ts)}</text>
+            {points.length > 2 && <text x={padL + plotW/2} y={H - 6} fill="#666" fontSize="9" textAnchor="middle">{fmtDate(points[Math.floor(points.length/2)].ts)}</text>}
+            <text x={W - padR} y={H - 6} fill="#666" fontSize="9" textAnchor="end">{fmtDate(points[points.length-1].ts)}</text>
           </svg>
         ) : (
           <div style={{ textAlign: 'center', color: '#555', padding: '30px 0', fontSize: 13 }}>
             Bu dönemde yeterli veri yok.<br />Daha fazla antrenman kaydet 💪
           </div>
         )}
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#666', marginTop: 4 }}>
-          {points.length >= 2 && <><span>{new Date(points[0].ts).toLocaleDateString('tr-TR', {day:'numeric',month:'short'})}</span><span>{new Date(points[points.length-1].ts).toLocaleDateString('tr-TR', {day:'numeric',month:'short'})}</span></>}
+        <div style={{ textAlign: 'center', fontSize: 10, color: '#555', marginTop: 6 }}>
+          Grafiğe dokun, o günkü değeri gör · gerçek seans ağırlıkları
         </div>
       </div>
 
@@ -2756,7 +2816,10 @@ const S = {
   progStatBox: { background: '#0f0f0f', border: '1px solid #1f1f1f', borderRadius: 14, padding: 14 },
   progStatV: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 800, fontSize: 24 },
   progStatL: { fontSize: 10, color: '#777', fontWeight: 700, letterSpacing: 0.5, marginTop: 2 },
-  progCard: { background: '#0f0f0f', border: '1px solid #1f1f1f', borderRadius: 16, padding: 16, marginBottom: 14 },
+  progCard: { background: '#0f0f0f', border: '1px solid #1f1f1f', borderRadius: 16, padding: 16, marginBottom: 14, position: 'relative' },
+  crosshairTip: { position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', background: '#1a1a1a', border: '1px solid #FF3D3D', borderRadius: 10, padding: '6px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 5, pointerEvents: 'none' },
+  crosshairDate: { fontSize: 10, color: '#888', fontWeight: 600 },
+  crosshairVal: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 18, fontWeight: 800, color: '#fff' },
   plateauBox: { background: 'rgba(255,167,38,0.08)', border: '1px solid rgba(255,167,38,0.35)', borderRadius: 16, padding: 16, marginBottom: 14 },
   plateauTitle: { fontSize: 11, fontWeight: 800, letterSpacing: 1, color: '#FFA726', marginBottom: 10 },
   plateauRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', width: '100%', background: 'transparent', border: 'none', borderTop: '1px solid rgba(255,167,38,0.12)', cursor: 'pointer' },
