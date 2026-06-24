@@ -228,17 +228,7 @@ const getExerciseMuscles = (exerciseName, customMap) => {
   return best; // null if nothing matched
 };
 
-const MARKET_DEFAULTS = [
-  { symbol: 'QQQ', name: 'Nasdaq 100' },
-  { symbol: 'SPY', name: 'S&P 500' },
-  { symbol: 'GLD', name: 'Altın' },
-  { symbol: 'SLV', name: 'Gümüş' },
-];
-
 const STORAGE_KEY = 'heavy-gym-data-v1';
-const MARKET_KEY = 'heavy-market-v1';
-const AI_KEY = 'apex-ai-v1';
-const REFRESH_INTERVAL = 30000;
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -808,8 +798,7 @@ function App() {
     <div style={S.app}>
       <div style={S.content}>
         {tab === 'workout' && <WorkoutTab authUser={authUser} />}
-        {tab === 'markets' && <MarketsTab />}
-        {tab === 'coach' && <CoachTab />}
+        {tab === 'progress' && <ProgressTab authUser={authUser} />}
       </div>
       <BottomTabs tab={tab} onChange={setTab} />
     </div>
@@ -914,11 +903,8 @@ function BottomTabs({ tab, onChange }) {
       <button onClick={() => onChange('workout')} style={{ ...S.tabBtn, color: tab === 'workout' ? '#fff' : '#555' }} className="tab-btn">
         <Icon.Dumbbell /><span style={S.tabLabel}>ANTRENMAN</span>
       </button>
-      <button onClick={() => onChange('markets')} style={{ ...S.tabBtn, color: tab === 'markets' ? '#fff' : '#555' }} className="tab-btn">
-        <Icon.Chart /><span style={S.tabLabel}>PİYASA</span>
-      </button>
-      <button onClick={() => onChange('coach')} style={{ ...S.tabBtn, color: tab === 'coach' ? '#fff' : '#555' }} className="tab-btn">
-        <Icon.Coach /><span style={S.tabLabel}>KOÇ</span>
+      <button onClick={() => onChange('progress')} style={{ ...S.tabBtn, color: tab === 'progress' ? '#fff' : '#555' }} className="tab-btn">
+        <Icon.Chart /><span style={S.tabLabel}>İLERLEME</span>
       </button>
     </div>
   );
@@ -2348,946 +2334,383 @@ function SessionSummaryModal({ summary, dayConfig, onClose }) {
 }
 
 // ═══════════════════════════════════════════
-// MARKETS TAB
+// PROGRESS TAB (İLERLEME)
 // ═══════════════════════════════════════════
 
-function MarketsTab() {
-  const [apiKey, setApiKey] = useState(null);
-  const [twelveKey, setTwelveKey] = useState(null);
-  const [watchlist, setWatchlist] = useState([]);
-  const [alarms, setAlarms] = useState([]);
-  const [quotes, setQuotes] = useState({});
-  const [loading, setLoading] = useState({});
-  const [lastRefresh, setLastRefresh] = useState(null);
-  const [showAddTicker, setShowAddTicker] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [detailSymbol, setDetailSymbol] = useState(null);
-  const [showAlarmModal, setShowAlarmModal] = useState(null); // null | symbol
+// Bir egzersizin günlük top setlerini (kronolojik) döndürür — PR geçmişi için
+function getExercisePRHistory(logs, exerciseName) {
+  const byDay = {};
+  logs.filter(l => l.exerciseName === exerciseName).forEach(l => {
+    const k = dateKey(l.timestamp);
+    if (!byDay[k]) byDay[k] = [];
+    byDay[k].push(l);
+  });
+  // Her gün için top set (ilk set) ve o günkü en iyi
+  const dayEntries = Object.entries(byDay).map(([k, dayLogs]) => {
+    const sorted = [...dayLogs].sort((a, b) => a.timestamp - b.timestamp);
+    const topSet = sorted[0];
+    return { dateKey: k, ts: topSet.timestamp, weight: topSet.weight, reps: topSet.reps };
+  }).sort((a, b) => a.ts - b.ts);
+  // Kümülatif rekor eğrisi: her noktada o ana kadarki en iyi top
+  let best = null;
+  const prCurve = dayEntries.map(e => {
+    if (!best || e.weight > best.weight || (e.weight === best.weight && e.reps > best.reps)) best = { weight: e.weight, reps: e.reps };
+    return { ts: e.ts, weight: best.weight, reps: best.reps, sessionWeight: e.weight, sessionReps: e.reps };
+  });
+  return prCurve;
+}
 
+// Tahmini 1RM (Epley formülü)
+function estimate1RM(weight, reps) {
+  if (!weight || !reps) return 0;
+  if (reps === 1) return weight;
+  return Math.round(weight * (1 + reps / 30));
+}
+
+function ProgressTab({ authUser }) {
+  const [data, setData] = useState({ exercises: DEFAULT_EXERCISES, logs: [], sessions: [], customDays: [] });
+  const [detailExercise, setDetailExercise] = useState(null);
+  const cloudReady = !!(authUser && window.APEX_FIREBASE_OK && window.APEX_DB);
+
+  // Veri yükle (workout ile aynı kaynak)
   useEffect(() => {
+    let localData = null;
     try {
-      const raw = localStorage.getItem(MARKET_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const p = JSON.parse(raw);
-        setApiKey(p.apiKey || null);
-        setTwelveKey(p.twelveKey || null);
-        setWatchlist(p.watchlist || []);
-        // Migrate old alarm format (triggered:bool) to new (state:string + fireCount)
-        const migratedAlarms = (p.alarms || []).map(a => {
-          if (a.state) return a; // already new format
-          return {
-            id: a.id, symbol: a.symbol, direction: a.direction, price: a.price, createdAt: a.createdAt,
-            state: a.triggered ? 'fired' : 'armed',
-            lastFiredAt: a.triggeredAt || null,
-            lastFirePrice: a.triggerPrice || null,
-            fireCount: a.triggered ? 1 : 0,
-          };
-        });
-        setAlarms(migratedAlarms);
+        const parsed = JSON.parse(raw);
+        localData = { exercises: { ...DEFAULT_EXERCISES, ...(parsed.exercises || {}) }, logs: parsed.logs || [], sessions: parsed.sessions || [], customDays: parsed.customDays || [], customMuscleMap: parsed.customMuscleMap || {} };
+        setData(localData);
       }
     } catch (e) {}
-  }, []);
-
-  const saveMarketData = (newApiKey, newTwelveKey, newWatchlist, newAlarms) => {
-    try { localStorage.setItem(MARKET_KEY, JSON.stringify({ apiKey: newApiKey, twelveKey: newTwelveKey, watchlist: newWatchlist, alarms: newAlarms })); } catch (e) {}
-  };
-
-  const fetchQuote = useCallback(async (symbol) => {
-    if (!apiKey) return null;
-    try {
-      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`);
-      const data = await res.json();
-      if (data.c !== undefined && data.c !== 0) return data;
-      return { error: true };
-    } catch (e) { return { error: true }; }
-  }, [apiKey]);
-
-  const refreshAll = useCallback(async () => {
-    if (!apiKey) return;
-    const allSymbols = [...MARKET_DEFAULTS.map(d => d.symbol), ...watchlist];
-    const loadingState = {};
-    allSymbols.forEach(s => loadingState[s] = true);
-    setLoading(loadingState);
-    const results = await Promise.all(allSymbols.map(async (s) => [s, await fetchQuote(s)]));
-    const newQuotes = {};
-    results.forEach(([s, q]) => { if (q) newQuotes[s] = q; });
-    setQuotes(prev => ({ ...prev, ...newQuotes }));
-    setLoading({});
-    setLastRefresh(Date.now());
-  }, [apiKey, watchlist, fetchQuote]);
-
-  useEffect(() => {
-    if (!apiKey) return;
-    refreshAll();
-    const interval = setInterval(refreshAll, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [apiKey, watchlist, refreshAll]);
-
-  const addToWatchlist = async (symbol) => {
-    const sym = symbol.trim().toUpperCase();
-    if (!sym || watchlist.includes(sym) || MARKET_DEFAULTS.some(d => d.symbol === sym)) { setShowAddTicker(false); return; }
-    const quote = await fetchQuote(sym);
-    if (!quote || quote.error) { alert(`"${sym}" bulunamadı.`); return; }
-    const newWatchlist = [...watchlist, sym];
-    setWatchlist(newWatchlist); setQuotes(prev => ({ ...prev, [sym]: quote }));
-    saveMarketData(apiKey, twelveKey, newWatchlist, alarms); setShowAddTicker(false);
-  };
-
-  const removeFromWatchlist = (symbol) => { const n = watchlist.filter(s => s !== symbol); setWatchlist(n); saveMarketData(apiKey, twelveKey, n, alarms); };
-  const reorderWatchlist = (newOrder) => { setWatchlist(newOrder); saveMarketData(apiKey, twelveKey, newOrder, alarms); };
-  const saveApiKey = (key) => { setApiKey(key); saveMarketData(key, twelveKey, watchlist, alarms); setShowSettings(false); };
-  const saveTwelveKey = (key) => { setTwelveKey(key); saveMarketData(apiKey, key, watchlist, alarms); };
-
-  const createAlarm = (symbol, direction, price) => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      try { Notification.requestPermission(); } catch (e) {}
+    if (cloudReady) {
+      window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc('gym').get().then((snap) => {
+        if (snap.exists) {
+          const cloud = snap.data();
+          setData({ exercises: { ...DEFAULT_EXERCISES, ...(cloud.exercises || {}) }, logs: cloud.logs || [], sessions: cloud.sessions || [], customDays: cloud.customDays || [], customMuscleMap: cloud.customMuscleMap || {} });
+        }
+      }).catch(() => {});
     }
-    const newAlarm = {
-      id: Date.now().toString() + Math.random(),
-      symbol, direction, price: parseFloat(price),
-      createdAt: Date.now(),
-      state: 'armed',
-      lastFiredAt: null,
-      lastFirePrice: null,
-      fireCount: 0,
-    };
-    const newAlarms = [...alarms, newAlarm];
-    setAlarms(newAlarms);
-    saveMarketData(apiKey, twelveKey, watchlist, newAlarms);
-    setShowAlarmModal(null);
-  };
+  }, [cloudReady, authUser]);
 
-  const deleteAlarm = (id) => {
-    const newAlarms = alarms.filter(a => a.id !== id);
-    setAlarms(newAlarms);
-    saveMarketData(apiKey, twelveKey, watchlist, newAlarms);
-  };
+  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays), [data.customDays]);
 
-  // Check alarms whenever quotes update — armed alarms fire when condition met,
-  // fired alarms re-arm when price moves 0.5% away from threshold
-  useEffect(() => {
-    if (!alarms.length) return;
-    const REARM_BUFFER_PCT = 0.5;
-    let anyChange = false;
+  // Tüm benzersiz egzersizler
+  const allExercises = useMemo(() => {
+    const set = new Set();
+    data.logs.forEach(l => set.add(l.exerciseName));
+    return [...set];
+  }, [data.logs]);
 
-    const newAlarms = alarms.map(a => {
-      const q = quotes[a.symbol];
-      if (!q || q.error || q.c == null) return a;
-      const conditionMet = a.direction === 'above' ? q.c >= a.price : q.c <= a.price;
-
-      if (a.state === 'armed' && conditionMet) {
-        anyChange = true;
-        const dirText = a.direction === 'above' ? '↑ üstüne çıktı' : '↓ altına düştü';
-        const body = `${a.symbol}: $${q.c.toFixed(2)} (alarm: $${a.price.toFixed(2)})`;
-        if ('Notification' in window && Notification.permission === 'granted') {
-          try { new Notification(`${a.symbol} ${dirText}`, { body, tag: a.id + '-' + Date.now() }); } catch (e) {}
-        }
-        haptic([100, 60, 100, 60, 100]);
-        return { ...a, state: 'fired', lastFiredAt: Date.now(), lastFirePrice: q.c, fireCount: (a.fireCount || 0) + 1 };
-      }
-
-      if (a.state === 'fired') {
-        const buffer = a.price * (REARM_BUFFER_PCT / 100);
-        const reArmed = a.direction === 'above' ? q.c < (a.price - buffer) : q.c > (a.price + buffer);
-        if (reArmed) {
-          anyChange = true;
-          return { ...a, state: 'armed' };
+  // Her egzersiz için PR eğrisi + son PR tarihi + plato durumu
+  const exerciseStats = useMemo(() => {
+    const now = Date.now();
+    const PLATEAU_WEEKS = 4;
+    const plateauMs = PLATEAU_WEEKS * 7 * 86400000;
+    return allExercises.map(name => {
+      const curve = getExercisePRHistory(data.logs, name);
+      if (curve.length === 0) return null;
+      const currentPR = curve[curve.length - 1];
+      // Son rekor artışının tarihi: eğride weight'in en son arttığı nokta
+      let lastImproveTs = curve[0].ts;
+      for (let i = 1; i < curve.length; i++) {
+        if (curve[i].weight > curve[i-1].weight || (curve[i].weight === curve[i-1].weight && curve[i].reps > curve[i-1].reps)) {
+          lastImproveTs = curve[i].ts;
         }
       }
-      return a;
+      const weeksSince = Math.floor((now - lastImproveTs) / (7 * 86400000));
+      const isStuck = (now - lastImproveTs) >= plateauMs && curve.length >= 2;
+      return {
+        name, curve, currentPR,
+        weight: currentPR.weight, reps: currentPR.reps,
+        lastImproveTs, weeksSince, isStuck,
+        oneRM: estimate1RM(currentPR.weight, currentPR.reps),
+      };
+    }).filter(Boolean);
+  }, [allExercises, data.logs]);
+
+  // Bu ay kırılan PR sayısı + en büyük sıçrama
+  const monthStats = useMemo(() => {
+    const d = new Date();
+    const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    let prCount = 0;
+    let biggestJump = null; // { name, delta }
+    exerciseStats.forEach(es => {
+      // Bu ay içindeki rekor artışlarını say
+      for (let i = 1; i < es.curve.length; i++) {
+        if (es.curve[i].ts >= monthStart) {
+          const improved = es.curve[i].weight > es.curve[i-1].weight;
+          if (improved) {
+            prCount++;
+            const delta = es.curve[i].weight - es.curve[i-1].weight;
+            if (!biggestJump || delta > biggestJump.delta) biggestJump = { name: es.name, delta };
+          }
+        }
+      }
+      // İlk kayıt da bu aysa say (yeni egzersiz = ilk rekor)
+      if (es.curve.length === 1 && es.curve[0].ts >= monthStart) prCount++;
     });
+    return { prCount, biggestJump };
+  }, [exerciseStats]);
 
-    if (anyChange) {
-      setAlarms(newAlarms);
-      saveMarketData(apiKey, twelveKey, watchlist, newAlarms);
+  // Bu ay antrenman sayısı + gün serisi
+  const trainingStats = useMemo(() => {
+    const d = new Date();
+    const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    const workoutDays = new Set();
+    data.logs.forEach(l => { if (l.timestamp >= monthStart) workoutDays.add(dateKey(l.timestamp)); });
+    // Gün serisi: bugünden geriye kaç farklı gün üst üste antrenman (basit: son 60 günde antrenman yapılan ardışık günler)
+    const allDays = new Set(data.logs.map(l => dateKey(l.timestamp)));
+    let streak = 0;
+    let cursor = new Date();
+    for (let i = 0; i < 365; i++) {
+      const k = dateKey(cursor.getTime());
+      if (allDays.has(k)) { streak++; cursor.setDate(cursor.getDate() - 1); }
+      else if (i === 0) { cursor.setDate(cursor.getDate() - 1); } // bugün boşsa dünden başla
+      else break;
     }
-  }, [quotes]);
+    return { monthWorkouts: workoutDays.size, streak };
+  }, [data.logs]);
 
-  if (!apiKey) return <ApiKeySetup onSave={saveApiKey} />;
+  // Takılan hareketler (plato)
+  const stuckExercises = useMemo(() => exerciseStats.filter(es => es.isStuck).sort((a, b) => b.weeksSince - a.weeksSince), [exerciseStats]);
 
-  const alarmModalNode = showAlarmModal ? <AlarmModal symbol={showAlarmModal} currentPrice={quotes[showAlarmModal]?.c} onClose={() => setShowAlarmModal(null)} onCreate={createAlarm} /> : null;
+  // İlerleyenler (rekor gelişimi listesi) — son artışa göre sıralı
+  const improvingExercises = useMemo(() => {
+    return [...exerciseStats].sort((a, b) => b.lastImproveTs - a.lastImproveTs);
+  }, [exerciseStats]);
 
-  if (detailSymbol) {
-    const defaultEntry = MARKET_DEFAULTS.find(d => d.symbol === detailSymbol);
-    const symbolAlarms = alarms.filter(a => a.symbol === detailSymbol);
-    return (
-      <>
-        <StockDetailView symbol={detailSymbol} label={defaultEntry?.name} quote={quotes[detailSymbol]} twelveKey={twelveKey} onSaveTwelveKey={saveTwelveKey} alarms={symbolAlarms} onCreateAlarmClick={() => setShowAlarmModal(detailSymbol)} onDeleteAlarm={deleteAlarm} onBack={() => setDetailSymbol(null)} />
-        {alarmModalNode}
-      </>
-    );
+  // Kas grubu ilerlemesi: son 3 ayda her kasın toplam hacim değişimi (basitleştirilmiş güç göstergesi)
+  const muscleProgress = useMemo(() => {
+    const now = Date.now();
+    const recentStart = now - 90 * 86400000;
+    const prevStart = now - 180 * 86400000;
+    const acc = {}; // muscle -> { recent: vol, prev: vol }
+    Object.keys(MUSCLES).forEach(m => acc[m] = { recent: 0, prev: 0 });
+    data.logs.forEach(l => {
+      const muscles = getExerciseMuscles(l.exerciseName, data.customMuscleMap);
+      if (!muscles) return;
+      const vol = l.weight * l.reps;
+      Object.entries(muscles).forEach(([m, w]) => {
+        if (!acc[m]) return;
+        if (l.timestamp >= recentStart) acc[m].recent += vol * w;
+        else if (l.timestamp >= prevStart) acc[m].prev += vol * w;
+      });
+    });
+    const list = Object.keys(MUSCLES).map(m => {
+      const { recent, prev } = acc[m];
+      if (recent === 0) return null;
+      const pct = prev > 0 ? Math.round(((recent - prev) / prev) * 100) : (recent > 0 ? 100 : 0);
+      return { key: m, tr: MUSCLES[m].tr, recent, pct };
+    }).filter(Boolean).sort((a, b) => b.recent - a.recent);
+    const maxRecent = Math.max(...list.map(x => x.recent), 1);
+    return { list, maxRecent };
+  }, [data.logs, data.customMuscleMap]);
+
+  const muscleColorMap = {
+    chest:'#FF3D3D', frontDelts:'#D4A547', sideDelts:'#D4A547', rearDelts:'#D4A547',
+    biceps:'#A78BFA', triceps:'#A78BFA', forearms:'#A78BFA', abs:'#FF3D3D',
+    lats:'#4A90E2', traps:'#4A90E2', lowerBack:'#4A90E2',
+    quads:'#34D399', hamstrings:'#34D399', glutes:'#34D399', calves:'#34D399',
+  };
+
+  // Tek hareket detay ekranı
+  if (detailExercise) {
+    const es = exerciseStats.find(e => e.name === detailExercise);
+    if (es) return <ExerciseProgressDetail es={es} onBack={() => setDetailExercise(null)} />;
   }
 
-  return (
-    <PullToRefresh onRefresh={refreshAll}>
-      <div style={S.screen}>
-        <div style={S.header}>
-          <div style={S.brand}><Icon.Chart /><span style={S.brandText}>PİYASA</span></div>
-          <button onClick={() => setShowSettings(true)} style={S.menuBtn}>•••</button>
-        </div>
-        <div style={S.marketStatus}>
-          {lastRefresh ? (
-            <>
-              <span style={{ ...S.statusDot, background: '#4CAF50' }} className="pulse" />
-              Son: {new Date(lastRefresh).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · Aşağı çekerek yenile
-            </>
-          ) : 'Yükleniyor...'}
-        </div>
-        <div style={S.sectionLabel}>ENDEKS & EMTİA</div>
-        <div style={S.tickerList}>
-          {MARKET_DEFAULTS.map(d => (
-            <TickerCard key={d.symbol} symbol={d.symbol} label={d.name} quote={quotes[d.symbol]} loading={loading[d.symbol]} onTap={() => setDetailSymbol(d.symbol)} />
-          ))}
-        </div>
-
-        {alarms.length > 0 && (
-          <>
-            <div style={{ ...S.sectionLabel, marginTop: 24 }}>ALARMLAR ({alarms.filter(a => a.state === 'fired').length > 0 ? `${alarms.filter(a => a.state === 'fired').length} TETİKLENDİ` : `${alarms.length} AKTİF`})</div>
-            <div style={S.alarmList}>
-              {alarms.slice().sort((a,b) => (b.state === 'fired' ? 1 : 0) - (a.state === 'fired' ? 1 : 0)).map(a => (
-                <AlarmRow key={a.id} alarm={a} currentPrice={quotes[a.symbol]?.c} onDelete={deleteAlarm} showSymbol />
-              ))}
-            </div>
-          </>
-        )}
-
-        <div style={{ ...S.sectionLabel, marginTop: 24 }}>WATCHLİSTİM</div>
-        {watchlist.length === 0 ? (
-          <div style={S.emptyState}>Henüz hisse eklemedin.<br />Aşağıdan istediğin ticker'ı ekle.</div>
-        ) : (
-          <>
-            {watchlist.length > 1 && <div style={S.hintBoxSmall}>İpucu: Sırayı değiştirmek için kart üzerinde uzun bas.</div>}
-            <ReorderableList items={watchlist} getKey={(sym) => sym} onReorder={reorderWatchlist}
-              renderItem={(sym, idx, isDragging) => (
-                <TickerCard symbol={sym} quote={quotes[sym]} loading={loading[sym]} onRemove={() => removeFromWatchlist(sym)} onTap={() => !isDragging && setDetailSymbol(sym)} draggable />
-              )} />
-          </>
-        )}
-        <button onClick={() => setShowAddTicker(true)} style={{ ...S.addBtn, borderColor: '#4CAF50', color: '#4CAF50', marginTop: 12 }} className="add-btn">
-          <Icon.Plus /> HİSSE EKLE
-        </button>
-        {showAddTicker && <AddTickerModal onClose={() => setShowAddTicker(false)} onAdd={addToWatchlist} />}
-        {showSettings && <MarketSettingsModal apiKey={apiKey} onClose={() => setShowSettings(false)} onSave={saveApiKey} />}
-        {alarmModalNode}
-      </div>
-    </PullToRefresh>
-  );
-}
-
-function TickerCard({ symbol, label, quote, loading, onRemove, onTap, draggable }) {
-  const isUp = quote && quote.d >= 0;
-  const color = isUp ? '#4CAF50' : '#FF5252';
-  const hasError = quote?.error;
-  return (
-    <div style={S.tickerCard}>
-      {draggable && <div style={S.dragHandle}><Icon.Drag /></div>}
-      <button onClick={onTap} style={S.tickerBtn}>
-        <div style={S.tickerLeft}>
-          <div style={S.tickerSymbol}>{symbol}</div>
-          {label && <div style={S.tickerLabel}>{label}</div>}
-        </div>
-        <div style={S.tickerRight}>
-          {hasError ? <div style={S.tickerError}>Veri yok</div>
-            : loading && !quote ? <div style={S.tickerLoading}>…</div>
-            : quote ? (
-              <>
-                <div style={S.tickerPrice}>${quote.c?.toFixed(2)}</div>
-                <div style={{ ...S.tickerChange, color }}>{isUp ? '▲' : '▼'} {Math.abs(quote.d).toFixed(2)} ({Math.abs(quote.dp).toFixed(2)}%)</div>
-              </>
-            ) : <div style={S.tickerLoading}>…</div>}
-        </div>
-      </button>
-      {onRemove && <button onClick={onRemove} style={S.tickerRemove}>×</button>}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════
-// STOCK DETAIL — CHART via Netlify Function
-// ═══════════════════════════════════════════
-
-const PERIODS = [
-  { key: '1D', label: '1G', interval: '5min', outputsize: 78 },
-  { key: '1W', label: '1H', interval: '1h', outputsize: 40 },
-  { key: '1M', label: '1A', interval: '1day', outputsize: 22 },
-  { key: '3M', label: '3A', interval: '1day', outputsize: 65 },
-  { key: '1Y', label: '1Y', interval: '1day', outputsize: 252 },
-];
-
-function StockDetailView({ symbol, label, quote, twelveKey, onSaveTwelveKey, alarms, onCreateAlarmClick, onDeleteAlarm, onBack }) {
-  const [period, setPeriod] = useState('1D');
-  const [candles, setCandles] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showTwelveSetup, setShowTwelveSetup] = useState(false);
-
-  useEffect(() => {
-    if (!twelveKey) { setLoading(false); return; }
-    let cancelled = false;
-    const p = PERIODS.find(x => x.key === period);
-    const url = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=${p.interval}&outputsize=${p.outputsize}&apikey=${twelveKey}`;
-    setLoading(true); setError(null); setCandles(null);
-
-    fetch(url)
-      .then(r => r.json())
-      .then(d => {
-        if (cancelled) return;
-        if (d.status === 'error' || d.code) {
-          setError(d.message || 'Veri alınamadı'); return;
-        }
-        if (!d.values || d.values.length < 2) { setError('Bu aralık için veri yok'); return; }
-        // Twelve Data returns newest first; reverse for chronological
-        const reversed = [...d.values].reverse();
-        const closes = reversed.map(v => parseFloat(v.close));
-        const timestamps = reversed.map(v => new Date(v.datetime).getTime() / 1000);
-        setCandles({ closes, timestamps });
-      })
-      .catch(e => { if (!cancelled) setError('Bağlantı hatası'); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [symbol, period, twelveKey]);
-
-  const isUp = quote && quote.d >= 0;
-  const color = isUp ? '#4CAF50' : '#FF5252';
+  const topMuscle = muscleProgress.list.find(m => m.pct > 0);
 
   return (
     <div style={S.screen}>
       <div style={S.topBar}>
-        <button onClick={onBack} style={S.iconBtn}><Icon.Chevron /></button>
-        <div style={{ ...S.topBarTitle, color: '#fff' }}>{symbol}</div>
+        <div style={{ width: 60 }} />
+        <div style={S.topBarTitle}>İLERLEME</div>
         <div style={{ width: 60 }} />
       </div>
-      {label && <div style={{ textAlign: 'center', color: '#888', fontSize: 13, marginBottom: 16 }}>{label}</div>}
-      {quote && !quote.error && (
-        <div style={S.detailPriceBox}>
-          <div style={S.detailPrice}>${quote.c?.toFixed(2)}</div>
-          <div style={{ ...S.detailChange, color }}>{isUp ? '▲' : '▼'} {Math.abs(quote.d).toFixed(2)} ({Math.abs(quote.dp).toFixed(2)}%)</div>
-        </div>
-      )}
 
-      {!twelveKey ? (
-        <TwelveDataSetup onSave={(k) => { onSaveTwelveKey(k); setShowTwelveSetup(false); }} />
+      {exerciseStats.length === 0 ? (
+        <div style={{ textAlign: 'center', color: '#555', marginTop: 60, fontSize: 14, lineHeight: 1.6 }}>
+          Henüz veri yok.<br />Antrenman kaydettikçe ilerlemen burada görünecek 💪
+        </div>
       ) : (
         <>
-          <div style={S.periodBar}>
-            {PERIODS.map(p => (
-              <button key={p.key} onClick={() => setPeriod(p.key)} style={{ ...S.periodBtn, ...(period === p.key ? S.periodBtnActive : {}) }} className={`period-btn ${period === p.key ? 'active' : ''}`}>
-                {p.label}
-              </button>
-            ))}
+          {/* Kahraman: bu ay PR */}
+          <div style={S.progHero}>
+            <div style={S.progHeroBig}>{monthStats.prCount}</div>
+            <div style={S.progHeroLbl}>Bu ay kırılan rekor</div>
+            {monthStats.biggestJump && (
+              <div style={S.progHeroDelta}>🔥 En büyük sıçrama: {monthStats.biggestJump.name} +{monthStats.biggestJump.delta}kg</div>
+            )}
           </div>
-          <div style={S.chartContainer}>
-            {loading ? <div style={S.chartLoading}>Yükleniyor...</div>
-              : error ? <div style={S.chartError}>{error}</div>
-              : candles ? <CandleChart candles={candles} color={color} /> : null}
+
+          {/* İki kutu */}
+          <div style={S.progStatGrid}>
+            <div style={S.progStatBox}><div style={S.progStatV}>{trainingStats.monthWorkouts}</div><div style={S.progStatL}>BU AY ANTRENMAN</div></div>
+            <div style={S.progStatBox}><div style={S.progStatV}>{trainingStats.streak}</div><div style={S.progStatL}>GÜN SERİSİ</div></div>
           </div>
-        </>
-      )}
 
-      {quote && !quote.error && (
-        <div style={S.statsGrid}>
-          <div style={S.statSmall}><div style={S.statSmallLabel}>AÇILIŞ</div><div style={S.statSmallValue}>${quote.o?.toFixed(2)}</div></div>
-          <div style={S.statSmall}><div style={S.statSmallLabel}>YÜKSEK</div><div style={S.statSmallValue}>${quote.h?.toFixed(2)}</div></div>
-          <div style={S.statSmall}><div style={S.statSmallLabel}>DÜŞÜK</div><div style={S.statSmallValue}>${quote.l?.toFixed(2)}</div></div>
-          <div style={S.statSmall}><div style={S.statSmallLabel}>ÖN. KAPANIŞ</div><div style={S.statSmallValue}>${quote.pc?.toFixed(2)}</div></div>
-        </div>
-      )}
-
-      <div style={{ ...S.sectionLabel, marginTop: 24 }}>ALARMLAR</div>
-      {alarms && alarms.length > 0 ? (
-        <div style={S.alarmList}>
-          {alarms.slice().sort((a,b) => (b.state === 'fired' ? 1 : 0) - (a.state === 'fired' ? 1 : 0)).map(a => (
-            <AlarmRow key={a.id} alarm={a} currentPrice={quote?.c} onDelete={onDeleteAlarm} />
-          ))}
-        </div>
-      ) : (
-        <div style={{ ...S.emptyState, padding: '20px 16px', fontSize: 13 }}>Henüz alarm yok.<br/>Aşağıdan kurabilirsin.</div>
-      )}
-      <button onClick={onCreateAlarmClick} style={{ ...S.addBtn, borderColor: '#FFB300', color: '#FFB300', marginTop: 10 }} className="add-btn">
-        🔔 ALARM EKLE
-      </button>
-    </div>
-  );
-}
-
-function TwelveDataSetup({ onSave }) {
-  const [key, setKey] = useState('');
-  return (
-    <div style={S.setupCard}>
-      <div style={S.setupTitle}>Grafik İçin Son Adım</div>
-      <div style={S.setupText}>
-        Grafik verisi için Twelve Data'dan ücretsiz bir API anahtarı al. Finnhub gibi — kart bilgisi yok, 1 dakika sürer. Bir kez ayarlarsın, bir daha sormaz.
-      </div>
-      <ol style={S.setupSteps}>
-        <li><strong>twelvedata.com/signup</strong> aç</li>
-        <li>E-postanla kayıt ol</li>
-        <li>Dashboard'da gördüğün API anahtarını kopyala</li>
-        <li>Aşağıya yapıştır</li>
-      </ol>
-      <a href="https://twelvedata.com/signup" target="_blank" rel="noopener" style={S.setupLinkBtn}>→ Twelve Data'ya git</a>
-      <div style={{ marginTop: 20 }}>
-        <div style={S.inputLabel}>API ANAHTARI</div>
-        <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxx" style={{ ...S.modalInput, marginBottom: 12, marginTop: 8 }} />
-        <button onClick={() => key.trim() && onSave(key.trim())} disabled={!key.trim()} style={{ ...S.submitBtn, background: key.trim() ? 'linear-gradient(135deg,#4CAF50,#2E7D32)' : '#2a2a2a', color: key.trim() ? '#fff' : '#666' }} className="submit-btn">
-          <Icon.Check /> KAYDET
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function CandleChart({ candles, color }) {
-  const { closes, timestamps } = candles;
-  const W = 360, H = 200, PAD_X = 4, PAD_Y = 20;
-  const min = Math.min(...closes), max = Math.max(...closes);
-  const range = max - min || 1;
-  const points = closes.map((c, i) => ({
-    x: PAD_X + (i / (closes.length - 1)) * (W - 2 * PAD_X),
-    y: PAD_Y + (1 - (c - min) / range) * (H - 2 * PAD_Y),
-  }));
-  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-  const areaPath = `${path} L ${points[points.length - 1].x} ${H} L ${points[0].x} ${H} Z`;
-
-  const svgRef = useRef(null);
-  const [activeIdx, setActiveIdx] = useState(null);
-
-  const handleTouch = (e) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const touch = e.touches?.[0] || e.changedTouches?.[0];
-    if (!touch) return;
-    const ratio = (touch.clientX - rect.left) / rect.width;
-    const idx = Math.max(0, Math.min(closes.length - 1, Math.round(ratio * (closes.length - 1))));
-    setActiveIdx(idx);
-  };
-
-  const handleTouchEnd = () => setActiveIdx(null);
-
-  const active = activeIdx != null ? { idx: activeIdx, ...points[activeIdx], price: closes[activeIdx], ts: timestamps?.[activeIdx] } : null;
-  const startPrice = closes[0];
-  const diff = active ? active.price - startPrice : 0;
-  const diffPct = active ? (diff / startPrice) * 100 : 0;
-  const diffColor = diff >= 0 ? '#4CAF50' : '#FF5252';
-
-  const fmtDate = (ts) => {
-    if (!ts) return '';
-    const d = new Date(ts * 1000);
-    const sameDay = closes.length <= 80; // intraday
-    if (sameDay) return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: closes.length > 200 ? 'numeric' : undefined });
-  };
-
-  return (
-    <div style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', minHeight: 28, marginBottom: 4, padding: '0 4px' }}>
-        {active ? (
-          <>
-            <div>
-              <span style={{ fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 800, color: '#fff' }}>${active.price.toFixed(2)}</span>
-              <span style={{ fontSize: 11, color: diffColor, fontWeight: 700, marginLeft: 8 }}>{diff >= 0 ? '+' : ''}{diff.toFixed(2)} ({diffPct >= 0 ? '+' : ''}{diffPct.toFixed(2)}%)</span>
-            </div>
-            <span style={{ fontSize: 11, color: '#888', fontWeight: 600 }}>{fmtDate(active.ts)}</span>
-          </>
-        ) : (
-          <span style={{ fontSize: 10, color: '#555', fontWeight: 600, letterSpacing: 0.5 }}>Grafiğe dokunup kaydır</span>
-        )}
-      </div>
-      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block', touchAction: 'none' }}
-        onTouchStart={handleTouch} onTouchMove={handleTouch} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}>
-        <defs>
-          <linearGradient id="stockGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-            <stop offset="100%" stopColor={color} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <text x={W - 4} y={12} textAnchor="end" fill="#666" fontSize="9" fontWeight="600">${max.toFixed(2)}</text>
-        <text x={W - 4} y={H - 4} textAnchor="end" fill="#666" fontSize="9" fontWeight="600">${min.toFixed(2)}</text>
-        <path d={areaPath} fill="url(#stockGrad)" />
-        <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        {active && (
-          <>
-            <line x1={active.x} y1={PAD_Y} x2={active.x} y2={H} stroke="#666" strokeWidth="0.8" strokeDasharray="3 3" />
-            <circle cx={active.x} cy={active.y} r="5" fill={color} stroke="#0a0a0a" strokeWidth="2" />
-          </>
-        )}
-      </svg>
-    </div>
-  );
-}
-
-function ApiKeySetup({ onSave }) {
-  const [key, setKey] = useState('');
-  return (
-    <div style={S.screen}>
-      <div style={S.header}><div style={S.brand}><Icon.Chart /><span style={S.brandText}>PİYASA</span></div></div>
-      <div style={S.setupCard}>
-        <div style={S.setupTitle}>İlk Kurulum</div>
-        <div style={S.setupText}>Canlı piyasa verisi için Finnhub'dan ücretsiz bir API anahtarı al. Kart bilgisi istemiyor, 30 saniye sürer.</div>
-        <ol style={S.setupSteps}>
-          <li><strong>finnhub.io</strong> aç, "Get free API key" tıkla</li>
-          <li>E-postanla kayıt ol, doğrula</li>
-          <li>Dashboard'da gördüğün API anahtarını kopyala</li>
-          <li>Aşağıya yapıştır</li>
-        </ol>
-        <a href="https://finnhub.io/register" target="_blank" rel="noopener" style={S.setupLinkBtn}>→ Finnhub'a git</a>
-        <div style={{ marginTop: 24 }}>
-          <div style={S.inputLabel}>API ANAHTARI</div>
-          <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="cxxxxxxxxxxxxxxxxxx" style={{ ...S.modalInput, marginBottom: 12, marginTop: 8 }} />
-          <button onClick={() => key.trim() && onSave(key.trim())} disabled={!key.trim()} style={{ ...S.submitBtn, background: key.trim() ? 'linear-gradient(135deg,#4CAF50,#2E7D32)' : '#2a2a2a', color: key.trim() ? '#fff' : '#666' }} className="submit-btn">
-            <Icon.Check /> KAYDET VE BAŞLA
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AddTickerModal({ onClose, onAdd }) {
-  const [sym, setSym] = useState('');
-  return (
-    <div style={S.modalOverlay} onClick={onClose}>
-      <div style={S.modal} onClick={e => e.stopPropagation()}>
-        <div style={S.modalTitle}>Hisse Ekle</div>
-        <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>Amerikan hisse sembolü gir (örn. AAPL, NVDA, TSLA, MSFT)</div>
-        <input autoFocus value={sym} onChange={(e) => setSym(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && onAdd(sym)} placeholder="AAPL" style={{ ...S.modalInput, textTransform: 'uppercase', fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: 2, textAlign: 'center' }} />
-        <div style={S.modalActions}>
-          <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
-          <button onClick={() => onAdd(sym)} style={{ ...S.modalConfirm, background: 'linear-gradient(135deg,#4CAF50,#2E7D32)' }}>EKLE</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MarketSettingsModal({ apiKey, onClose, onSave }) {
-  const [key, setKey] = useState(apiKey);
-  return (
-    <div style={S.modalOverlay} onClick={onClose}>
-      <div style={S.modal} onClick={e => e.stopPropagation()}>
-        <div style={S.modalTitle}>Piyasa Ayarları</div>
-        <div style={S.inputLabel}>API ANAHTARI</div>
-        <input value={key} onChange={(e) => setKey(e.target.value)} style={{ ...S.modalInput, marginTop: 8 }} />
-        <div style={S.modalActions}>
-          <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
-          <button onClick={() => onSave(key.trim())} style={{ ...S.modalConfirm, background: 'linear-gradient(135deg,#4CAF50,#2E7D32)' }}>KAYDET</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AlarmModal({ symbol, currentPrice, onClose, onCreate }) {
-  const [direction, setDirection] = useState('above');
-  const [price, setPrice] = useState(currentPrice ? currentPrice.toFixed(2) : '');
-
-  const handleSubmit = () => {
-    const normalized = price.replace(',', '.');
-    const p = parseFloat(normalized);
-    if (!p || p <= 0) return;
-    onCreate(symbol, direction, p);
-  };
-
-  const notifSupported = typeof window !== 'undefined' && 'Notification' in window;
-  const notifGranted = notifSupported && Notification.permission === 'granted';
-  const notifDenied = notifSupported && Notification.permission === 'denied';
-  const validPrice = parseFloat(price.replace(',', '.')) > 0;
-
-  return (
-    <div style={S.modalOverlay} onClick={onClose}>
-      <div style={S.modal} onClick={e => e.stopPropagation()}>
-        <div style={S.modalTitle}>{symbol} Alarmı</div>
-        {currentPrice && <div style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>Şu anki fiyat: <span style={{color:'#fff', fontWeight: 700}}>${currentPrice.toFixed(2)}</span></div>}
-
-        <div style={S.alarmDirSelect}>
-          <button onClick={() => setDirection('above')} style={{ ...S.alarmDirBtn, ...(direction === 'above' ? { background: 'rgba(76,175,80,0.2)', borderColor: '#4CAF50', color: '#4CAF50' } : {}) }}>↑ ÜSTÜNDE</button>
-          <button onClick={() => setDirection('below')} style={{ ...S.alarmDirBtn, ...(direction === 'below' ? { background: 'rgba(255,82,82,0.2)', borderColor: '#FF5252', color: '#FF5252' } : {}) }}>↓ ALTINDA</button>
-        </div>
-
-        <div style={S.inputLabel}>FİYAT ($)</div>
-        <input value={price} onChange={e => setPrice(e.target.value.replace(/[^0-9.,]/g, '').replace(/([.,].*)[.,]/g, '$1'))} type="text" inputMode="decimal" style={{ ...S.modalInput, fontSize: 28, fontWeight: 800, textAlign: 'center', fontFamily: "'Big Shoulders Display',sans-serif", marginTop: 6 }} />
-
-        {!notifGranted && (
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 14, lineHeight: 1.5, padding: '10px 12px', background: '#0a0a0a', borderRadius: 8, border: '1px solid #1f1f1f' }}>
-            {notifDenied
-              ? 'ℹ️ Bildirim izni kapalı. Sadece uygulama açıkken alarm görülür.'
-              : 'ℹ️ Kayıttan sonra telefon bildirim izni isteyecek. İzin verirsen alarm her ortamda çalar.'}
-          </div>
-        )}
-
-        <div style={S.modalActions}>
-          <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
-          <button onClick={handleSubmit} disabled={!validPrice} style={{ ...S.modalConfirm, background: validPrice ? (direction === 'above' ? 'linear-gradient(135deg,#4CAF50,#2E7D32)' : 'linear-gradient(135deg,#FF5252,#C62828)') : '#2a2a2a', color: validPrice ? '#fff' : '#666' }}>
-            ALARM KUR
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AlarmRow({ alarm, currentPrice, onDelete, showSymbol }) {
-  const dir = alarm.direction === 'above';
-  const isFired = alarm.state === 'fired';
-  const dirColor = isFired ? '#FFD700' : (dir ? '#4CAF50' : '#FF5252');
-  let distancePct = null;
-  if (currentPrice && !isFired) {
-    distancePct = dir ? ((alarm.price - currentPrice) / currentPrice) * 100 : ((currentPrice - alarm.price) / currentPrice) * 100;
-  }
-  const fmtAgo = (ts) => {
-    if (!ts) return '';
-    const diff = Date.now() - ts;
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'az önce';
-    if (mins < 60) return `${mins} dk önce`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours} sa önce`;
-    return `${Math.floor(hours/24)} gün önce`;
-  };
-
-  return (
-    <div style={{ ...S.alarmRow, background: isFired ? 'rgba(255,215,0,0.08)' : '#141414', borderColor: isFired ? '#FFD700' : '#1f1f1f' }}>
-      <div style={{ ...S.alarmIcon, color: dirColor }}>{isFired ? '🔔' : (dir ? '▲' : '▼')}</div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {showSymbol && <div style={S.alarmSymbol}>{alarm.symbol}</div>}
-        <div style={S.alarmCondition}>
-          <span style={{ color: dirColor, fontWeight: 700 }}>${alarm.price.toFixed(2)}</span>
-          <span style={{ color: '#888', marginLeft: 4 }}>{dir ? 'üstünde' : 'altında'}</span>
-          {alarm.fireCount > 1 && <span style={{ color: '#666', marginLeft: 6, fontSize: 11 }}>· {alarm.fireCount}. kez</span>}
-        </div>
-        {isFired ? (
-          <div style={S.alarmTriggered}>Tetiklendi · ${alarm.lastFirePrice?.toFixed(2)} · {fmtAgo(alarm.lastFiredAt)}</div>
-        ) : alarm.fireCount > 0 ? (
-          <div style={S.alarmDistance}>Hazır · Son tetik: {fmtAgo(alarm.lastFiredAt)}{distancePct != null ? ` · ${distancePct.toFixed(2)}% uzakta` : ''}</div>
-        ) : distancePct != null ? (
-          <div style={S.alarmDistance}>{distancePct > 0 ? `${distancePct.toFixed(2)}% uzakta` : 'Tetiklenmek üzere'}</div>
-        ) : (
-          <div style={S.alarmDistance}>Fiyat bekleniyor...</div>
-        )}
-      </div>
-      <button onClick={() => onDelete(alarm.id)} style={S.alarmDel}>×</button>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════
-// COACH TAB (AI assistant via Groq)
-// ═══════════════════════════════════════════
-
-const COACH_MODEL = 'llama-3.3-70b-versatile';
-const COACH_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
-const SYSTEM_PROMPT = `Sen APEX adlı kişisel takip uygulamasının yapay zeka koçusun. Türkçe konuşuyorsun.
-
-Karakterin: Bilgili, dengeli bir arkadaş gibi. Doğrudan ve dürüst ama nazik. Kuvvet antrenmanı, hipertrofi ve progressive overload konularında bilgilisin. Aynı zamanda Amerikan borsası ve yatırım hakkında temel bilgilere sahipsin. Saçma motivasyon sloganları kullanmıyorsun ama gerektiğinde teşvik ediyorsun.
-
-Kurallar:
-- Cevaplar KISA ve ÖZ — gerektiğinde 2-3 cümle, listeler madde madde
-- Kullanıcının verisine bakıp SOMUT konuş; "X kg yaptın, hedef Y" gibi gerçek sayılar kullan
-- Bilmediğin şeyleri uydurma — "şu an verim yok" de
-- Kesin tıbbi/finansal tavsiye verme; "şunu düşünebilirsin", "iyi bir yaklaşım olabilir" tonu kullan
-- Emojileri ölçülü kullan (en fazla 1-2 mesaj başına)
-- Cevaplarda markdown kullanma, düz metin yaz
-- Kullanıcı seni "dostum"/"brom" diye çağırırsa sen de samimi konuş`;
-
-function buildCoachContext() {
-  const lines = [];
-  let gym = null, market = null;
-  try { gym = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) {}
-  try { market = JSON.parse(localStorage.getItem(MARKET_KEY) || '{}'); } catch (e) {}
-
-  const now = Date.now();
-  const fmtDate = (ts) => {
-    const d = new Date(ts);
-    const days = Math.floor((now - ts) / 86400000);
-    if (days === 0) return 'Bugün';
-    if (days === 1) return 'Dün';
-    if (days < 7) return `${days} gün önce`;
-    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
-  };
-
-  lines.push(`Tarih: ${new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`);
-  lines.push('');
-
-  // Workout data
-  if (gym?.logs?.length) {
-    const logs = gym.logs;
-    const sessions = gym.sessions || [];
-    const totalDays = new Set(logs.map(l => dateKey(l.timestamp))).size;
-    const totalVolume = logs.reduce((s, l) => s + l.weight * l.reps, 0);
-    lines.push('=== ANTRENMAN VERİSİ ===');
-    lines.push(`Toplam antrenman günü: ${totalDays}, Toplam hacim: ${(totalVolume/1000).toFixed(1)} ton`);
-
-    // Last 14 days
-    const fourteenAgo = now - 14 * 86400000;
-    const recentLogs = logs.filter(l => l.timestamp >= fourteenAgo);
-    if (recentLogs.length) {
-      const byDay = {};
-      recentLogs.forEach(l => {
-        const k = dateKey(l.timestamp);
-        if (!byDay[k]) byDay[k] = { dayType: l.dayType, ts: l.timestamp, exercises: {} };
-        if (!byDay[k].exercises[l.exerciseName]) byDay[k].exercises[l.exerciseName] = [];
-        byDay[k].exercises[l.exerciseName].push({ w: l.weight, r: l.reps });
-      });
-      lines.push('Son 14 gün:');
-      Object.values(byDay).sort((a,b) => b.ts - a.ts).forEach(day => {
-        const sess = sessions.find(s => dateKey(s.startTime) === dateKey(day.ts) && s.dayType === day.dayType);
-        const dur = sess?.endTime ? `${Math.round((sess.endTime - sess.startTime) / 60000)}dk` : '';
-        const exerciseLines = Object.entries(day.exercises).map(([name, sets]) =>
-          `    ${name}: ${sets.map(s => `${s.w}kg×${s.r}`).join(', ')}`
-        );
-        lines.push(`  ${fmtDate(day.ts)} - ${day.dayType.toUpperCase()}${dur ? ' (' + dur + ')' : ''}`);
-        exerciseLines.forEach(l => lines.push(l));
-      });
-    } else {
-      lines.push('Son 14 günde antrenman kaydı yok.');
-    }
-
-    // All-time PRs (top weight per exercise)
-    const prs = {};
-    logs.forEach(l => {
-      const cur = prs[l.exerciseName];
-      if (!cur || l.weight > cur.weight || (l.weight === cur.weight && l.reps > cur.reps)) {
-        prs[l.exerciseName] = { weight: l.weight, reps: l.reps, ts: l.timestamp };
-      }
-    });
-    const sortedPRs = Object.entries(prs).sort((a,b) => b[1].weight - a[1].weight).slice(0, 15);
-    if (sortedPRs.length) {
-      lines.push('Tüm zamanların PR\'ları:');
-      sortedPRs.forEach(([name, pr]) => {
-        lines.push(`  ${name}: ${pr.weight}kg × ${pr.reps} (${fmtDate(pr.ts)})`);
-      });
-    }
-  } else {
-    lines.push('=== ANTRENMAN VERİSİ ===\nHenüz antrenman verisi yok.');
-  }
-  lines.push('');
-
-  // Market data
-  if (market?.watchlist?.length || market?.alarms?.length) {
-    lines.push('=== PİYASA ===');
-    if (market.watchlist?.length) {
-      lines.push(`Watchlist: ${market.watchlist.join(', ')}`);
-    }
-    if (market.alarms?.length) {
-      const armed = market.alarms.filter(a => a.state === 'armed');
-      const fired = market.alarms.filter(a => a.state === 'fired');
-      if (armed.length) {
-        lines.push('Aktif alarmlar:');
-        armed.forEach(a => lines.push(`  ${a.symbol}: $${a.price} ${a.direction === 'above' ? 'üstüne çıkarsa' : 'altına düşerse'}`));
-      }
-      if (fired.length) {
-        lines.push(`${fired.length} tetiklenmiş alarm var.`);
-      }
-    }
-  }
-
-  return lines.join('\n');
-}
-
-const QUICK_PROMPTS = [
-  { icon: '📊', text: 'Bu hafta nasıl gidiyorum?' },
-  { icon: '🏋️', text: 'Bench Press\'imi nasıl ilerletebilirim?' },
-  { icon: '🗓️', text: 'Yarın için program öner' },
-  { icon: '🔥', text: 'Hangi egzersizde platodayım?' },
-  { icon: '💪', text: 'Bana motivasyon ver' },
-  { icon: '📈', text: 'Watchlist\'imdeki durum nedir?' },
-];
-
-function CoachTab() {
-  const [apiKey, setApiKey] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const scrollRef = useRef(null);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(AI_KEY);
-      if (raw) { const p = JSON.parse(raw); setApiKey(p.apiKey || null); setMessages(p.messages || []); }
-    } catch (e) {}
-  }, []);
-
-  const saveAi = (newKey, newMessages) => {
-    try { localStorage.setItem(AI_KEY, JSON.stringify({ apiKey: newKey, messages: newMessages })); } catch (e) {}
-  };
-
-  useEffect(() => {
-    // Auto-scroll to bottom on new messages
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, loading]);
-
-  const send = async (textOverride) => {
-    const text = (textOverride ?? input).trim();
-    if (!text || loading || !apiKey) return;
-    setError(null);
-    const userMsg = { role: 'user', content: text };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
-    setInput('');
-    setLoading(true);
-
-    try {
-      const ctx = buildCoachContext();
-      const sys = SYSTEM_PROMPT + '\n\n=== KULLANICININ GÜNCEL VERİLERİ ===\n' + ctx;
-      // Send only last 10 messages to save tokens (plus the system prompt with full context)
-      const chatHistory = newMessages.slice(-10);
-      const res = await fetch(COACH_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: COACH_MODEL,
-          messages: [{ role: 'system', content: sys }, ...chatHistory],
-          temperature: 0.7,
-          max_tokens: 800,
-        })
-      });
-      if (!res.ok) {
-        if (res.status === 401) throw new Error('API anahtarı geçersiz. Ayarlardan kontrol et.');
-        if (res.status === 429) throw new Error('Çok hızlı istek attın, biraz bekle.');
-        throw new Error(`Hata ${res.status}`);
-      }
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content;
-      if (!reply) throw new Error('Boş cevap geldi');
-      const updated = [...newMessages, { role: 'assistant', content: reply }];
-      setMessages(updated);
-      saveAi(apiKey, updated);
-    } catch (e) {
-      setError(e.message || 'Bir şey ters gitti');
-      // Revert: remove the user message that didn't get a reply
-      setMessages(messages);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const clearChat = () => {
-    if (confirm('Sohbet geçmişini silmek istiyor musun?')) {
-      setMessages([]);
-      saveAi(apiKey, []);
-    }
-  };
-
-  const saveApiKey = (key) => {
-    setApiKey(key);
-    saveAi(key, messages);
-    setShowSettings(false);
-  };
-
-  if (!apiKey) return <CoachSetup onSave={saveApiKey} />;
-
-  return (
-    <div style={S.coachContainer}>
-      <div style={S.coachHeader}>
-        <div style={S.brand}><Icon.Coach /><span style={S.brandText}>KOÇ</span></div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {messages.length > 0 && <button onClick={clearChat} style={S.menuBtn} title="Temizle">🗑</button>}
-          <button onClick={() => setShowSettings(true)} style={S.menuBtn}>•••</button>
-        </div>
-      </div>
-
-      <div ref={scrollRef} style={S.chatScroll}>
-        {messages.length === 0 ? (
-          <div style={S.coachWelcome}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>✨</div>
-            <div style={S.coachWelcomeTitle}>Sana nasıl yardım edebilirim?</div>
-            <div style={S.coachWelcomeText}>
-              Antrenman geçmişine, PR'larına ve watchlist'ine erişimim var. Doğrudan soru sor veya aşağıdakilerden birini dene:
-            </div>
-            <div style={S.quickPromptList}>
-              {QUICK_PROMPTS.map((p, i) => (
-                <button key={i} onClick={() => send(p.text)} style={S.quickPromptBtn} className="exercise-btn">
-                  <span style={{ fontSize: 18 }}>{p.icon}</span>
-                  <span>{p.text}</span>
+          {/* Takılan hareketler */}
+          {stuckExercises.length > 0 && (
+            <div style={S.plateauBox}>
+              <div style={S.plateauTitle}>⏳ TAKILDIĞIN HAREKETLER</div>
+              {stuckExercises.map((es, i) => (
+                <button key={i} onClick={() => setDetailExercise(es.name)} style={S.plateauRow}>
+                  <div style={{ flex: 1, textAlign: 'left' }}>
+                    <div style={S.plateauName}>{es.name}</div>
+                    <div style={S.plateauSub}>{es.weight}kg · son rekor {es.weeksSince} hafta önce</div>
+                  </div>
+                  <div style={S.plateauBadge}>{es.weeksSince} hafta</div>
                 </button>
               ))}
             </div>
-          </div>
-        ) : (
-          <div style={S.messageList}>
-            {messages.map((m, i) => (
-              <div key={i} style={m.role === 'user' ? S.msgUserWrap : S.msgAiWrap}>
-                <div style={m.role === 'user' ? S.msgUser : S.msgAi}>{m.content}</div>
+          )}
+
+          {/* Kas grubu ilerlemesi */}
+          {muscleProgress.list.length > 0 && (
+            <>
+              {topMuscle && (
+                <div style={S.winnerBanner}>
+                  <div style={S.winnerLbl}>🔥 BU DÖNEM EN ÇOK GELİŞEN</div>
+                  <div style={S.winnerName}>{topMuscle.tr}</div>
+                  <div style={S.winnerDelta}>▲ %{topMuscle.pct} güç/hacim artışı</div>
+                </div>
+              )}
+              <div style={S.sectionLabel}>KAS GRUBU · SON 3 AY DEĞİŞİM</div>
+              <div style={S.progCard}>
+                {muscleProgress.list.slice(0, 8).map((m, i) => (
+                  <div key={i} style={S.muscleProgRow}>
+                    <div style={S.mpName}>{m.tr}</div>
+                    <div style={S.mpBarTrack}>
+                      <div style={{ ...S.mpBar, width: `${(m.recent / muscleProgress.maxRecent) * 100}%`, background: muscleColorMap[m.key] || '#FF3D3D' }} />
+                    </div>
+                    <div style={{ ...S.mpDelta, color: m.pct > 0 ? '#4CAF50' : '#888' }}>{m.pct > 0 ? `▲ %${m.pct}` : '▬ 0%'}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-            {loading && (
-              <div style={S.msgAiWrap}>
-                <div style={S.msgAi}>
-                  <span className="pulse">●</span> <span className="pulse" style={{ animationDelay: '0.2s' }}>●</span> <span className="pulse" style={{ animationDelay: '0.4s' }}>●</span>
+            </>
+          )}
+
+          {/* Rekor gelişimi listesi */}
+          <div style={S.sectionLabel}>REKOR GELİŞİMİ · dokun, detayı gör</div>
+          {improvingExercises.map((es, i) => (
+            <button key={i} onClick={() => setDetailExercise(es.name)} style={{ ...S.prRow, ...(es.isStuck ? S.prRowStuck : {}) }}>
+              <div style={{ ...S.prRowIc, background: es.isStuck ? 'linear-gradient(135deg,#FFA726,#8B6914)' : 'linear-gradient(135deg,#FF3D3D,#8B1111)' }}>
+                {es.isStuck ? '⏳' : '🏋️'}
+              </div>
+              <div style={{ flex: 1, textAlign: 'left' }}>
+                <div style={S.prRowName}>{es.name}</div>
+                <div style={{ ...S.prRowSub, color: es.isStuck ? '#FFA726' : '#4CAF50' }}>
+                  {es.isStuck ? `⏳ ${es.weeksSince} haftadır takılı` : `tahmini 1RM ~${es.oneRM}kg`}
                 </div>
               </div>
-            )}
-            {error && <div style={S.msgError}>⚠ {error}</div>}
-          </div>
-        )}
-      </div>
-
-      <div style={S.chatInputBar}>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder="Bir şey sor..."
-          style={S.chatInput}
-          disabled={loading}
-        />
-        <button onClick={() => send()} disabled={!input.trim() || loading} style={{ ...S.chatSendBtn, opacity: input.trim() && !loading ? 1 : 0.4 }}>
-          <Icon.Send />
-        </button>
-      </div>
-
-      {showSettings && <CoachSettingsModal apiKey={apiKey} onClose={() => setShowSettings(false)} onSave={saveApiKey} />}
+              <div style={S.prRowWt}>{es.weight}kg</div>
+            </button>
+          ))}
+        </>
+      )}
     </div>
   );
 }
 
-function CoachSetup({ onSave }) {
-  const [key, setKey] = useState('');
+// Tek hareket derin grafik ekranı
+function ExerciseProgressDetail({ es, onBack }) {
+  const [period, setPeriod] = useState('6A'); // 1A 3A 6A 1Y TÜM
+  const periodMs = { '1A': 30, '3A': 90, '6A': 180, '1Y': 365, 'TÜM': 99999 };
+  const now = Date.now();
+  const cutoff = now - periodMs[period] * 86400000;
+  const points = es.curve.filter(p => p.ts >= cutoff);
+
+  // Grafik için min/max
+  const weights = points.map(p => p.weight);
+  const minW = Math.min(...weights, es.weight);
+  const maxW = Math.max(...weights, es.weight);
+  const range = maxW - minW || 1;
+
+  // 6 ay önceki vs şimdi kazanç
+  const sixMonthAgo = now - 180 * 86400000;
+  const oldPoint = es.curve.find(p => p.ts >= sixMonthAgo) || es.curve[0];
+  const gain = es.weight - (oldPoint ? oldPoint.weight : es.weight);
+
+  // SVG path oluştur
+  const W = 300, H = 160, padL = 10, padR = 10, padT = 20, padB = 20;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const xFor = (i) => points.length <= 1 ? padL + plotW / 2 : padL + (i / (points.length - 1)) * plotW;
+  const yFor = (w) => padT + plotH - ((w - minW) / range) * plotH;
+  let linePath = '', areaPath = '';
+  points.forEach((p, i) => {
+    const x = xFor(i), y = yFor(p.weight);
+    linePath += (i === 0 ? `M${x} ${y}` : ` L${x} ${y}`);
+  });
+  if (points.length > 0) {
+    areaPath = linePath + ` L${xFor(points.length-1)} ${padT+plotH} L${xFor(0)} ${padT+plotH} Z`;
+  }
+
   return (
     <div style={S.screen}>
-      <div style={S.header}><div style={S.brand}><Icon.Coach /><span style={S.brandText}>KOÇ</span></div></div>
-      <div style={S.setupCard}>
-        <div style={S.setupTitle}>AI Koç Kurulumu</div>
-        <div style={S.setupText}>
-          Koç senin verilerine bakıp soruları cevaplar. Bunu yapabilmesi için Groq'tan ücretsiz bir API anahtarı al — kart bilgisi istemiyor, 30 saniye sürer.
-        </div>
-        <ol style={S.setupSteps}>
-          <li><strong>console.groq.com/keys</strong> aç</li>
-          <li>"Sign in" → e-postanla kayıt ol</li>
-          <li>"Create API Key" tıkla, isim ver (örn. "apex")</li>
-          <li>Anahtarı kopyala (sadece bir kere gösterilir, kaydet)</li>
-          <li>Aşağıya yapıştır</li>
-        </ol>
-        <a href="https://console.groq.com/keys" target="_blank" rel="noopener" style={S.setupLinkBtn}>→ Groq'a git</a>
-        <div style={{ marginTop: 24 }}>
-          <div style={S.inputLabel}>API ANAHTARI</div>
-          <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="gsk_xxxxxxxxxx" style={{ ...S.modalInput, marginBottom: 12, marginTop: 8 }} />
-          <button onClick={() => key.trim() && onSave(key.trim())} disabled={!key.trim()} style={{ ...S.submitBtn, background: key.trim() ? 'linear-gradient(135deg,#9C27B0,#6A1B9A)' : '#2a2a2a', color: key.trim() ? '#fff' : '#666' }} className="submit-btn">
-            <Icon.Check /> KAYDET VE BAŞLA
-          </button>
-        </div>
+      <div style={S.topBar}>
+        <button onClick={onBack} style={S.iconBtn}>‹ Geri</button>
+        <div style={S.topBarTitle}></div>
+        <div style={{ width: 60 }} />
       </div>
-    </div>
-  );
-}
 
-function CoachSettingsModal({ apiKey, onClose, onSave }) {
-  const [key, setKey] = useState(apiKey);
-  return (
-    <div style={S.modalOverlay} onClick={onClose}>
-      <div style={S.modal} onClick={e => e.stopPropagation()}>
-        <div style={S.modalTitle}>Koç Ayarları</div>
-        <div style={S.inputLabel}>GROQ API ANAHTARI</div>
-        <input value={key} onChange={(e) => setKey(e.target.value)} style={{ ...S.modalInput, marginTop: 8 }} />
-        <div style={S.modalActions}>
-          <button onClick={onClose} style={S.modalCancel}>İPTAL</button>
-          <button onClick={() => onSave(key.trim())} style={{ ...S.modalConfirm, background: 'linear-gradient(135deg,#9C27B0,#6A1B9A)' }}>KAYDET</button>
+      <div style={S.exDetailHead}>
+        <div style={{ ...S.exDetailIc, background: es.isStuck ? 'linear-gradient(135deg,#FFA726,#8B6914)' : 'linear-gradient(135deg,#FF3D3D,#8B1111)' }}>{es.isStuck ? '⏳' : '🏋️'}</div>
+        <div>
+          <div style={S.exDetailName}>{es.name}</div>
+          <div style={S.exDetailCur}>Güncel TOP rekor: {es.weight}kg × {es.reps}</div>
         </div>
       </div>
+
+      <div style={S.exBigStats}>
+        <div style={S.exStat}><div style={{ ...S.exStatV, color: '#FF3D3D' }}>{es.weight}</div><div style={S.exStatL}>ŞU AN (KG)</div></div>
+        <div style={S.exStat}><div style={{ ...S.exStatV, color: gain >= 0 ? '#4CAF50' : '#FF5252' }}>{gain >= 0 ? '+' : ''}{gain}</div><div style={S.exStatL}>6 AYDA (KG)</div></div>
+        <div style={S.exStat}><div style={S.exStatV}>~{es.oneRM}</div><div style={S.exStatL}>TAHMİNİ 1RM</div></div>
+      </div>
+
+      <div style={S.periodToggle}>
+        {['1A','3A','6A','1Y','TÜM'].map(p => (
+          <button key={p} onClick={() => setPeriod(p)} style={{ ...S.periodBtn, ...(period === p ? S.periodBtnActive : {}) }}>{p}</button>
+        ))}
+      </div>
+
+      <div style={{ ...S.progCard, padding: 14 }}>
+        {points.length >= 2 ? (
+          <svg viewBox="0 0 300 160" style={{ width: '100%', display: 'block' }}>
+            <defs>
+              <linearGradient id="exfill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#FF3D3D" stopOpacity="0.35"/>
+                <stop offset="1" stopColor="#FF3D3D" stopOpacity="0"/>
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="50" x2="300" y2="50" stroke="#1a1a1a" strokeWidth="1"/>
+            <line x1="0" y1="90" x2="300" y2="90" stroke="#1a1a1a" strokeWidth="1"/>
+            <line x1="0" y1="130" x2="300" y2="130" stroke="#1a1a1a" strokeWidth="1"/>
+            <path d={areaPath} fill="url(#exfill)"/>
+            <path d={linePath} fill="none" stroke="#FF3D3D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+            {points.map((p, i) => (
+              <circle key={i} cx={xFor(i)} cy={yFor(p.weight)} r={i === points.length-1 ? 5 : 3} fill={i === points.length-1 ? '#fff' : '#FF3D3D'} stroke={i === points.length-1 ? '#FF3D3D' : 'none'} strokeWidth="2"/>
+            ))}
+          </svg>
+        ) : (
+          <div style={{ textAlign: 'center', color: '#555', padding: '30px 0', fontSize: 13 }}>
+            Bu dönemde yeterli veri yok.<br />Daha fazla antrenman kaydet 💪
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#666', marginTop: 4 }}>
+          {points.length >= 2 && <><span>{new Date(points[0].ts).toLocaleDateString('tr-TR', {day:'numeric',month:'short'})}</span><span>{new Date(points[points.length-1].ts).toLocaleDateString('tr-TR', {day:'numeric',month:'short'})}</span></>}
+        </div>
+      </div>
+
+      {es.isStuck && (
+        <div style={{ ...S.plateauBox, marginTop: 14 }}>
+          <div style={S.plateauTitle}>⏳ {es.weeksSince} HAFTADIR TAKILI</div>
+          <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.5 }}>
+            {es.weight}kg'da {es.weeksSince} haftadır yeni rekor yok. Deload (ağırlığı %10 düşürüp tekrar çıkmak) veya rep aralığını değiştirmek platoyu kırabilir.
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3299,6 +2722,47 @@ function CoachSettingsModal({ apiKey, onClose, onSave }) {
 const S = {
   app: { minHeight: '100vh', background: '#0a0a0a', color: '#fff' },
   content: { paddingBottom: 90, position: 'relative' },
+  progHero: { background: 'linear-gradient(135deg,#1a1a1a,#0d0d0d)', border: '1px solid #2a2a2a', borderRadius: 18, padding: 18, marginBottom: 12 },
+  progHeroBig: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 46, lineHeight: 1, background: 'linear-gradient(135deg,#FF6B6B,#FF2020)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' },
+  progHeroLbl: { fontSize: 12, color: '#888', marginTop: 4 },
+  progHeroDelta: { fontSize: 13, color: '#FF3D3D', fontWeight: 700, marginTop: 8 },
+  progStatGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 },
+  progStatBox: { background: '#0f0f0f', border: '1px solid #1f1f1f', borderRadius: 14, padding: 14 },
+  progStatV: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 800, fontSize: 24 },
+  progStatL: { fontSize: 10, color: '#777', fontWeight: 700, letterSpacing: 0.5, marginTop: 2 },
+  progCard: { background: '#0f0f0f', border: '1px solid #1f1f1f', borderRadius: 16, padding: 16, marginBottom: 14 },
+  plateauBox: { background: 'rgba(255,167,38,0.08)', border: '1px solid rgba(255,167,38,0.35)', borderRadius: 16, padding: 16, marginBottom: 14 },
+  plateauTitle: { fontSize: 11, fontWeight: 800, letterSpacing: 1, color: '#FFA726', marginBottom: 10 },
+  plateauRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', width: '100%', background: 'transparent', border: 'none', borderTop: '1px solid rgba(255,167,38,0.12)', cursor: 'pointer' },
+  plateauName: { fontSize: 13, fontWeight: 700, color: '#fff' },
+  plateauSub: { fontSize: 11, color: '#999', marginTop: 1 },
+  plateauBadge: { background: 'rgba(255,167,38,0.2)', color: '#FFA726', fontSize: 11, fontWeight: 800, padding: '4px 9px', borderRadius: 20, whiteSpace: 'nowrap' },
+  winnerBanner: { background: 'linear-gradient(135deg, rgba(255,61,61,0.12), #0f0f0f)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 14, padding: '14px 16px', marginBottom: 14 },
+  winnerLbl: { fontSize: 10, color: '#FF3D3D', fontWeight: 800, letterSpacing: 1 },
+  winnerName: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 800, fontSize: 20, marginTop: 2 },
+  winnerDelta: { fontSize: 12, color: '#4CAF50', fontWeight: 700, marginTop: 2 },
+  muscleProgRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid #1a1a1a' },
+  mpName: { width: 76, fontSize: 13, fontWeight: 600 },
+  mpBarTrack: { flex: 1, height: 10, background: '#1a1a1a', borderRadius: 5, overflow: 'hidden' },
+  mpBar: { height: '100%', borderRadius: 5 },
+  mpDelta: { fontSize: 11, fontWeight: 700, width: 52, textAlign: 'right' },
+  prRow: { display: 'flex', alignItems: 'center', gap: 12, background: '#0f0f0f', border: '1px solid #1f1f1f', borderRadius: 12, padding: '12px 14px', marginBottom: 8, width: '100%', cursor: 'pointer' },
+  prRowStuck: { borderColor: 'rgba(255,167,38,0.3)' },
+  prRowIc: { width: 36, height: 36, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 },
+  prRowName: { fontSize: 13, fontWeight: 600 },
+  prRowSub: { fontSize: 10, marginTop: 2, fontWeight: 700 },
+  prRowWt: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 800, fontSize: 18, textAlign: 'right' },
+  exDetailHead: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 },
+  exDetailIc: { width: 44, height: 44, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 },
+  exDetailName: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 800, fontSize: 22 },
+  exDetailCur: { fontSize: 12, color: '#888' },
+  exBigStats: { display: 'flex', gap: 10, margin: '16px 0' },
+  exStat: { flex: 1, background: '#0f0f0f', border: '1px solid #1f1f1f', borderRadius: 12, padding: 12, textAlign: 'center' },
+  exStatV: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 800, fontSize: 22 },
+  exStatL: { fontSize: 9, color: '#777', fontWeight: 700, marginTop: 2, letterSpacing: 0.5 },
+  periodToggle: { display: 'flex', gap: 2, background: '#1a1a1a', borderRadius: 8, padding: 2, marginBottom: 16 },
+  periodBtn: { flex: 1, textAlign: 'center', fontSize: 10, fontWeight: 800, padding: 7, borderRadius: 6, color: '#888', background: 'transparent', border: 'none', cursor: 'pointer' },
+  periodBtnActive: { background: '#FF3D3D', color: '#fff' },
   screen: { maxWidth: 480, margin: '0 auto', padding: '16px 16px calc(100px + env(safe-area-inset-bottom))' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 4px 4px' },
   brand: { display: 'flex', alignItems: 'center', gap: 8 },
