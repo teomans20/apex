@@ -253,7 +253,7 @@ const getExerciseMuscles = (exerciseName, customMap) => {
 };
 
 const STORAGE_KEY = 'heavy-gym-data-v1';
-const APP_VERSION = '2.1'; // Crosshair grafik
+const APP_VERSION = '2.2'; // Crosshair düzeltme
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -2684,10 +2684,13 @@ function ExerciseProgressDetail({ es, onBack }) {
 
   // Dokunma → en yakın noktayı bul
   const handleTouch = (clientX) => {
-    if (!svgRef.current || points.length === 0) return;
+    if (!svgRef.current || points.length === 0 || clientX == null) return;
     const rect = svgRef.current.getBoundingClientRect();
-    const relX = ((clientX - rect.left) / rect.width) * W; // SVG koordinatına çevir
-    // En yakın nokta indexini bul
+    if (!rect.width) return;
+    // Parmağın grafikteki oranı (0..1), sonra SVG koordinatına
+    let frac = (clientX - rect.left) / rect.width;
+    frac = Math.max(0, Math.min(1, frac));
+    const relX = frac * W;
     let nearest = 0, minDist = Infinity;
     points.forEach((p, i) => {
       const d = Math.abs(xFor(i) - relX);
@@ -2735,10 +2738,11 @@ function ExerciseProgressDetail({ es, onBack }) {
           </div>
         )}
         {points.length >= 2 ? (
-          <svg ref={svgRef} viewBox="0 0 300 170" style={{ width: '100%', display: 'block', touchAction: 'none' }}
-            onTouchStart={(e) => handleTouch(e.touches[0].clientX)}
-            onTouchMove={(e) => { e.preventDefault(); handleTouch(e.touches[0].clientX); }}
+          <svg ref={svgRef} viewBox="0 0 300 170" style={{ width: '100%', display: 'block', touchAction: 'none', cursor: 'crosshair' }}
+            onTouchStart={(e) => { if (e.touches && e.touches[0]) handleTouch(e.touches[0].clientX); }}
+            onTouchMove={(e) => { if (e.touches && e.touches[0]) { handleTouch(e.touches[0].clientX); } }}
             onTouchEnd={() => setTouchIdx(null)}
+            onTouchCancel={() => setTouchIdx(null)}
             onMouseDown={(e) => handleTouch(e.clientX)}
             onMouseMove={(e) => { if (e.buttons === 1) handleTouch(e.clientX); }}
             onMouseUp={() => setTouchIdx(null)}
@@ -2765,7 +2769,7 @@ function ExerciseProgressDetail({ es, onBack }) {
             <path d={linePath} fill="none" stroke="#FF3D3D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             {/* Noktalar */}
             {points.map((p, i) => (
-              <circle key={i} cx={xFor(i)} cy={yFor(p.weight)} r={i === points.length-1 ? 4 : 2.5} fill={i === points.length-1 ? '#fff' : '#FF3D3D'} stroke={i === points.length-1 ? '#FF3D3D' : 'none'} strokeWidth="2"/>
+              <circle key={i} cx={xFor(i)} cy={yFor(p.weight)} r={i === points.length-1 ? 4 : 2.5} fill={i === points.length-1 ? '#fff' : '#FF3D3D'} stroke={i === points.length-1 ? '#FF3D3D' : 'none'} strokeWidth="2" style={{ pointerEvents: 'none' }}/>
             ))}
             {/* Crosshair dikey çizgi + vurgu noktası */}
             {active && (
@@ -2778,6 +2782,8 @@ function ExerciseProgressDetail({ es, onBack }) {
             <text x={padL} y={H - 6} fill="#666" fontSize="9" textAnchor="start">{fmtDate(points[0].ts)}</text>
             {points.length > 2 && <text x={padL + plotW/2} y={H - 6} fill="#666" fontSize="9" textAnchor="middle">{fmtDate(points[Math.floor(points.length/2)].ts)}</text>}
             <text x={W - padR} y={H - 6} fill="#666" fontSize="9" textAnchor="end">{fmtDate(points[points.length-1].ts)}</text>
+            {/* Şeffaf dokunma katmanı — tüm grafiği kaplar, dokunmaları yakalar */}
+            <rect x="0" y="0" width={W} height={H} fill="transparent" />
           </svg>
         ) : (
           <div style={{ textAlign: 'center', color: '#555', padding: '30px 0', fontSize: 13 }}>
