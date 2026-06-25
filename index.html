@@ -285,7 +285,7 @@ function loadActiveGymId() {
 function saveActiveGymId(id) {
   try { localStorage.setItem(ACTIVE_GYM_KEY, id); } catch (e) {}
 }
-const APP_VERSION = '3.1'; // Ortada logo + iOS8 logo fix
+const APP_VERSION = '3.2'; // Shift fix + logo gradient fix
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -960,7 +960,7 @@ function GymPickerModal({ gyms, activeGymId, onSelect, onAdd, onRename, onDelete
 
         {adding ? (
           <div style={{ ...S.gymItem }}>
-            <input autoFocus value={newName} onChange={e => setNewName(e.target.value)} placeholder="Salon adı (örn: Çorlu Gym)" style={S.gymEditInput} autoCapitalize="words" autoCorrect="off" onKeyDown={e => e.key === 'Enter' && (onAdd(newName), setAdding(false), setNewName(''))} />
+            <input autoFocus value={newName} onChange={e => setNewName(e.target.value)} placeholder="Salon adı (örn: Çorlu Gym)" style={S.gymEditInput} autoCapitalize="sentences" autoCorrect="off" onKeyDown={e => e.key === 'Enter' && (onAdd(newName), setAdding(false), setNewName(''))} />
             <button onClick={() => { onAdd(newName); setAdding(false); setNewName(''); }} style={S.gymMiniBtn}>✓</button>
           </div>
         ) : (
@@ -980,10 +980,11 @@ function ApexLogo({ size = 80 }) {
   const gid = React.useMemo(() => 'apexlogo_' + Math.random().toString(36).slice(2, 9), []);
   return (
     <svg width={size} height={size} viewBox="0 0 180 180" style={{ display: 'block', margin: '0 auto' }}>
-      <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+      <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="180" gradientUnits="userSpaceOnUse">
         <stop offset="0" stopColor="#FF6B6B"/><stop offset="0.5" stopColor="#FF2020"/><stop offset="1" stopColor="#6B0D0D"/>
       </linearGradient></defs>
       <rect width="180" height="180" rx="40" fill="#0a0a0a"/>
+      <path d="M38 145 L90 38 L142 145 L114 145 L90 80 L66 145 Z" fill="#FF2020"/>
       <path d="M38 145 L90 38 L142 145 L114 145 L90 80 L66 145 Z" fill={`url(#${gid})`}/>
       <path d="M90 88 L105 122 L75 122 Z" fill="#0a0a0a"/>
     </svg>
@@ -1049,7 +1050,7 @@ function AuthScreen() {
         <div style={S.authSubtitle}>{mode === 'login' ? 'Tekrar hoş geldin' : 'Hesap oluştur'}</div>
 
         {mode === 'signup' && (
-          <input style={S.authInput} placeholder="İsmin" value={name} onChange={e => setName(e.target.value)} type="text" autoCapitalize="words" autoCorrect="off" spellCheck="false" />
+          <input style={S.authInput} placeholder="İsmin" value={name} onChange={e => setName(e.target.value)} type="text" autoCapitalize="sentences" autoCorrect="off" spellCheck="false" />
         )}
         <input style={S.authInput} type="email" placeholder="E-posta" value={email} onChange={e => setEmail(e.target.value)} autoCapitalize="none" autoCorrect="off" />
         <input style={S.authInput} type="password" placeholder="Şifre" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
