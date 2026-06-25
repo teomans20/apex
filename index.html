@@ -253,7 +253,39 @@ const getExerciseMuscles = (exerciseName, customMap) => {
 };
 
 const STORAGE_KEY = 'heavy-gym-data-v1';
-const APP_VERSION = '2.2'; // Crosshair düzeltme
+const GYMS_KEY = 'apex-gyms-v1';        // salon listesi
+const ACTIVE_GYM_KEY = 'apex-active-gym'; // aktif salon id
+
+// Bir salonun veri anahtarı (localStorage). İlk salon eski anahtarı kullanır (geriye uyumluluk)
+function gymStorageKey(gymId) {
+  return gymId === 'default' ? STORAGE_KEY : `${STORAGE_KEY}__${gymId}`;
+}
+// Firestore doküman adı
+function gymDocName(gymId) {
+  return gymId === 'default' ? 'gym' : `gym_${gymId}`;
+}
+// Salon listesini oku (yoksa varsayılan tek salon oluştur)
+function loadGyms() {
+  try {
+    const raw = localStorage.getItem(GYMS_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length) return arr;
+    }
+  } catch (e) {}
+  // İlk kez: mevcut veriyi "1. Salon" olarak tanımla (veri kaybı yok)
+  return [{ id: 'default', name: 'Salonum' }];
+}
+function saveGyms(gyms) {
+  try { localStorage.setItem(GYMS_KEY, JSON.stringify(gyms)); } catch (e) {}
+}
+function loadActiveGymId() {
+  try { return localStorage.getItem(ACTIVE_GYM_KEY) || 'default'; } catch (e) { return 'default'; }
+}
+function saveActiveGymId(id) {
+  try { localStorage.setItem(ACTIVE_GYM_KEY, id); } catch (e) {}
+}
+const APP_VERSION = '3.1'; // Ortada logo + iOS8 logo fix
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -788,6 +820,9 @@ function DayDetailModal({ targetDateKey, data, dayConfig, onClose, onDeleteLog, 
 function App() {
   const [tab, setTab] = useState('workout');
   const [authUser, setAuthUser] = useState(undefined); // undefined = yükleniyor, null = giriş yok, obj = giriş var
+  const [gyms, setGyms] = useState(loadGyms);
+  const [activeGymId, setActiveGymId] = useState(loadActiveGymId);
+  const [showGymPicker, setShowGymPicker] = useState(false);
 
   useEffect(() => {
     if (!window.APEX_FIREBASE_OK || !window.APEX_AUTH) {
@@ -800,6 +835,57 @@ function App() {
     });
     return () => unsub && unsub();
   }, []);
+
+  // Giriş yapılınca salon listesini buluttan da çek
+  useEffect(() => {
+    if (authUser && window.APEX_FIREBASE_OK && window.APEX_DB) {
+      window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc('gyms_meta').get().then((snap) => {
+        if (snap.exists && snap.data().gyms && snap.data().gyms.length) {
+          setGyms(snap.data().gyms);
+          saveGyms(snap.data().gyms);
+        }
+      }).catch(() => {});
+    }
+  }, [authUser]);
+
+  const activeGym = gyms.find(g => g.id === activeGymId) || gyms[0];
+
+  const persistGyms = (newGyms) => {
+    setGyms(newGyms);
+    saveGyms(newGyms);
+    if (authUser && window.APEX_FIREBASE_OK && window.APEX_DB) {
+      window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc('gyms_meta').set({ gyms: newGyms }).catch(() => {});
+    }
+  };
+
+  const selectGym = (id) => {
+    setActiveGymId(id);
+    saveActiveGymId(id);
+    setShowGymPicker(false);
+  };
+
+  const addGym = (name) => {
+    const id = 'g' + Date.now();
+    const newGyms = [...gyms, { id, name: name.trim() || 'Yeni Salon' }];
+    persistGyms(newGyms);
+    selectGym(id);
+  };
+
+  const renameGym = (id, name) => {
+    persistGyms(gyms.map(g => g.id === id ? { ...g, name: name.trim() || g.name } : g));
+  };
+
+  const deleteGym = (id) => {
+    if (gyms.length <= 1) return; // son salon silinemez
+    const newGyms = gyms.filter(g => g.id !== id);
+    persistGyms(newGyms);
+    if (activeGymId === id) selectGym(newGyms[0].id);
+    // O salonun verisini de temizle
+    try { localStorage.removeItem(gymStorageKey(id)); } catch (e) {}
+    if (authUser && window.APEX_FIREBASE_OK && window.APEX_DB) {
+      window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc(gymDocName(id)).delete().catch(() => {});
+    }
+  };
 
   // Auth durumu yükleniyor
   if (authUser === undefined) {
@@ -819,26 +905,86 @@ function App() {
   }
 
   // Giriş yapılmış (veya offline mod) → uygulama
+  // key={activeGymId} → salon değişince sekmeler komple yeniden yüklenir (temiz veri)
   return (
     <div style={S.app}>
       <div style={S.content}>
-        {tab === 'workout' && <WorkoutTab authUser={authUser} />}
-        {tab === 'progress' && <ProgressTab authUser={authUser} />}
+        {tab === 'workout' && <WorkoutTab key={activeGymId} authUser={authUser} activeGym={activeGym} onOpenGymPicker={() => setShowGymPicker(true)} />}
+        {tab === 'progress' && <ProgressTab key={activeGymId} authUser={authUser} activeGym={activeGym} onOpenGymPicker={() => setShowGymPicker(true)} />}
       </div>
       <BottomTabs tab={tab} onChange={setTab} />
+      {showGymPicker && (
+        <GymPickerModal
+          gyms={gyms} activeGymId={activeGymId}
+          onSelect={selectGym} onAdd={addGym} onRename={renameGym} onDelete={deleteGym}
+          onClose={() => setShowGymPicker(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Salon seçici modal
+function GymPickerModal({ gyms, activeGymId, onSelect, onAdd, onRename, onDelete, onClose }) {
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [editId, setEditId] = useState(null);
+  const [editName, setEditName] = useState('');
+
+  return (
+    <div style={S.modalOverlay} onClick={onClose}>
+      <div style={S.modal} onClick={e => e.stopPropagation()}>
+        <div style={S.modalTitle}>SALON SEÇ</div>
+        <div style={{ fontSize: 11, color: '#777', marginBottom: 16 }}>Her salonun kendi egzersizleri ve rekorları ayrıdır</div>
+
+        {gyms.map(g => (
+          <div key={g.id} style={{ ...S.gymItem, ...(g.id === activeGymId ? S.gymItemActive : {}) }}>
+            {editId === g.id ? (
+              <>
+                <input autoFocus value={editName} onChange={e => setEditName(e.target.value)} style={S.gymEditInput} />
+                <button onClick={() => { onRename(g.id, editName); setEditId(null); }} style={S.gymMiniBtn}>✓</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => onSelect(g.id)} style={S.gymItemMain}>
+                  <span style={{ fontSize: 17 }}>📍</span>
+                  <span style={S.gymItemName}>{g.name}</span>
+                  {g.id === activeGymId && <span style={{ color: '#FF3D3D', fontSize: 15, marginLeft: 'auto' }}>✓</span>}
+                </button>
+                <button onClick={() => { setEditId(g.id); setEditName(g.name); }} style={S.gymMiniBtn}>✎</button>
+                {gyms.length > 1 && <button onClick={() => { if (confirm(`"${g.name}" salonu ve tüm verisi silinsin mi?`)) onDelete(g.id); }} style={{ ...S.gymMiniBtn, color: '#FF5252' }}>🗑</button>}
+              </>
+            )}
+          </div>
+        ))}
+
+        {adding ? (
+          <div style={{ ...S.gymItem }}>
+            <input autoFocus value={newName} onChange={e => setNewName(e.target.value)} placeholder="Salon adı (örn: Çorlu Gym)" style={S.gymEditInput} autoCapitalize="words" autoCorrect="off" onKeyDown={e => e.key === 'Enter' && (onAdd(newName), setAdding(false), setNewName(''))} />
+            <button onClick={() => { onAdd(newName); setAdding(false); setNewName(''); }} style={S.gymMiniBtn}>✓</button>
+          </div>
+        ) : (
+          <button onClick={() => setAdding(true)} style={S.gymAddBtn}>+ Yeni Salon Ekle</button>
+        )}
+
+        <button onClick={onClose} style={{ ...S.modalCancel, marginTop: 12 }}>KAPAT</button>
+      </div>
     </div>
   );
 }
 
 // APEX logo (V3 ikon) — auth ekranı ve yükleme için
 function ApexLogo({ size = 80 }) {
+  // Benzersiz gradient id — aynı sayfada birden fazla logo olunca eski iOS Safari'de
+  // id çakışması gradient'i bozuyordu (sadece düz "A" görünüyordu). Her logo kendi id'sini alır.
+  const gid = React.useMemo(() => 'apexlogo_' + Math.random().toString(36).slice(2, 9), []);
   return (
     <svg width={size} height={size} viewBox="0 0 180 180" style={{ display: 'block', margin: '0 auto' }}>
-      <defs><linearGradient id="apexlogo" x1="0" y1="0" x2="0" y2="1">
+      <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stopColor="#FF6B6B"/><stop offset="0.5" stopColor="#FF2020"/><stop offset="1" stopColor="#6B0D0D"/>
       </linearGradient></defs>
       <rect width="180" height="180" rx="40" fill="#0a0a0a"/>
-      <path d="M38 145 L90 38 L142 145 L114 145 L90 80 L66 145 Z" fill="url(#apexlogo)"/>
+      <path d="M38 145 L90 38 L142 145 L114 145 L90 80 L66 145 Z" fill={`url(#${gid})`}/>
       <path d="M90 88 L105 122 L75 122 Z" fill="#0a0a0a"/>
     </svg>
   );
@@ -903,7 +1049,7 @@ function AuthScreen() {
         <div style={S.authSubtitle}>{mode === 'login' ? 'Tekrar hoş geldin' : 'Hesap oluştur'}</div>
 
         {mode === 'signup' && (
-          <input style={S.authInput} placeholder="İsmin" value={name} onChange={e => setName(e.target.value)} autoCapitalize="words" />
+          <input style={S.authInput} placeholder="İsmin" value={name} onChange={e => setName(e.target.value)} type="text" autoCapitalize="words" autoCorrect="off" spellCheck="false" />
         )}
         <input style={S.authInput} type="email" placeholder="E-posta" value={email} onChange={e => setEmail(e.target.value)} autoCapitalize="none" autoCorrect="off" />
         <input style={S.authInput} type="password" placeholder="Şifre" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
@@ -939,7 +1085,7 @@ function BottomTabs({ tab, onChange }) {
 // WORKOUT TAB
 // ═══════════════════════════════════════════
 
-function WorkoutTab({ authUser }) {
+function WorkoutTab({ authUser, activeGym, onOpenGymPicker }) {
   const [view, setView] = useState('home');
   const [currentDay, setCurrentDay] = useState(null);
   const [currentExercise, setCurrentExercise] = useState(null);
@@ -955,38 +1101,42 @@ function WorkoutTab({ authUser }) {
   const [editDayId, setEditDayId] = useState(null); // custom day being edited
   const [cloudLoaded, setCloudLoaded] = useState(false); // bulut verisi yüklendi mi
   const cloudReady = !!(authUser && window.APEX_FIREBASE_OK && window.APEX_DB);
+  const gymId = (activeGym && activeGym.id) || 'default';
+  const lsKey = gymStorageKey(gymId);
+  const docName = gymDocName(gymId);
 
   // Veri yükleme: önce localStorage (hızlı), sonra bulut (varsa)
   useEffect(() => {
     // 1) localStorage'dan anında yükle (offline + hız)
     let localData = null;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(lsKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         localData = { exercises: { ...DEFAULT_EXERCISES, ...(parsed.exercises || {}) }, logs: parsed.logs || [], sessions: parsed.sessions || [], customDays: parsed.customDays || [], customMuscleMap: parsed.customMuscleMap || {} };
         setData(localData);
+      } else {
+        // Bu salonda hiç veri yok → temiz başla (varsayılan günler, boş loglar)
+        setData({ exercises: DEFAULT_EXERCISES, logs: [], sessions: [], customDays: [], customMuscleMap: {} });
       }
     } catch (e) {}
 
     // 2) Bulutdan yükle (giriş varsa)
     if (cloudReady) {
-      const docRef = window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc('gym');
+      const docRef = window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc(docName);
       docRef.get().then((snap) => {
         if (snap.exists) {
-          // Bulutta veri var → onu kullan
           const cloud = snap.data();
           const merged = { exercises: { ...DEFAULT_EXERCISES, ...(cloud.exercises || {}) }, logs: cloud.logs || [], sessions: cloud.sessions || [], customDays: cloud.customDays || [], customMuscleMap: cloud.customMuscleMap || {} };
           setData(merged);
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch (e) {}
+          try { localStorage.setItem(lsKey, JSON.stringify(merged)); } catch (e) {}
         } else if (localData) {
-          // Bulutta yok ama localde var → ilk kez buluta taşı (migrate)
           docRef.set(localData).catch(() => {});
         }
         setCloudLoaded(true);
       }).catch(() => { setCloudLoaded(true); });
     }
-  }, [cloudReady, authUser]);
+  }, [cloudReady, authUser, gymId]);
 
   // Build the merged day config (built-in + custom) — used everywhere
   const dayConfig = useMemo(() => buildDayConfigMap(data.customDays), [data.customDays]);
@@ -994,11 +1144,11 @@ function WorkoutTab({ authUser }) {
   const saveData = (newData) => {
     setData(newData);
     // Her zaman localStorage'a yaz (offline yedek)
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newData)); } catch (e) {}
+    try { localStorage.setItem(lsKey, JSON.stringify(newData)); } catch (e) {}
     // Giriş varsa buluta da yaz
     if (cloudReady) {
       try {
-        window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc('gym')
+        window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc(docName)
           .set(newData).catch(() => {});
       } catch (e) {}
     }
@@ -1300,7 +1450,7 @@ function WorkoutTab({ authUser }) {
 
   return (
     <>
-      {view === 'home' && <HomeView onSelectDay={(d) => { setCurrentDay(d); setLogDate(null); setView('day'); }} data={data} dayConfig={dayConfig} onMenu={() => setShowMenu(true)} onTapCalendarDay={setDayDetailKey} onAddDay={() => setShowAddDay(true)} onEditDay={setEditDayId} onSaveMuscleMap={saveMuscleMap} />}
+      {view === 'home' && <HomeView onSelectDay={(d) => { setCurrentDay(d); setLogDate(null); setView('day'); }} data={data} dayConfig={dayConfig} onMenu={() => setShowMenu(true)} onTapCalendarDay={setDayDetailKey} onAddDay={() => setShowAddDay(true)} onEditDay={setEditDayId} onSaveMuscleMap={saveMuscleMap} activeGym={activeGym} onOpenGymPicker={onOpenGymPicker} />}
       {view === 'day' && <DayView dayType={currentDay} cfg={dayConfig[currentDay]} exercises={data.exercises[currentDay] || []} logsForDay={data.logs} getLastPerformance={getLastPerformance} activeSession={getActiveSession()} onStartSession={startSession} onEndSession={endSession} onBack={() => { setView('home'); setLogDate(null); }} onSelectExercise={(e) => { setCurrentExercise(e); setView('exercise'); }} onAddExercise={() => setShowAddExercise(true)} onRemoveExercise={removeExercise} onReorderExercises={reorderExercises} logDate={logDate} />}
       {view === 'exercise' && <ExerciseView exerciseName={currentExercise} cfg={dayConfig[currentDay]} history={getHistoryGrouped(currentExercise)} onBack={() => setView('day')} onAddLog={(w, r) => addLog(currentExercise, w, r)} onDeleteLog={deleteLog} logDate={logDate} />}
       {showAddExercise && <AddExerciseModal cfg={dayConfig[currentDay]} existingExercises={data.exercises} dayConfig={dayConfig} currentDayId={currentDay} onClose={() => setShowAddExercise(false)} onAdd={(n) => { addExercise(n); setShowAddExercise(false); }} />}
@@ -1315,7 +1465,7 @@ function WorkoutTab({ authUser }) {
   );
 }
 
-function HomeView({ onSelectDay, data, dayConfig, onMenu, onTapCalendarDay, onAddDay, onEditDay, onSaveMuscleMap }) {
+function HomeView({ onSelectDay, data, dayConfig, onMenu, onTapCalendarDay, onAddDay, onEditDay, onSaveMuscleMap, activeGym, onOpenGymPicker }) {
   const todayLogs = data.logs.filter(l => dateKey(l.timestamp) === dateKey(Date.now()));
   const totalSessions = new Set(data.logs.map(l => dateKey(l.timestamp))).size;
   const totalVolume = data.logs.reduce((s, l) => s + l.weight * l.reps, 0);
@@ -1329,7 +1479,12 @@ function HomeView({ onSelectDay, data, dayConfig, onMenu, onTapCalendarDay, onAd
   return (
     <div style={S.screen}>
       <div style={S.header}>
-        <div style={S.brand}><Icon.Dumbbell /><span style={S.brandText}>APEX</span></div>
+        <button onClick={onOpenGymPicker} style={S.gymSelector}>
+          <span style={{ fontSize: 14 }}>📍</span>
+          <span style={S.gymSelectorName}>{activeGym ? activeGym.name : 'Salonum'}</span>
+          <span style={{ color: '#FF3D3D', fontSize: 11 }}>▾</span>
+        </button>
+        <div style={S.headerLogo}><ApexLogo size={34} /></div>
         <button onClick={onMenu} style={S.menuBtn}>•••</button>
       </div>
       <div style={S.date}>{new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
@@ -2393,31 +2548,36 @@ function estimate1RM(weight, reps) {
   return Math.round(weight * (1 + reps / 30));
 }
 
-function ProgressTab({ authUser }) {
+function ProgressTab({ authUser, activeGym, onOpenGymPicker }) {
   const [data, setData] = useState({ exercises: DEFAULT_EXERCISES, logs: [], sessions: [], customDays: [] });
   const [detailExercise, setDetailExercise] = useState(null);
   const cloudReady = !!(authUser && window.APEX_FIREBASE_OK && window.APEX_DB);
+  const gymId = (activeGym && activeGym.id) || 'default';
+  const lsKey = gymStorageKey(gymId);
+  const docName = gymDocName(gymId);
 
-  // Veri yükle (workout ile aynı kaynak)
+  // Veri yükle (workout ile aynı kaynak, salona göre)
   useEffect(() => {
     let localData = null;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(lsKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         localData = { exercises: { ...DEFAULT_EXERCISES, ...(parsed.exercises || {}) }, logs: parsed.logs || [], sessions: parsed.sessions || [], customDays: parsed.customDays || [], customMuscleMap: parsed.customMuscleMap || {} };
         setData(localData);
+      } else {
+        setData({ exercises: DEFAULT_EXERCISES, logs: [], sessions: [], customDays: [], customMuscleMap: {} });
       }
     } catch (e) {}
     if (cloudReady) {
-      window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc('gym').get().then((snap) => {
+      window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc(docName).get().then((snap) => {
         if (snap.exists) {
           const cloud = snap.data();
           setData({ exercises: { ...DEFAULT_EXERCISES, ...(cloud.exercises || {}) }, logs: cloud.logs || [], sessions: cloud.sessions || [], customDays: cloud.customDays || [], customMuscleMap: cloud.customMuscleMap || {} });
         }
       }).catch(() => {});
     }
-  }, [cloudReady, authUser]);
+  }, [cloudReady, authUser, gymId]);
 
   const dayConfig = useMemo(() => buildDayConfigMap(data.customDays), [data.customDays]);
 
@@ -2550,10 +2710,14 @@ function ProgressTab({ authUser }) {
 
   return (
     <div style={S.screen}>
-      <div style={S.topBar}>
-        <div style={{ width: 60 }} />
+      <div style={S.header}>
+        <button onClick={onOpenGymPicker} style={S.gymSelector}>
+          <span style={{ fontSize: 14 }}>📍</span>
+          <span style={S.gymSelectorName}>{activeGym ? activeGym.name : 'Salonum'}</span>
+          <span style={{ color: '#FF3D3D', fontSize: 11 }}>▾</span>
+        </button>
         <div style={S.topBarTitle}>İLERLEME</div>
-        <div style={{ width: 60 }} />
+        <div style={{ width: 40 }} />
       </div>
 
       {exerciseStats.length === 0 ? (
@@ -2699,6 +2863,26 @@ function ExerciseProgressDetail({ es, onBack }) {
     setTouchIdx(nearest);
   };
 
+  // Native (non-passive) dokunma dinleyicileri — mobil Safari'de güvenilir çalışır,
+  // metin seçme/kaydırma davranışını engeller
+  React.useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const onStart = (e) => { if (e.touches && e.touches[0]) { e.preventDefault(); handleTouch(e.touches[0].clientX); } };
+    const onMove = (e) => { if (e.touches && e.touches[0]) { e.preventDefault(); handleTouch(e.touches[0].clientX); } };
+    const onEnd = () => setTouchIdx(null);
+    svg.addEventListener('touchstart', onStart, { passive: false });
+    svg.addEventListener('touchmove', onMove, { passive: false });
+    svg.addEventListener('touchend', onEnd);
+    svg.addEventListener('touchcancel', onEnd);
+    return () => {
+      svg.removeEventListener('touchstart', onStart);
+      svg.removeEventListener('touchmove', onMove);
+      svg.removeEventListener('touchend', onEnd);
+      svg.removeEventListener('touchcancel', onEnd);
+    };
+  }, [points, period]);
+
   const active = touchIdx !== null && points[touchIdx] ? points[touchIdx] : null;
 
   return (
@@ -2738,11 +2922,7 @@ function ExerciseProgressDetail({ es, onBack }) {
           </div>
         )}
         {points.length >= 2 ? (
-          <svg ref={svgRef} viewBox="0 0 300 170" style={{ width: '100%', display: 'block', touchAction: 'none', cursor: 'crosshair' }}
-            onTouchStart={(e) => { if (e.touches && e.touches[0]) handleTouch(e.touches[0].clientX); }}
-            onTouchMove={(e) => { if (e.touches && e.touches[0]) { handleTouch(e.touches[0].clientX); } }}
-            onTouchEnd={() => setTouchIdx(null)}
-            onTouchCancel={() => setTouchIdx(null)}
+          <svg ref={svgRef} viewBox="0 0 300 170" style={{ width: '100%', display: 'block', touchAction: 'none', cursor: 'crosshair', userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
             onMouseDown={(e) => handleTouch(e.clientX)}
             onMouseMove={(e) => { if (e.buttons === 1) handleTouch(e.clientX); }}
             onMouseUp={() => setTouchIdx(null)}
@@ -2814,6 +2994,16 @@ function ExerciseProgressDetail({ es, onBack }) {
 const S = {
   app: { minHeight: '100vh', background: '#0a0a0a', color: '#fff' },
   content: { paddingBottom: 90, position: 'relative' },
+  gymSelector: { display: 'flex', alignItems: 'center', gap: 7, background: 'linear-gradient(135deg,#1a1a1a,#0f0f0f)', border: '1px solid #2a2a2a', borderRadius: 22, padding: '7px 13px', cursor: 'pointer', position: 'relative', zIndex: 2 },
+  headerLogo: { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 1, pointerEvents: 'none' },
+  gymSelectorName: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: 0.5, color: '#fff', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  gymItem: { display: 'flex', alignItems: 'center', gap: 8, background: '#0f0f0f', border: '1px solid #1f1f1f', borderRadius: 12, padding: '6px 10px', marginBottom: 8 },
+  gymItemActive: { borderColor: '#FF3D3D', background: 'rgba(255,61,61,0.08)' },
+  gymItemMain: { display: 'flex', alignItems: 'center', gap: 10, flex: 1, background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px 4px', textAlign: 'left' },
+  gymItemName: { fontSize: 15, fontWeight: 700, color: '#fff' },
+  gymMiniBtn: { background: 'transparent', border: 'none', color: '#888', fontSize: 15, cursor: 'pointer', padding: '8px 8px' },
+  gymEditInput: { flex: 1, background: '#1a1a1a', border: '1px solid #FF3D3D', borderRadius: 8, padding: '10px 12px', fontSize: 15, color: '#fff', outline: 'none', fontFamily: "'Manrope',sans-serif" },
+  gymAddBtn: { width: '100%', background: 'rgba(255,61,61,0.1)', border: '1px dashed rgba(255,61,61,0.4)', borderRadius: 12, padding: 14, color: '#FF3D3D', fontWeight: 700, fontSize: 14, cursor: 'pointer', marginTop: 4 },
   progHero: { background: 'linear-gradient(135deg,#1a1a1a,#0d0d0d)', border: '1px solid #2a2a2a', borderRadius: 18, padding: 18, marginBottom: 12 },
   progHeroBig: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 46, lineHeight: 1, background: 'linear-gradient(135deg,#FF6B6B,#FF2020)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' },
   progHeroLbl: { fontSize: 12, color: '#888', marginTop: 4 },
@@ -2859,7 +3049,7 @@ const S = {
   periodBtn: { flex: 1, textAlign: 'center', fontSize: 10, fontWeight: 800, padding: 7, borderRadius: 6, color: '#888', background: 'transparent', border: 'none', cursor: 'pointer' },
   periodBtnActive: { background: '#FF3D3D', color: '#fff' },
   screen: { maxWidth: 480, margin: '0 auto', padding: '16px 16px calc(100px + env(safe-area-inset-bottom))' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 4px 4px' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 4px 4px', position: 'relative' },
   brand: { display: 'flex', alignItems: 'center', gap: 8 },
   brandText: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 900, letterSpacing: 2 },
   menuBtn: { background: 'transparent', border: 'none', color: '#666', fontSize: 18, cursor: 'pointer', padding: 8, letterSpacing: 2 },
