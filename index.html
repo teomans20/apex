@@ -900,7 +900,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.6.5'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.6.6'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -6698,7 +6698,7 @@ function ProgressTab({
     style: S.progHeroLbl
   }, "Bu ay kırılan rekor"), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 11, color: '#666', marginTop: 2 }
-  }, "(önceki en iyini geçtiğin set sayısı)"), monthStats.biggestJump && /*#__PURE__*/React.createElement("div", {
+  }, "(önceki rekorunu geçtiğin set sayısı)"), monthStats.biggestJump && /*#__PURE__*/React.createElement("div", {
     style: S.progHeroDelta
   }, "🔥 En büyük sıçrama: ", monthStats.biggestJump.name, " +", monthStats.biggestJump.delta, "kg")), /*#__PURE__*/React.createElement("div", {
     style: S.progStatGrid
