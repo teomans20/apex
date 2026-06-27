@@ -898,7 +898,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.5.3'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.5.5'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2850,6 +2850,7 @@ function FeedCard({
   const [emojiInput, setEmojiInput] = useState('');
   const [showWho, setShowWho] = useState(null); // hangi emojinin "kimler" listesi açık
   const pressTimer = useRef(null);
+  const longPressed = useRef(false);
   const reactions = item.reactions || {};
 
   // Eski kartlardaki fire/muscle/clap'i emoji'ye çevir (geriye uyumluluk)
@@ -2882,7 +2883,9 @@ function FeedCard({
 
   // Basılı tut → kimler tepki verdi
   const startPress = emoji => {
+    longPressed.current = false;
     pressTimer.current = setTimeout(() => {
+      longPressed.current = true;
       haptic(30);
       setShowWho(emoji);
     }, 450);
@@ -2979,9 +2982,7 @@ function FeedCard({
       onTouchStart: () => startPress(emoji),
       onTouchEnd: cancelPress,
       onTouchMove: cancelPress,
-      onMouseDown: () => startPress(emoji),
-      onMouseUp: cancelPress,
-      onMouseLeave: cancelPress,
+      onContextMenu: e => { e.preventDefault(); setShowWho(emoji); },
       style: {
         ...S.reactBtn,
         ...(active ? S.reactBtnActive : {})
