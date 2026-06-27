@@ -900,7 +900,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.6'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.6.2'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -3430,10 +3430,18 @@ function LoadingScreen({
 }) {
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      ...S.app,
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: '100vw',
+      height: '100vh',
+      background: '#000',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center'
+      justifyContent: 'center',
+      zIndex: 9999
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3444,14 +3452,14 @@ function LoadingScreen({
       animation: 'apexPulse 1.4s ease-in-out infinite'
     }
   }, /*#__PURE__*/React.createElement(ApexLogo, {
-    size: 76
+    size: 104
   })), /*#__PURE__*/React.createElement("div", {
     style: {
-      marginTop: 26,
-      width: 120,
-      height: 3,
+      marginTop: 32,
+      width: 150,
+      height: 4,
       background: '#1a1a1a',
-      borderRadius: 3,
+      borderRadius: 4,
       overflow: 'hidden',
       marginLeft: 'auto',
       marginRight: 'auto'
@@ -3461,15 +3469,15 @@ function LoadingScreen({
       height: '100%',
       width: '40%',
       background: 'linear-gradient(90deg,transparent,#FF3D3D,transparent)',
-      borderRadius: 3,
+      borderRadius: 4,
       animation: 'apexSlide 1.2s ease-in-out infinite'
     }
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       color: '#666',
-      fontSize: 11,
-      marginTop: 18,
-      letterSpacing: 2,
+      fontSize: 12,
+      marginTop: 20,
+      letterSpacing: 2.5,
       fontWeight: 700
     }
   }, label || 'YÜKLENİYOR')));
@@ -6605,12 +6613,16 @@ function ProgressTab({
         prev
       } = acc[m];
       if (recent === 0) return null;
-      const pct = prev > 0 ? Math.round((recent - prev) / prev * 100) : recent > 0 ? 100 : 0;
+      // Önceki dönem verisi varsa gerçek % değişim; yoksa kıyas yapılamaz → isNew
+      const isNew = prev === 0;
+      const pct = prev > 0 ? Math.round((recent - prev) / prev * 100) : 0;
       return {
         key: m,
         tr: MUSCLES[m].tr,
         recent,
-        pct
+        prev,
+        pct,
+        isNew
       };
     }).filter(Boolean).sort((a, b) => b.recent - a.recent);
     const maxRecent = Math.max(...list.map(x => x.recent), 1);
@@ -6684,7 +6696,9 @@ function ProgressTab({
     style: S.progHeroBig
   }, monthStats.prCount), /*#__PURE__*/React.createElement("div", {
     style: S.progHeroLbl
-  }, "Bu ay kırılan rekor"), monthStats.biggestJump && /*#__PURE__*/React.createElement("div", {
+  }, "Bu ay kırılan rekor"), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 11, color: '#666', marginTop: 2 }
+  }, "(önceki en iyini geçtiğin set sayısı)"), monthStats.biggestJump && /*#__PURE__*/React.createElement("div", {
     style: S.progHeroDelta
   }, "🔥 En büyük sıçrama: ", monthStats.biggestJump.name, " +", monthStats.biggestJump.delta, "kg")), /*#__PURE__*/React.createElement("div", {
     style: S.progStatGrid
@@ -6747,9 +6761,9 @@ function ProgressTab({
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.mpDelta,
-      color: m.pct > 0 ? '#4CAF50' : '#888'
+      color: m.isNew ? '#4A90E2' : m.pct > 0 ? '#4CAF50' : m.pct < 0 ? '#FF5252' : '#888'
     }
-  }, m.pct > 0 ? `▲ %${m.pct}` : '▬ 0%'))))), /*#__PURE__*/React.createElement("div", {
+  }, m.isNew ? 'YENİ' : m.pct > 0 ? `▲ %${m.pct}` : m.pct < 0 ? `▼ %${Math.abs(m.pct)}` : '▬ 0%'))))), /*#__PURE__*/React.createElement("div", {
     style: S.sectionLabel
   }, "REKOR GELİŞİMİ · dokun, detayı gör"), improvingExercises.map((es, i) => /*#__PURE__*/React.createElement("button", {
     key: i,
