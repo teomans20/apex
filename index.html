@@ -898,7 +898,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.5.1'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.5.2'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2695,10 +2695,11 @@ async function toggleReaction(ownerUid, itemId, reactionType, myUid) {
     if (!snap.exists) return;
     const data = snap.data();
     const reactions = data.reactions || {};
-    const arr = reactions[reactionType] || [];
-    const idx = arr.indexOf(myUid);
-    if (idx >= 0) arr.splice(idx, 1); // zaten var → kaldır
-    else arr.push(myUid); // yok → ekle
+    // Önce bu uid'i bu tepkiden tamamen çıkar (tekrarları da temizle)
+    let arr = (reactions[reactionType] || []).filter(u => u !== myUid);
+    const wasReacted = (reactions[reactionType] || []).indexOf(myUid) >= 0;
+    // Tepki vermediyse şimdi ekle (tek kez); verdiyse zaten çıkardık (toggle off)
+    if (!wasReacted) arr.push(myUid);
     reactions[reactionType] = arr;
     await ref.update({
       reactions: reactions
@@ -2773,9 +2774,10 @@ function FeedView({
       const reactions = {
         ...(it.reactions || {})
       };
-      const arr = [...(reactions[type] || [])];
-      const idx = arr.indexOf(me.uid);
-      if (idx >= 0) arr.splice(idx, 1);else arr.push(me.uid);
+      const had = (reactions[type] || []).indexOf(me.uid) >= 0;
+      // uid'i bu tepkiden çıkar (tekrarları temizle), tepki yoksa tek kez ekle
+      let arr = (reactions[type] || []).filter(u => u !== me.uid);
+      if (!had) arr.push(me.uid);
       reactions[type] = arr;
       return {
         ...it,
@@ -2844,7 +2846,9 @@ function FeedCard({
   const normalized = {};
   Object.keys(reactions).forEach(k => {
     const emoji = legacyMap[k] || k;
-    normalized[emoji] = (normalized[emoji] || []).concat(reactions[k] || []);
+    const merged = (normalized[emoji] || []).concat(reactions[k] || []);
+    // Aynı kişiyi bir kez say (uid tekrarını temizle)
+    normalized[emoji] = [...new Set(merged)];
   });
   const activeReactions = Object.keys(normalized).filter(e => (normalized[e] || []).length > 0);
   const handleEmojiInput = val => {
