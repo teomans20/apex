@@ -900,7 +900,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.6.2'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.6.5'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -6590,39 +6590,39 @@ function ProgressTab({
 
   // Kas grubu ilerlemesi: son 3 ayda her kasın toplam hacim değişimi (basitleştirilmiş güç göstergesi)
   const muscleProgress = useMemo(() => {
-    const now = Date.now();
-    const recentStart = now - 90 * 86400000;
-    const prevStart = now - 180 * 86400000;
-    const acc = {}; // muscle -> { recent: vol, prev: vol }
-    Object.keys(MUSCLES).forEach(m => acc[m] = {
-      recent: 0,
-      prev: 0
-    });
+    // Seçenek 2: o kasta BAŞTAN BERİ gelişim
+    // Her kas için günlük hacim serisi çıkar, ilk N gün ort. vs son N gün ort. karşılaştır.
+    const byMuscleDay = {}; // muscle -> { dayKey -> volume }
+    Object.keys(MUSCLES).forEach(m => byMuscleDay[m] = {});
     data.logs.forEach(l => {
       const muscles = getExerciseMuscles(l.exerciseName, data.customMuscleMap);
       if (!muscles) return;
       const vol = l.weight * l.reps;
+      const dk = dateKey(l.timestamp);
       Object.entries(muscles).forEach(([m, w]) => {
-        if (!acc[m]) return;
-        if (l.timestamp >= recentStart) acc[m].recent += vol * w;else if (l.timestamp >= prevStart) acc[m].prev += vol * w;
+        if (!byMuscleDay[m]) return;
+        byMuscleDay[m][dk] = (byMuscleDay[m][dk] || 0) + vol * w;
       });
     });
     const list = Object.keys(MUSCLES).map(m => {
-      const {
-        recent,
-        prev
-      } = acc[m];
-      if (recent === 0) return null;
-      // Önceki dönem verisi varsa gerçek % değişim; yoksa kıyas yapılamaz → isNew
-      const isNew = prev === 0;
-      const pct = prev > 0 ? Math.round((recent - prev) / prev * 100) : 0;
+      // Günleri tarihe göre sırala (her gün = o kasın o günkü toplam hacmi)
+      const days = Object.keys(byMuscleDay[m]).sort().map(dk => byMuscleDay[m][dk]);
+      if (days.length === 0) return null;
+      const recent = days.reduce((s, v) => s + v, 0); // çubuk uzunluğu için toplam hacim
+      // İlk N gün ort. vs son N gün ort. (N = en fazla 3, ama gün sayısına göre)
+      const n = Math.min(3, Math.floor(days.length / 2)) || 1;
+      const firstAvg = days.slice(0, n).reduce((s, v) => s + v, 0) / n;
+      const lastAvg = days.slice(-n).reduce((s, v) => s + v, 0) / n;
+      // En az 2 farklı gün yoksa kıyas yapılamaz → isNew
+      const isNew = days.length < 2;
+      const pct = (!isNew && firstAvg > 0) ? Math.round((lastAvg - firstAvg) / firstAvg * 100) : 0;
       return {
         key: m,
         tr: MUSCLES[m].tr,
         recent,
-        prev,
         pct,
-        isNew
+        isNew,
+        sessionCount: days.length
       };
     }).filter(Boolean).sort((a, b) => b.recent - a.recent);
     const maxRecent = Math.max(...list.map(x => x.recent), 1);
@@ -6743,7 +6743,7 @@ function ProgressTab({
     style: S.winnerDelta
   }, "▲ %", topMuscle.pct, " güç/hacim artışı")), /*#__PURE__*/React.createElement("div", {
     style: S.sectionLabel
-  }, "KAS GRUBU · SON 3 AY DEĞİŞİM"), /*#__PURE__*/React.createElement("div", {
+  }, "KAS GRUBU · BAŞLANGICA GÖRE GELİŞİM"), /*#__PURE__*/React.createElement("div", {
     style: S.progCard
   }, muscleProgress.list.slice(0, 8).map((m, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
@@ -7159,7 +7159,7 @@ const S = {
     position: 'absolute',
     left: '50%',
     top: '50%',
-    transform: 'translate(-50%, -50%)',
+    transform: 'translate(-50%, -80%)',
     zIndex: 1,
     pointerEvents: 'none'
   },
