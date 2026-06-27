@@ -898,7 +898,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.1'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.2'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2121,6 +2121,455 @@ function UsernameSetup({
   }, busy ? 'KONTROL EDİLİYOR...' : 'DEVAM ET')));
 }
 
+// ═══════════════════════════════════════════
+// ARKADAŞLIK YARDIMCILARI (Faz 2)
+// ═══════════════════════════════════════════
+// Veri modeli:
+//   users/{uid}/friends/{friendUid}     → { username, name, since }  (kabul edilmiş)
+//   users/{uid}/friendRequests/{fromUid}→ { username, name, at }     (gelen istek)
+//   users/{uid}/sentRequests/{toUid}    → { username, name, at }     (gönderilen istek)
+
+// Arkadaşlık isteği gönder
+async function sendFriendRequest(me, target) {
+  // me: {uid, username, name}, target: {uid, username, name}
+  if (!window.APEX_DB) throw new Error('no-db');
+  if (me.uid === target.uid) throw new Error('self');
+  const now = Date.now();
+  // Karşı tarafın "gelen istekler"ine beni yaz
+  await window.APEX_DB.collection('users').doc(target.uid).collection('friendRequests').doc(me.uid).set({
+    username: me.username,
+    name: me.name || '',
+    at: now
+  });
+  // Benim "gönderilenler"ime onu yaz
+  await window.APEX_DB.collection('users').doc(me.uid).collection('sentRequests').doc(target.uid).set({
+    username: target.username,
+    name: target.name || '',
+    at: now
+  });
+}
+
+// Gelen isteği kabul et
+async function acceptFriendRequest(me, fromUid, fromInfo) {
+  if (!window.APEX_DB) throw new Error('no-db');
+  const now = Date.now();
+  // İki tarafa da arkadaşlık yaz
+  await window.APEX_DB.collection('users').doc(me.uid).collection('friends').doc(fromUid).set({
+    username: fromInfo.username,
+    name: fromInfo.name || '',
+    since: now
+  });
+  await window.APEX_DB.collection('users').doc(fromUid).collection('friends').doc(me.uid).set({
+    username: me.username,
+    name: me.name || '',
+    since: now
+  });
+  // İstekleri temizle
+  await window.APEX_DB.collection('users').doc(me.uid).collection('friendRequests').doc(fromUid).delete();
+  await window.APEX_DB.collection('users').doc(fromUid).collection('sentRequests').doc(me.uid).delete();
+}
+
+// Gelen isteği reddet/sil
+async function rejectFriendRequest(myUid, fromUid) {
+  if (!window.APEX_DB) throw new Error('no-db');
+  await window.APEX_DB.collection('users').doc(myUid).collection('friendRequests').doc(fromUid).delete();
+  await window.APEX_DB.collection('users').doc(fromUid).collection('sentRequests').doc(myUid).delete();
+}
+
+// Gönderilen isteği iptal et
+async function cancelFriendRequest(myUid, toUid) {
+  if (!window.APEX_DB) throw new Error('no-db');
+  await window.APEX_DB.collection('users').doc(myUid).collection('sentRequests').doc(toUid).delete();
+  await window.APEX_DB.collection('users').doc(toUid).collection('friendRequests').doc(myUid).delete();
+}
+
+// Arkadaşı çıkar
+async function removeFriend(myUid, friendUid) {
+  if (!window.APEX_DB) throw new Error('no-db');
+  await window.APEX_DB.collection('users').doc(myUid).collection('friends').doc(friendUid).delete();
+  await window.APEX_DB.collection('users').doc(friendUid).collection('friends').doc(myUid).delete();
+}
+
+// Arkadaş listesini çek
+async function loadFriends(uid) {
+  if (!window.APEX_DB) return [];
+  try {
+    const snap = await window.APEX_DB.collection('users').doc(uid).collection('friends').get();
+    return snap.docs.map(d => ({
+      uid: d.id,
+      ...d.data()
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
+// Gelen istekleri çek
+async function loadFriendRequests(uid) {
+  if (!window.APEX_DB) return [];
+  try {
+    const snap = await window.APEX_DB.collection('users').doc(uid).collection('friendRequests').get();
+    return snap.docs.map(d => ({
+      uid: d.id,
+      ...d.data()
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
+// Gönderilen istekleri çek
+async function loadSentRequests(uid) {
+  if (!window.APEX_DB) return [];
+  try {
+    const snap = await window.APEX_DB.collection('users').doc(uid).collection('sentRequests').get();
+    return snap.docs.map(d => ({
+      uid: d.id,
+      ...d.data()
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
+// Avatar harfi + rengi (isimden)
+function avatarFor(name) {
+  const letter = (name || '?').trim().charAt(0).toUpperCase() || '?';
+  const colors = ['linear-gradient(135deg,#FF3D3D,#8B1111)', 'linear-gradient(135deg,#4A90E2,#1E3A5F)', 'linear-gradient(135deg,#34D399,#064E3B)', 'linear-gradient(135deg,#A78BFA,#4C1D95)', 'linear-gradient(135deg,#FFA726,#8B6914)'];
+  let h = 0;
+  for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) % colors.length;
+  return {
+    letter,
+    bg: colors[h]
+  };
+}
+
+// ═══════════════════════════════════════════
+// ARKADAŞLAR SEKMESİ (Faz 2: ekleme + istekler)
+// ═══════════════════════════════════════════
+function FriendsTab({
+  authUser,
+  myUsername
+}) {
+  const [sub, setSub] = useState('friends'); // 'friends' | 'add'
+  const [friends, setFriends] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [sent, setSent] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const cloudReady = !!(authUser && window.APEX_FIREBASE_OK && window.APEX_DB);
+  const me = {
+    uid: authUser && authUser.uid,
+    username: myUsername,
+    name: authUser && authUser.displayName || ''
+  };
+  const refresh = async () => {
+    if (!cloudReady) {
+      setLoading(false);
+      return;
+    }
+    const [f, r, s] = await Promise.all([loadFriends(authUser.uid), loadFriendRequests(authUser.uid), loadSentRequests(authUser.uid)]);
+    setFriends(f);
+    setRequests(r);
+    setSent(s);
+    setLoading(false);
+  };
+  useEffect(() => {
+    refresh();
+  }, [cloudReady]);
+
+  // Offline veya Firebase yok
+  if (!cloudReady) {
+    return /*#__PURE__*/React.createElement("div", {
+      style: S.screen
+    }, /*#__PURE__*/React.createElement("div", {
+      style: S.topBar
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 40
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: S.topBarTitle
+    }, "ARKADAŞLAR"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 40
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center',
+        color: '#666',
+        marginTop: 80,
+        fontSize: 14,
+        lineHeight: 1.6
+      }
+    }, "Arkadaşlar için internet", /*#__PURE__*/React.createElement("br", null), "ve giriş gerekli 🌐"));
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: S.screen
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.header
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.gymSelectorName
+  }, "ARKADAŞLAR"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setSub(sub === 'add' ? 'friends' : 'add'),
+    style: S.friendAddBtn
+  }, sub === 'add' ? '✕' : '＋ Ekle')), sub === 'add' ? /*#__PURE__*/React.createElement(AddFriendView, {
+    me: me,
+    friends: friends,
+    sent: sent,
+    requests: requests,
+    onChanged: refresh
+  }) : /*#__PURE__*/React.createElement(React.Fragment, null, requests.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: S.friendSection
+  }, "GELEN İSTEKLER (", requests.length, ")"), requests.map(r => /*#__PURE__*/React.createElement("div", {
+    key: r.uid,
+    style: S.friendRow
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: r.name || r.username
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.friendName
+  }, r.name || r.username), /*#__PURE__*/React.createElement("div", {
+    style: S.friendUser
+  }, "@", r.username)), /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      await acceptFriendRequest(me, r.uid, r);
+      refresh();
+    },
+    style: S.btnAccept
+  }, "Kabul"), /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      await rejectFriendRequest(authUser.uid, r.uid);
+      refresh();
+    },
+    style: S.btnReject
+  }, "Sil")))), /*#__PURE__*/React.createElement("div", {
+    style: S.friendSection
+  }, "ARKADAŞLARIN (", friends.length, ")"), loading ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      color: '#555',
+      marginTop: 30,
+      fontSize: 13
+    }
+  }, "Yükleniyor...") : friends.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      color: '#666',
+      marginTop: 40,
+      fontSize: 14,
+      lineHeight: 1.6
+    }
+  }, "Henüz arkadaşın yok.", /*#__PURE__*/React.createElement("br", null), "＋ Ekle ile @kullanıcı adından ekle 🔥") : friends.map(f => /*#__PURE__*/React.createElement("div", {
+    key: f.uid,
+    style: S.friendRow
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: f.name || f.username
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.friendName
+  }, f.name || f.username), /*#__PURE__*/React.createElement("div", {
+    style: S.friendUser
+  }, "@", f.username)), /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      if (confirm(`@${f.username} arkadaşlıktan çıkarılsın mı?`)) {
+        await removeFriend(authUser.uid, f.uid);
+        refresh();
+      }
+    },
+    style: S.btnReject
+  }, "Çıkar"))), sent.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: S.friendSection
+  }, "GÖNDERİLEN (", sent.length, ")"), sent.map(s => /*#__PURE__*/React.createElement("div", {
+    key: s.uid,
+    style: S.friendRow
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: s.name || s.username
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.friendName
+  }, s.name || s.username), /*#__PURE__*/React.createElement("div", {
+    style: S.friendUser
+  }, "@", s.username, " · bekliyor...")), /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      await cancelFriendRequest(authUser.uid, s.uid);
+      refresh();
+    },
+    style: S.btnReject
+  }, "İptal"))))));
+}
+
+// Avatar bileşeni
+function Avatar({
+  name,
+  size = 38
+}) {
+  const a = avatarFor(name);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: size,
+      height: size,
+      borderRadius: '50%',
+      background: a.bg,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontWeight: 800,
+      fontSize: size * 0.4,
+      fontFamily: "'Big Shoulders Display',sans-serif",
+      flexShrink: 0
+    }
+  }, a.letter);
+}
+
+// Arkadaş ekleme görünümü
+function AddFriendView({
+  me,
+  friends,
+  sent,
+  requests,
+  onChanged
+}) {
+  const [query, setQuery] = useState('');
+  const [result, setResult] = useState(undefined); // undefined=arama yok, null=bulunamadı, obj=bulundu
+  const [searching, setSearching] = useState(false);
+  const [msg, setMsg] = useState('');
+  const search = async () => {
+    const u = normalizeUsername(query);
+    if (u.length < 3) {
+      setMsg('En az 3 karakter');
+      return;
+    }
+    setSearching(true);
+    setMsg('');
+    setResult(undefined);
+    const found = await findUserByUsername(u);
+    setResult(found || null);
+    setSearching(false);
+  };
+  const alreadyFriend = result && friends.some(f => f.uid === result.uid);
+  const alreadySent = result && sent.some(s => s.uid === result.uid);
+  const isMe = result && result.uid === me.uid;
+  const sendReq = async () => {
+    try {
+      await sendFriendRequest(me, result);
+      setMsg('İstek gönderildi ✓');
+      setResult(undefined);
+      setQuery('');
+      onChanged();
+    } catch (e) {
+      setMsg('Gönderilemedi, tekrar dene');
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#999',
+      marginBottom: 12,
+      lineHeight: 1.5
+    }
+  }, "Arkadaşının @kullanıcı adını yaz, istek at. Kabul edince arkadaş olursunuz."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      flex: 1,
+      background: '#141414',
+      border: '1px solid #262626',
+      borderRadius: 11,
+      padding: '0 12px'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#FF3D3D',
+      fontWeight: 800,
+      fontSize: 15
+    }
+  }, "@"), /*#__PURE__*/React.createElement("input", {
+    value: query,
+    onChange: e => {
+      setQuery(normalizeUsername(e.target.value));
+      setMsg('');
+    },
+    onKeyDown: e => e.key === 'Enter' && search(),
+    placeholder: "kullaniciadi",
+    autoCapitalize: "none",
+    autoCorrect: "off",
+    spellCheck: "false",
+    style: {
+      flex: 1,
+      background: 'transparent',
+      border: 'none',
+      padding: '13px 6px',
+      fontSize: 15,
+      color: '#fff',
+      outline: 'none',
+      fontFamily: "'Manrope',sans-serif"
+    }
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: search,
+    style: S.friendSearchGo
+  }, searching ? '...' : 'Ara')), msg && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: msg.includes('✓') ? '#4CAF50' : '#FF5252',
+      fontSize: 12,
+      marginBottom: 10
+    }
+  }, msg), result === null && /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      color: '#666',
+      marginTop: 24,
+      fontSize: 13
+    }
+  }, "@", normalizeUsername(query), " bulunamadı 🤔", /*#__PURE__*/React.createElement("br", null), "Kullanıcı adını doğru yazdığından emin ol"), result && /*#__PURE__*/React.createElement("div", {
+    style: S.friendRow
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: result.name || result.username
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.friendName
+  }, result.name || result.username), /*#__PURE__*/React.createElement("div", {
+    style: S.friendUser
+  }, "@", result.username)), isMe ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#666',
+      fontSize: 12
+    }
+  }, "Bu sensin 🙂") : alreadyFriend ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#4CAF50',
+      fontSize: 12,
+      fontWeight: 700
+    }
+  }, "✓ Arkadaş") : alreadySent ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#FFA726',
+      fontSize: 12,
+      fontWeight: 700
+    }
+  }, "Bekliyor") : /*#__PURE__*/React.createElement("button", {
+    onClick: sendReq,
+    style: S.btnAccept
+  }, "İstek At")));
+}
+
 function App() {
   const [tab, setTab] = useState('workout');
   const [authUser, setAuthUser] = useState(undefined); // undefined = yükleniyor, null = giriş yok, obj = giriş var
@@ -2267,12 +2716,16 @@ function App() {
     key: activeGymId,
     authUser: authUser,
     activeGym: activeGym,
+    myUsername: myUsername,
     onOpenGymPicker: () => setShowGymPicker(true)
   }), tab === 'progress' && /*#__PURE__*/React.createElement(ProgressTab, {
     key: activeGymId,
     authUser: authUser,
     activeGym: activeGym,
     onOpenGymPicker: () => setShowGymPicker(true)
+  }), tab === 'friends' && /*#__PURE__*/React.createElement(FriendsTab, {
+    authUser: authUser,
+    myUsername: myUsername
   })), /*#__PURE__*/React.createElement(BottomTabs, {
     tab: tab,
     onChange: setTab
@@ -2608,7 +3061,18 @@ function BottomTabs({
     className: "tab-btn"
   }, /*#__PURE__*/React.createElement(Icon.Chart, null), /*#__PURE__*/React.createElement("span", {
     style: S.tabLabel
-  }, "İLERLEME")));
+  }, "İLERLEME")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onChange('friends'),
+    style: {
+      ...S.tabBtn,
+      color: tab === 'friends' ? '#fff' : '#555'
+    },
+    className: "tab-btn"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: { fontSize: 20, lineHeight: 1 }
+  }, "👥"), /*#__PURE__*/React.createElement("span", {
+    style: S.tabLabel
+  }, "ARKADAŞLAR")));
 }
 
 // ═══════════════════════════════════════════
@@ -2618,6 +3082,7 @@ function BottomTabs({
 function WorkoutTab({
   authUser,
   activeGym,
+  myUsername,
   onOpenGymPicker
 }) {
   const [view, setView] = useState('home');
@@ -3213,7 +3678,8 @@ function WorkoutTab({
     onClose: () => setShowMenu(false),
     onExport: exportData,
     onImport: importData,
-    authUser: authUser
+    authUser: authUser,
+    myUsername: myUsername
   }), showAddDay && /*#__PURE__*/React.createElement(DayEditorModal, {
     onClose: () => setShowAddDay(false),
     onSave: addCustomDay,
@@ -4618,7 +5084,8 @@ function MenuModal({
   onClose,
   onExport,
   onImport,
-  authUser
+  authUser,
+  myUsername
 }) {
   const logout = async () => {
     if (window.APEX_AUTH) {
@@ -4637,7 +5104,9 @@ function MenuModal({
     style: S.menuUserBox
   }, /*#__PURE__*/React.createElement("div", {
     style: S.menuUserName
-  }, authUser.displayName || 'Kullanıcı'), /*#__PURE__*/React.createElement("div", {
+  }, authUser.displayName || 'Kullanıcı', myUsername && /*#__PURE__*/React.createElement("span", {
+    style: { color: '#FF3D3D', fontSize: 13, fontWeight: 700, marginLeft: 8 }
+  }, "@" + myUsername)), /*#__PURE__*/React.createElement("div", {
     style: S.menuUserEmail
   }, authUser.email), /*#__PURE__*/React.createElement("div", {
     style: S.menuUserSync
@@ -5822,6 +6291,14 @@ const S = {
     cursor: 'pointer',
     marginTop: 4
   },
+  friendAddBtn: { background: 'linear-gradient(135deg,#FF3D3D,#8B1111)', color: '#fff', border: 'none', borderRadius: 20, padding: '8px 16px', fontSize: 13, fontWeight: 800, cursor: 'pointer' },
+  friendSection: { fontSize: 11, fontWeight: 800, letterSpacing: 1, color: '#666', margin: '18px 0 10px' },
+  friendRow: { display: 'flex', alignItems: 'center', gap: 11, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 14, padding: 12, marginBottom: 9 },
+  friendName: { fontSize: 13, fontWeight: 700, color: '#fff' },
+  friendUser: { fontSize: 11, color: '#777', marginTop: 1 },
+  btnAccept: { background: '#FF3D3D', color: '#fff', border: 'none', borderRadius: 9, padding: '8px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', flexShrink: 0 },
+  btnReject: { background: '#1a1a1a', color: '#888', border: 'none', borderRadius: 9, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, marginLeft: 6 },
+  friendSearchGo: { background: '#FF3D3D', color: '#fff', border: 'none', borderRadius: 11, padding: '0 18px', fontWeight: 800, fontSize: 14, cursor: 'pointer' },
   progHero: {
     background: 'linear-gradient(135deg,#1a1a1a,#0d0d0d)',
     border: '1px solid #2a2a2a',
