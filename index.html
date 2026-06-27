@@ -898,7 +898,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.4.1'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.5'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2643,11 +2643,7 @@ async function writeFeedItem(uid, item) {
     await window.APEX_DB.collection('users').doc(uid).collection('feed').doc(id).set({
       ...item,
       at: item.at || Date.now(),
-      reactions: {
-        fire: [],
-        muscle: [],
-        clap: []
-      }
+      reactions: {}
     });
     // Eski kartları temizle (son 50 tut) - basit yaklaşım: çok eski olanları silme şimdilik atla
   } catch (e) {}
@@ -2698,11 +2694,7 @@ async function toggleReaction(ownerUid, itemId, reactionType, myUid) {
     const snap = await ref.get();
     if (!snap.exists) return;
     const data = snap.data();
-    const reactions = data.reactions || {
-      fire: [],
-      muscle: [],
-      clap: []
-    };
+    const reactions = data.reactions || {};
     const arr = reactions[reactionType] || [];
     const idx = arr.indexOf(myUid);
     if (idx >= 0) arr.splice(idx, 1); // zaten var → kaldır
@@ -2775,11 +2767,7 @@ function FeedView({
     setItems(prev => prev.map(it => {
       if (it.id !== item.id || it.ownerUid !== item.ownerUid) return it;
       const reactions = {
-        ...(it.reactions || {
-          fire: [],
-          muscle: [],
-          clap: []
-        })
+        ...(it.reactions || {})
       };
       const arr = [...(reactions[type] || [])];
       const idx = arr.indexOf(me.uid);
@@ -2827,29 +2815,39 @@ function FeedView({
 }
 
 // Tek feed kartı
+// Tek feed kartı — dinamik emoji reaksiyonları (klavyeden istediğin emoji)
 function FeedCard({
   item,
   myUid,
   onReact
 }) {
   const a = avatarFor(item.ownerName || item.ownerUsername);
-  const reactions = item.reactions || {
-    fire: [],
-    muscle: [],
-    clap: []
+  const [picking, setPicking] = useState(false);
+  const [emojiInput, setEmojiInput] = useState('');
+  const reactions = item.reactions || {};
+
+  // Eski kartlardaki fire/muscle/clap'i emoji'ye çevir (geriye uyumluluk)
+  const legacyMap = {
+    fire: '🔥',
+    muscle: '💪',
+    clap: '👏'
   };
-  const reactBtn = (type, emoji) => {
-    const arr = reactions[type] || [];
-    const active = arr.indexOf(myUid) >= 0;
-    return /*#__PURE__*/React.createElement("button", {
-      onClick: () => onReact(item, type),
-      style: {
-        ...S.reactBtn,
-        ...(active ? S.reactBtnActive : {})
-      }
-    }, emoji, arr.length > 0 && /*#__PURE__*/React.createElement("span", {
-      style: S.reactCount
-    }, arr.length));
+  const normalized = {};
+  Object.keys(reactions).forEach(k => {
+    const emoji = legacyMap[k] || k;
+    normalized[emoji] = (normalized[emoji] || []).concat(reactions[k] || []);
+  });
+
+  // Gösterilecek reaksiyonlar: sayısı > 0 olanlar
+  const activeReactions = Object.keys(normalized).filter(e => (normalized[e] || []).length > 0);
+  const handleEmojiInput = val => {
+    // Son girilen karakteri (emoji) al
+    const chars = Array.from(val.trim());
+    if (chars.length === 0) return;
+    const emoji = chars[chars.length - 1];
+    onReact(item, emoji);
+    setEmojiInput('');
+    setPicking(false);
   };
   return /*#__PURE__*/React.createElement("div", {
     style: S.feedCard
@@ -2913,7 +2911,45 @@ function FeedCard({
     style: S.feedBody
   }, "💪 ", item.dayName, " günü tamamladı · ", item.setCount, " set", item.volume ? ` · ${(item.volume / 1000).toFixed(1)}t hacim` : ''), /*#__PURE__*/React.createElement("div", {
     style: S.feedReactRow
-  }, reactBtn('fire', '🔥'), reactBtn('muscle', '💪'), reactBtn('clap', '👏')));
+  }, activeReactions.map(emoji => {
+    const arr = normalized[emoji] || [];
+    const active = arr.indexOf(myUid) >= 0;
+    return /*#__PURE__*/React.createElement("button", {
+      key: emoji,
+      onClick: () => onReact(item, emoji),
+      style: {
+        ...S.reactBtn,
+        ...(active ? S.reactBtnActive : {})
+      }
+    }, emoji, arr.length > 0 && /*#__PURE__*/React.createElement("span", {
+      style: S.reactCount
+    }, arr.length));
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setPicking(true),
+    style: {
+      ...S.reactBtn,
+      color: '#888'
+    }
+  }, activeReactions.length === 0 ? '🔥 Tepki ver' : '＋'), picking && /*#__PURE__*/React.createElement("input", {
+    autoFocus: true,
+    value: emojiInput,
+    onChange: e => handleEmojiInput(e.target.value),
+    onBlur: () => {
+      setPicking(false);
+      setEmojiInput('');
+    },
+    placeholder: "emoji",
+    style: {
+      width: 70,
+      background: '#1a1a1a',
+      border: '1px solid #FF3D3D',
+      borderRadius: 20,
+      padding: '5px 10px',
+      fontSize: 15,
+      color: '#fff',
+      outline: 'none'
+    }
+  })));
 }
 
 // ═══════════════════════════════════════════
