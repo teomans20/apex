@@ -898,7 +898,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.5'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.5.1'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2749,6 +2749,10 @@ function FeedView({
 }) {
   const [items, setItems] = useState(null); // null = yükleniyor
   const [refreshing, setRefreshing] = useState(false);
+  // uid → isim eşlemesi (reaksiyon verenleri göstermek için)
+  const userMap = {};
+  userMap[me.uid] = 'Sen';
+  friends.forEach(f => { userMap[f.uid] = f.name || f.username; });
   const load = async () => {
     setRefreshing(true);
     const feed = await loadCombinedFeed(me.uid, friends, me);
@@ -2810,20 +2814,25 @@ function FeedView({
     key: item.ownerUid + '_' + item.id,
     item: item,
     myUid: me.uid,
-    onReact: onReact
+    onReact: onReact,
+    userMap: userMap
   })));
 }
 
 // Tek feed kartı
 // Tek feed kartı — dinamik emoji reaksiyonları (klavyeden istediğin emoji)
+// Tek feed kartı — dinamik emoji reaksiyonları (sadece emoji) + basılı tut: kimler tepki verdi
 function FeedCard({
   item,
   myUid,
-  onReact
+  onReact,
+  userMap
 }) {
   const a = avatarFor(item.ownerName || item.ownerUsername);
   const [picking, setPicking] = useState(false);
   const [emojiInput, setEmojiInput] = useState('');
+  const [showWho, setShowWho] = useState(null); // hangi emojinin "kimler" listesi açık
+  const pressTimer = useRef(null);
   const reactions = item.reactions || {};
 
   // Eski kartlardaki fire/muscle/clap'i emoji'ye çevir (geriye uyumluluk)
@@ -2837,17 +2846,36 @@ function FeedCard({
     const emoji = legacyMap[k] || k;
     normalized[emoji] = (normalized[emoji] || []).concat(reactions[k] || []);
   });
-
-  // Gösterilecek reaksiyonlar: sayısı > 0 olanlar
   const activeReactions = Object.keys(normalized).filter(e => (normalized[e] || []).length > 0);
   const handleEmojiInput = val => {
-    // Son girilen karakteri (emoji) al
     const chars = Array.from(val.trim());
     if (chars.length === 0) return;
-    const emoji = chars[chars.length - 1];
-    onReact(item, emoji);
+    const ch = chars[chars.length - 1];
+    const isEmoji = /\p{Extended_Pictographic}|\p{Emoji_Presentation}/u.test(ch);
+    if (!isEmoji) {
+      setEmojiInput('');
+      return;
+    }
+    onReact(item, ch);
     setEmojiInput('');
     setPicking(false);
+  };
+
+  // Basılı tut → kimler tepki verdi
+  const startPress = emoji => {
+    pressTimer.current = setTimeout(() => {
+      haptic(30);
+      setShowWho(emoji);
+    }, 450);
+  };
+  const cancelPress = () => {
+    clearTimeout(pressTimer.current);
+  };
+
+  // İsim listesi (uid'lerden)
+  const whoNames = emoji => {
+    const arr = normalized[emoji] || [];
+    return arr.map(uid => userMap && userMap[uid] || 'Biri').join(', ');
   };
   return /*#__PURE__*/React.createElement("div", {
     style: S.feedCard
@@ -2909,7 +2937,19 @@ function FeedCard({
     style: S.feedTag
   }, "🏆 YENİ REKOR", item.delta ? ` · +${item.delta}kg` : ''))), item.type === 'workout' && /*#__PURE__*/React.createElement("div", {
     style: S.feedBody
-  }, "💪 ", item.dayName, " günü tamamladı · ", item.setCount, " set", item.volume ? ` · ${(item.volume / 1000).toFixed(1)}t hacim` : ''), /*#__PURE__*/React.createElement("div", {
+  }, "💪 ", item.dayName, " günü tamamladı · ", item.setCount, " set", item.volume ? ` · ${(item.volume / 1000).toFixed(1)}t hacim` : ''), showWho && /*#__PURE__*/React.createElement("div", {
+    style: S.whoPopup,
+    onClick: () => setShowWho(null)
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 16
+    }
+  }, showWho), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: '#ccc'
+    }
+  }, whoNames(showWho) || 'kimse')), /*#__PURE__*/React.createElement("div", {
     style: S.feedReactRow
   }, activeReactions.map(emoji => {
     const arr = normalized[emoji] || [];
@@ -2917,6 +2957,12 @@ function FeedCard({
     return /*#__PURE__*/React.createElement("button", {
       key: emoji,
       onClick: () => onReact(item, emoji),
+      onTouchStart: () => startPress(emoji),
+      onTouchEnd: cancelPress,
+      onTouchMove: cancelPress,
+      onMouseDown: () => startPress(emoji),
+      onMouseUp: cancelPress,
+      onMouseLeave: cancelPress,
       style: {
         ...S.reactBtn,
         ...(active ? S.reactBtnActive : {})
@@ -2939,6 +2985,7 @@ function FeedCard({
       setEmojiInput('');
     },
     placeholder: "emoji",
+    inputMode: "text",
     style: {
       width: 70,
       background: '#1a1a1a',
@@ -2949,7 +2996,13 @@ function FeedCard({
       color: '#fff',
       outline: 'none'
     }
-  })));
+  })), activeReactions.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: '#555',
+      marginTop: 5
+    }
+  }, "💡 emojiye basılı tut, kimlerin verdiğini gör"));
 }
 
 // ═══════════════════════════════════════════
@@ -7137,6 +7190,7 @@ const S = {
   reactBtn: { background: '#161616', border: '1px solid #242424', borderRadius: 20, padding: '5px 11px', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 },
   reactBtnActive: { background: 'rgba(255,61,61,0.15)', borderColor: '#FF3D3D' },
   reactCount: { fontSize: 11, color: '#999', fontWeight: 700 },
+  whoPopup: { display: 'flex', alignItems: 'center', gap: 8, background: '#1a1a1a', border: '1px solid #333', borderRadius: 10, padding: '8px 12px', marginBottom: 10, marginTop: 4 },
   lbRow: { display: 'flex', alignItems: 'center', gap: 12, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '11px 13px', marginBottom: 8 },
   lbRowMe: { borderColor: '#FF3D3D', background: 'rgba(255,61,61,0.07)' },
   lbRank: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 20, width: 26, textAlign: 'center', flexShrink: 0 },
