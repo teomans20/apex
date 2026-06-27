@@ -898,7 +898,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.2'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.2.3'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2133,17 +2133,19 @@ function UsernameSetup({
 async function sendFriendRequest(me, target) {
   // me: {uid, username, name}, target: {uid, username, name}
   if (!window.APEX_DB) throw new Error('no-db');
-  if (me.uid === target.uid) throw new Error('self');
+  if (!me.uid || !me.username) throw new Error('kullanıcı-adın-yok');
+  if (!target.uid || !target.username) throw new Error('hedef-eksik');
+  if (me.uid === target.uid) throw new Error('kendine-istek');
   const now = Date.now();
   // Karşı tarafın "gelen istekler"ine beni yaz
   await window.APEX_DB.collection('users').doc(target.uid).collection('friendRequests').doc(me.uid).set({
-    username: me.username,
+    username: me.username || '',
     name: me.name || '',
     at: now
   });
   // Benim "gönderilenler"ime onu yaz
   await window.APEX_DB.collection('users').doc(me.uid).collection('sentRequests').doc(target.uid).set({
-    username: target.username,
+    username: target.username || '',
     name: target.name || '',
     at: now
   });
@@ -2164,9 +2166,15 @@ async function acceptFriendRequest(me, fromUid, fromInfo) {
     name: me.name || '',
     since: now
   });
-  // İstekleri temizle
-  await window.APEX_DB.collection('users').doc(me.uid).collection('friendRequests').doc(fromUid).delete();
-  await window.APEX_DB.collection('users').doc(fromUid).collection('sentRequests').doc(me.uid).delete();
+  // TÜM istek izlerini temizle (çift yönlü istek durumu dahil — 4 olası kayıt)
+  // 1) Karşıdan bana gelen istek
+  await window.APEX_DB.collection('users').doc(me.uid).collection('friendRequests').doc(fromUid).delete().catch(() => {});
+  // 2) Karşının "bana gönderdim" kaydı
+  await window.APEX_DB.collection('users').doc(fromUid).collection('sentRequests').doc(me.uid).delete().catch(() => {});
+  // 3) Benim karşıya gönderdiğim istek (çift yönlü durumda kalmıştı)
+  await window.APEX_DB.collection('users').doc(me.uid).collection('sentRequests').doc(fromUid).delete().catch(() => {});
+  // 4) Karşının "benden gelen istek" kaydı
+  await window.APEX_DB.collection('users').doc(fromUid).collection('friendRequests').doc(me.uid).delete().catch(() => {});
 }
 
 // Gelen isteği reddet/sil
@@ -2256,6 +2264,7 @@ function FriendsTab({
   const [requests, setRequests] = useState([]);
   const [sent, setSent] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionError, setActionError] = useState('');
   const cloudReady = !!(authUser && window.APEX_FIREBASE_OK && window.APEX_DB);
   const me = {
     uid: authUser && authUser.uid,
@@ -2318,7 +2327,9 @@ function FriendsTab({
     sent: sent,
     requests: requests,
     onChanged: refresh
-  }) : /*#__PURE__*/React.createElement(React.Fragment, null, requests.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }) : /*#__PURE__*/React.createElement(React.Fragment, null, actionError && /*#__PURE__*/React.createElement("div", {
+    style: { background: 'rgba(255,82,82,0.12)', border: '1px solid rgba(255,82,82,0.4)', borderRadius: 10, padding: 10, fontSize: 12, color: '#FF5252', marginBottom: 12 }
+  }, actionError), requests.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.friendSection
   }, "GELEN İSTEKLER (", requests.length, ")"), requests.map(r => /*#__PURE__*/React.createElement("div", {
     key: r.uid,
@@ -2335,8 +2346,13 @@ function FriendsTab({
     style: S.friendUser
   }, "@", r.username)), /*#__PURE__*/React.createElement("button", {
     onClick: async () => {
-      await acceptFriendRequest(me, r.uid, r);
-      refresh();
+      setActionError('');
+      try {
+        await acceptFriendRequest(me, r.uid, r);
+        refresh();
+      } catch (e) {
+        setActionError('Kabul hatası: ' + ((e && e.code) || (e && e.message) || 'bilinmeyen'));
+      }
     },
     style: S.btnAccept
   }, "Kabul"), /*#__PURE__*/React.createElement("button", {
@@ -2457,16 +2473,25 @@ function AddFriendView({
   };
   const alreadyFriend = result && friends.some(f => f.uid === result.uid);
   const alreadySent = result && sent.some(s => s.uid === result.uid);
+  const incomingFromThem = result && requests.some(r => r.uid === result.uid);
   const isMe = result && result.uid === me.uid;
   const sendReq = async () => {
     try {
-      await sendFriendRequest(me, result);
-      setMsg('İstek gönderildi ✓');
+      // Bu kişi bana zaten istek attıysa → istek atma, direkt arkadaş ol
+      if (incomingFromThem) {
+        await acceptFriendRequest(me, result.uid, result);
+        setMsg('Arkadaş oldunuz ✓');
+      } else {
+        await sendFriendRequest(me, result);
+        setMsg('İstek gönderildi ✓');
+      }
       setResult(undefined);
       setQuery('');
       onChanged();
     } catch (e) {
-      setMsg('Gönderilemedi, tekrar dene');
+      // Gerçek hatayı göster (teşhis için)
+      const code = (e && e.code) ? e.code : (e && e.message) ? e.message : 'bilinmeyen';
+      setMsg('Hata: ' + code);
     }
   };
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
@@ -2567,7 +2592,7 @@ function AddFriendView({
   }, "Bekliyor") : /*#__PURE__*/React.createElement("button", {
     onClick: sendReq,
     style: S.btnAccept
-  }, "İstek At")));
+  }, incomingFromThem ? "Kabul Et" : "İstek At")));
 }
 
 function App() {
