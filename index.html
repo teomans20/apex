@@ -898,7 +898,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.0'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.1'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1926,9 +1926,205 @@ function DayDetailModal({
 // APP ROOT
 // ═══════════════════════════════════════════
 
+// ═══════════════════════════════════════════
+// KULLANICI ADI + ARKADAŞLIK YARDIMCILARI (Faz 1)
+// ═══════════════════════════════════════════
+
+// Kullanıcı adını normalize et: küçük harf, sadece harf/rakam/alt çizgi
+function normalizeUsername(raw) {
+  return (raw || '').toLowerCase().trim().replace(/[^a-z0-9_]/g, '').slice(0, 20);
+}
+
+// Kullanıcı adı geçerli mi? (3-20 karakter)
+function isValidUsername(u) {
+  const n = normalizeUsername(u);
+  return n.length >= 3 && n.length <= 20;
+}
+
+// Kullanıcı adı müsait mi? (Firestore'da usernames/{username} var mı)
+async function isUsernameAvailable(username) {
+  const u = normalizeUsername(username);
+  if (!window.APEX_DB) return false;
+  try {
+    const snap = await window.APEX_DB.collection('usernames').doc(u).get();
+    return !snap.exists;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Kullanıcı adını sahiplen: usernames/{username} = {uid}, users/{uid}.username = username
+async function claimUsername(uid, username) {
+  const u = normalizeUsername(username);
+  if (!window.APEX_DB) throw new Error('no-db');
+  // usernames koleksiyonuna yaz (benzersizlik için)
+  await window.APEX_DB.collection('usernames').doc(u).set({
+    uid: uid,
+    createdAt: Date.now()
+  });
+  // users dokümanına da ekle
+  await window.APEX_DB.collection('users').doc(uid).set({
+    username: u
+  }, {
+    merge: true
+  });
+  return u;
+}
+
+// Bir kullanıcının username'i var mı? (users/{uid}.username)
+async function getMyUsername(uid) {
+  if (!window.APEX_DB) return null;
+  try {
+    const snap = await window.APEX_DB.collection('users').doc(uid).get();
+    if (snap.exists && snap.data().username) return snap.data().username;
+  } catch (e) {}
+  return null;
+}
+
+// Kullanıcı adından kullanıcı bul (arkadaş eklemek için)
+async function findUserByUsername(username) {
+  const u = normalizeUsername(username);
+  if (!window.APEX_DB || !u) return null;
+  try {
+    const unameSnap = await window.APEX_DB.collection('usernames').doc(u).get();
+    if (!unameSnap.exists) return null;
+    const uid = unameSnap.data().uid;
+    const userSnap = await window.APEX_DB.collection('users').doc(uid).get();
+    if (!userSnap.exists) return null;
+    const d = userSnap.data();
+    return {
+      uid: uid,
+      username: u,
+      name: d.name || 'APEX kullanıcısı'
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+// Kullanıcı adı seçme ekranı (mevcut kullanıcılar için, ilk açılışta)
+function UsernameSetup({
+  uid,
+  onDone
+}) {
+  const [username, setUsername] = useState('');
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const handleSubmit = async () => {
+    const u = normalizeUsername(username);
+    if (!isValidUsername(u)) {
+      setError('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _)');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const available = await isUsernameAvailable(u);
+      if (!available) {
+        setError('Bu kullanıcı adı alınmış, başka dene');
+        setBusy(false);
+        return;
+      }
+      await claimUsername(uid, u);
+      onDone(u);
+    } catch (e) {
+      setError('Bir hata oldu, tekrar dene');
+      setBusy(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: S.app
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      maxWidth: 400,
+      margin: '0 auto',
+      padding: '60px 24px',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement(ApexLogo, {
+    size: 56
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: "'Big Shoulders Display',sans-serif",
+      fontWeight: 800,
+      fontSize: 26,
+      marginTop: 24
+    }
+  }, "KULLANICI ADI SEÇ"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#888',
+      fontSize: 13,
+      marginTop: 8,
+      lineHeight: 1.5
+    }
+  }, "Arkadaşların seni bu adla bulacak.", /*#__PURE__*/React.createElement("br", null), "Sonra değiştiremezsin, dikkatli seç."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      background: '#141414',
+      border: '1px solid #2a2a2a',
+      borderRadius: 12,
+      padding: '0 14px',
+      marginTop: 28
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#FF3D3D',
+      fontSize: 18,
+      fontWeight: 800
+    }
+  }, "@"), /*#__PURE__*/React.createElement("input", {
+    autoFocus: true,
+    value: username,
+    onChange: e => {
+      setUsername(normalizeUsername(e.target.value));
+      setError('');
+    },
+    placeholder: "kullaniciadi",
+    autoCapitalize: "none",
+    autoCorrect: "off",
+    spellCheck: "false",
+    style: {
+      flex: 1,
+      background: 'transparent',
+      border: 'none',
+      padding: '15px 8px',
+      fontSize: 16,
+      color: '#fff',
+      outline: 'none',
+      fontFamily: "'Manrope',sans-serif"
+    }
+  })), error && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#FF5252',
+      fontSize: 12,
+      marginTop: 10
+    }
+  }, error), /*#__PURE__*/React.createElement("button", {
+    onClick: handleSubmit,
+    disabled: busy,
+    style: {
+      width: '100%',
+      background: busy ? '#444' : 'linear-gradient(135deg,#FF3D3D,#8B1111)',
+      color: '#fff',
+      border: 'none',
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 15,
+      fontWeight: 800,
+      fontFamily: "'Big Shoulders Display',sans-serif",
+      letterSpacing: 1,
+      marginTop: 20,
+      cursor: 'pointer'
+    }
+  }, busy ? 'KONTROL EDİLİYOR...' : 'DEVAM ET')));
+}
+
 function App() {
   const [tab, setTab] = useState('workout');
   const [authUser, setAuthUser] = useState(undefined); // undefined = yükleniyor, null = giriş yok, obj = giriş var
+  const [myUsername, setMyUsername] = useState(undefined); // undefined = bilinmiyor, null = yok (seçilmeli), string = var
   const [gyms, setGyms] = useState(loadGyms);
   const [activeGymId, setActiveGymId] = useState(loadActiveGymId);
   const [showGymPicker, setShowGymPicker] = useState(false);
@@ -1943,6 +2139,19 @@ function App() {
     });
     return () => unsub && unsub();
   }, []);
+
+  // Giriş yapınca kullanıcı adını kontrol et (yoksa seçtireceğiz)
+  useEffect(() => {
+    let cancelled = false;
+    if (authUser && window.APEX_FIREBASE_OK && window.APEX_DB) {
+      getMyUsername(authUser.uid).then(u => {
+        if (!cancelled) setMyUsername(u || null);
+      }).catch(() => { if (!cancelled) setMyUsername(null); });
+    } else if (authUser === null) {
+      setMyUsername(undefined);
+    }
+    return () => { cancelled = true; };
+  }, [authUser]);
 
   // Giriş yapılınca salon listesini buluttan da çek
   useEffect(() => {
@@ -2027,6 +2236,25 @@ function App() {
   // Giriş yapılmamış → giriş ekranı (Firebase varsa)
   if (authUser === null && window.APEX_FIREBASE_OK) {
     return /*#__PURE__*/React.createElement(AuthScreen, null);
+  }
+
+  // Giriş var ama kullanıcı adı durumu daha yükleniyor (Firebase modunda)
+  if (authUser && window.APEX_FIREBASE_OK && myUsername === undefined) {
+    return /*#__PURE__*/React.createElement("div", {
+      style: { ...S.app, display: 'flex', alignItems: 'center', justifyContent: 'center' }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: { textAlign: 'center' }
+    }, /*#__PURE__*/React.createElement(ApexLogo, { size: 64 }), /*#__PURE__*/React.createElement("div", {
+      style: { color: '#555', fontSize: 13, marginTop: 16, letterSpacing: 1 }
+    }, "YÜKLENİYOR...")));
+  }
+
+  // Giriş var ama kullanıcı adı yok → seçtir (mevcut kullanıcılar + güvenlik)
+  if (authUser && window.APEX_FIREBASE_OK && myUsername === null) {
+    return /*#__PURE__*/React.createElement(UsernameSetup, {
+      uid: authUser.uid,
+      onDone: (u) => setMyUsername(u)
+    });
   }
 
   // Giriş yapılmış (veya offline mod) → uygulama
@@ -2217,6 +2445,7 @@ function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const trError = code => {
@@ -2247,13 +2476,24 @@ function AuthScreen() {
       setError('İsim girin');
       return;
     }
+    if (mode === 'signup' && !isValidUsername(username)) {
+      setError('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _)');
+      return;
+    }
     setBusy(true);
     try {
       if (mode === 'login') {
         await window.APEX_AUTH.signInWithEmailAndPassword(email.trim(), password);
       } else {
+        // Önce kullanıcı adı müsait mi kontrol et
+        const available = await isUsernameAvailable(username);
+        if (!available) {
+          setError('Bu kullanıcı adı alınmış, başka dene');
+          setBusy(false);
+          return;
+        }
         const cred = await window.APEX_AUTH.createUserWithEmailAndPassword(email.trim(), password);
-        // İsmi profile + Firestore'a yaz
+        // İsmi + kullanıcı adını profile + Firestore'a yaz
         if (cred.user) {
           try {
             await cred.user.updateProfile({
@@ -2268,6 +2508,9 @@ function AuthScreen() {
             }, {
               merge: true
             });
+          } catch (e) {}
+          try {
+            await claimUsername(cred.user.uid, username);
           } catch (e) {}
         }
       }
@@ -2296,7 +2539,20 @@ function AuthScreen() {
     autoCapitalize: "sentences",
     autoCorrect: "off",
     spellCheck: "false"
-  }), /*#__PURE__*/React.createElement("input", {
+  }), mode === 'signup' && /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', alignItems: 'center', background: '#141414', border: '1px solid #2a2a2a', borderRadius: 12, padding: '0 14px', marginBottom: 10 }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: { color: '#FF3D3D', fontSize: 16, fontWeight: 800 }
+  }, "@"), /*#__PURE__*/React.createElement("input", {
+    style: { flex: 1, background: 'transparent', border: 'none', padding: '14px 8px', fontSize: 15, color: '#fff', outline: 'none', fontFamily: "'Manrope',sans-serif" },
+    placeholder: "kullaniciadi",
+    value: username,
+    onChange: e => setUsername(normalizeUsername(e.target.value)),
+    type: "text",
+    autoCapitalize: "none",
+    autoCorrect: "off",
+    spellCheck: "false"
+  })), /*#__PURE__*/React.createElement("input", {
     style: S.authInput,
     type: "email",
     placeholder: "E-posta",
