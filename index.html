@@ -898,7 +898,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.5.2'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.5.3'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2695,12 +2695,20 @@ async function toggleReaction(ownerUid, itemId, reactionType, myUid) {
     if (!snap.exists) return;
     const data = snap.data();
     const reactions = data.reactions || {};
-    // Önce bu uid'i bu tepkiden tamamen çıkar (tekrarları da temizle)
-    let arr = (reactions[reactionType] || []).filter(u => u !== myUid);
-    const wasReacted = (reactions[reactionType] || []).indexOf(myUid) >= 0;
-    // Tepki vermediyse şimdi ekle (tek kez); verdiyse zaten çıkardık (toggle off)
-    if (!wasReacted) arr.push(myUid);
-    reactions[reactionType] = arr;
+    // Emoji ↔ legacy anahtar eşlemesi (🔥 ile fire aynı şey sayılır)
+    const emojiToLegacy = { '🔥': 'fire', '💪': 'muscle', '👏': 'clap' };
+    const legacyKey = emojiToLegacy[reactionType];
+    // Hem emoji hem legacy anahtarda bu uid var mı kontrol et
+    const inEmoji = (reactions[reactionType] || []).indexOf(myUid) >= 0;
+    const inLegacy = legacyKey ? (reactions[legacyKey] || []).indexOf(myUid) >= 0 : false;
+    const wasReacted = inEmoji || inLegacy;
+    // Bu uid'i HER İKİ anahtardan da temizle (tekrarları da)
+    reactions[reactionType] = (reactions[reactionType] || []).filter(u => u !== myUid);
+    if (legacyKey && reactions[legacyKey]) {
+      reactions[legacyKey] = reactions[legacyKey].filter(u => u !== myUid);
+    }
+    // Tepki yoksa şimdi ekle (emoji anahtarına, tek kez)
+    if (!wasReacted) reactions[reactionType].push(myUid);
     await ref.update({
       reactions: reactions
     });
@@ -2774,11 +2782,18 @@ function FeedView({
       const reactions = {
         ...(it.reactions || {})
       };
-      const had = (reactions[type] || []).indexOf(me.uid) >= 0;
-      // uid'i bu tepkiden çıkar (tekrarları temizle), tepki yoksa tek kez ekle
-      let arr = (reactions[type] || []).filter(u => u !== me.uid);
-      if (!had) arr.push(me.uid);
-      reactions[type] = arr;
+      // Emoji ↔ legacy eşlemesi (🔥 ile fire aynı)
+      const emojiToLegacy = { '🔥': 'fire', '💪': 'muscle', '👏': 'clap' };
+      const legacyKey = emojiToLegacy[type];
+      const inEmoji = (reactions[type] || []).indexOf(me.uid) >= 0;
+      const inLegacy = legacyKey ? (reactions[legacyKey] || []).indexOf(me.uid) >= 0 : false;
+      const had = inEmoji || inLegacy;
+      // Her iki anahtardan da temizle
+      reactions[type] = (reactions[type] || []).filter(u => u !== me.uid);
+      if (legacyKey && reactions[legacyKey]) {
+        reactions[legacyKey] = reactions[legacyKey].filter(u => u !== me.uid);
+      }
+      if (!had) reactions[type].push(me.uid);
       return {
         ...it,
         reactions
