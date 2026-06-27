@@ -900,7 +900,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.6.6'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.7'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -4002,6 +4002,7 @@ function WorkoutTab({
   const [sessionSummary, setSessionSummary] = useState(null);
   const [showAddDay, setShowAddDay] = useState(false);
   const [editDayId, setEditDayId] = useState(null); // custom day being edited
+  const [unlockedDays, setUnlockedDays] = useState({}); // {dayType: true} bu oturumda düzeltme açıldı mı
   const [cloudLoaded, setCloudLoaded] = useState(false); // bulut verisi yüklendi mi
   const cloudReady = !!(authUser && window.APEX_FIREBASE_OK && window.APEX_DB);
   const gymId = activeGym && activeGym.id || 'default';
@@ -4196,6 +4197,7 @@ function WorkoutTab({
     return backoffSets.length ? bestOfSets(backoffSets) : null;
   };
   const addLog = (exerciseName, weight, reps) => {
+    if (!ensureUnlocked()) return; // kilitli gün → düzeltme onayı yoksa ekleme
     const w = parseFloat(weight),
       r = parseInt(reps);
     let timestamp;
@@ -4266,10 +4268,13 @@ function WorkoutTab({
       }
     }
   };
-  const deleteLog = id => saveData({
-    ...data,
-    logs: data.logs.filter(l => l.id !== id)
-  });
+  const deleteLog = id => {
+    if (!ensureUnlocked()) return;
+    saveData({
+      ...data,
+      logs: data.logs.filter(l => l.id !== id)
+    });
+  };
   const deleteWorkoutDay = (targetDateKey, dayType) => {
     const newLogs = data.logs.filter(l => !(dateKey(l.timestamp) === targetDateKey && l.dayType === dayType));
     const newSessions = data.sessions.filter(s => !(dateKey(s.startTime) === targetDateKey && s.dayType === dayType));
@@ -4304,7 +4309,31 @@ function WorkoutTab({
     }
   });
   const getActiveSession = () => data.sessions.find(s => s.dayType === currentDay && !s.endTime);
+  // Bugün bu gün-tipi için tamamlanmış (bitmiş) bir seans var mı? → kilitli sayılır
+  const isDayLocked = () => {
+    if (logDate) return false; // geçmişe tarihli giriş modunda kilit yok
+    if (unlockedDays[currentDay]) return false; // bu oturumda düzeltme açıldı
+    const todayKey = dateKey(Date.now());
+    return data.sessions.some(s => s.dayType === currentDay && s.endTime && dateKey(s.startTime) === todayKey);
+  };
+  // Değişiklik denemesinde kilit kontrolü: kilitliyse sor, açılırsa true döner (işleme devam)
+  const ensureUnlocked = () => {
+    if (!isDayLocked()) return true;
+    const ok = confirm('Bu antrenmanı bugün tamamladın. Düzeltmek istiyor musun?\n\n(Süre kilitli kalır, sadece setleri değiştirebilirsin.)');
+    if (ok) {
+      setUnlockedDays(prev => ({ ...prev, [currentDay]: true }));
+      return true;
+    }
+    return false;
+  };
   const startSession = () => {
+    // Bugün bu gün zaten tamamlanmışsa, yeni seans başlatma (süreyi ezmesin)
+    if (isDayLocked()) {
+      const ok = confirm('Bu antrenmanı bugün tamamladın, süresi kayıtlı. Yine de yeni bir süre başlatmak istersen önceki silinmez.\n\nDüzeltmek istiyor musun?');
+      if (!ok) return;
+      setUnlockedDays(prev => ({ ...prev, [currentDay]: true }));
+      return; // düzeltme moduna geçti ama yeni seans açma — süre korunur
+    }
     const newSession = {
       id: Date.now().toString(),
       dayType: currentDay,
