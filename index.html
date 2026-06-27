@@ -900,7 +900,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.7.1'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.7.2'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1633,7 +1633,8 @@ function DayDetailModal({
   onClose,
   onDeleteLog,
   onDeleteWorkout,
-  onAddWorkout
+  onAddWorkout,
+  onEditWorkout
 }) {
   const {
     date,
@@ -1799,12 +1800,17 @@ function DayDetailModal({
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: S.dayDetailLabel
-    }, cfg.name, " DAY"), /*#__PURE__*/React.createElement("button", {
+    }, cfg.name, " DAY"), /*#__PURE__*/React.createElement("div", {
+      style: { display: 'flex', gap: 8, alignItems: 'center' }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => onEditWorkout(targetDateKey, dayType),
+      style: { background: 'rgba(0,0,0,0.25)', border: 'none', borderRadius: 9, padding: '7px 13px', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', letterSpacing: 0.5 }
+    }, "✏️ DÜZENLE"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         if (confirm(`${cfg.name} antrenmanını tamamen silmek istiyor musun?`)) onDeleteWorkout(targetDateKey, dayType);
       },
       style: S.dayDetailDel
-    }, /*#__PURE__*/React.createElement(Icon.Trash, null))), /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement(Icon.Trash, null)))), /*#__PURE__*/React.createElement("div", {
       style: S.dayDetailStats
     }, /*#__PURE__*/React.createElement("div", {
       style: S.dayStatBox
@@ -3998,6 +4004,7 @@ function WorkoutTab({
   const [prCelebration, setPrCelebration] = useState(null);
   const [toast, setToast] = useState(null);
   const [dayDetailKey, setDayDetailKey] = useState(null);
+  const [autoEdit, setAutoEdit] = useState(false); // takvimden DÜZENLE → DayView açılınca edit modunu aç
   const [logDate, setLogDate] = useState(null); // null = today; "YYYY-M-D" string = backdated
   const [sessionSummary, setSessionSummary] = useState(null);
   const [showAddDay, setShowAddDay] = useState(false);
@@ -4590,6 +4597,8 @@ function WorkoutTab({
       const dk = logDate || dateKey(Date.now());
       return data.sessions.some(s => s.dayType === currentDay && s.endTime && dateKey(s.startTime) === dk);
     })(),
+    autoEdit: autoEdit,
+    onAutoEditConsumed: () => setAutoEdit(false),
     onStartSession: startSession,
     onEndSession: endSession,
     onBack: () => {
@@ -4651,7 +4660,15 @@ function WorkoutTab({
     onClose: () => setDayDetailKey(null),
     onDeleteLog: deleteLog,
     onDeleteWorkout: deleteWorkoutDay,
-    onAddWorkout: startBackdatedWorkout
+    onAddWorkout: startBackdatedWorkout,
+    onEditWorkout: (dk, dayType) => {
+      const todayKey = dateKey(Date.now());
+      setCurrentDay(dayType);
+      setLogDate(dk === todayKey ? null : dk);
+      setDayDetailKey(null);
+      setAutoEdit(true);
+      setView('day');
+    }
   }), sessionSummary && /*#__PURE__*/React.createElement(SessionSummaryModal, {
     summary: sessionSummary,
     dayConfig: dayConfig,
@@ -5417,6 +5434,8 @@ function DayView({
   getLastPerformance,
   activeSession,
   isCompleted,
+  autoEdit,
+  onAutoEditConsumed,
   onStartSession,
   onEndSession,
   onBack,
@@ -5427,6 +5446,13 @@ function DayView({
   logDate
 }) {
   const [editMode, setEditMode] = useState(false);
+  // Takvimden DÜZENLE ile gelindiyse düzenleme modunu otomatik aç
+  useEffect(() => {
+    if (autoEdit) {
+      setEditMode(true);
+      if (onAutoEditConsumed) onAutoEditConsumed();
+    }
+  }, [autoEdit]);
   const isBackdated = !!logDate;
 
   // Count today's (or logDate's) sets per exercise
