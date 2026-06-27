@@ -105,6 +105,8 @@
   @keyframes toastOut { to { transform: translateY(80px) translateX(-50%); opacity: 0; } }
   .spin { animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes apexPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: 0.75; } }
+  @keyframes apexSlide { 0% { transform: translateX(-130%); } 100% { transform: translateX(330%); } }
   #root { min-height: 100vh; }
 </style>
 </head>
@@ -898,7 +900,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.5.5'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.6'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2868,9 +2870,20 @@ function FeedCard({
   });
   const activeReactions = Object.keys(normalized).filter(e => (normalized[e] || []).length > 0);
   const handleEmojiInput = val => {
-    const chars = Array.from(val.trim());
-    if (chars.length === 0) return;
-    const ch = chars[chars.length - 1];
+    const trimmed = val.trim();
+    if (!trimmed) return;
+    // Emoji'leri görünür bütün (grapheme) olarak ayır — ten rengi, bayrak, ZWJ birleşik emojiler bölünmesin
+    let segments;
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+      const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+      segments = [...seg.segment(trimmed)].map(s => s.segment);
+    } else {
+      // Eski cihaz fallback: regex ile emoji dizilerini yakala (modifier + ZWJ dahil)
+      segments = trimmed.match(/\p{Extended_Pictographic}(\u200d\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}\uFE0F])*/gu) || [];
+    }
+    if (segments.length === 0) return;
+    const ch = segments[segments.length - 1];
+    // Bu bütünün içinde gerçekten emoji var mı? (harf/rakam reddet)
     const isEmoji = /\p{Extended_Pictographic}|\p{Emoji_Presentation}/u.test(ch);
     if (!isEmoji) {
       setEmojiInput('');
@@ -3411,6 +3424,57 @@ function FriendProfileView({
   }, "💡 Sadece bu arkadaşın paylaştığı salonun özeti görünür. Detaylı logları gizli.")));
 }
 
+// Yükleme ekranı — nabız atan logo + animasyonlu çubuk
+function LoadingScreen({
+  label
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...S.app,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      animation: 'apexPulse 1.4s ease-in-out infinite'
+    }
+  }, /*#__PURE__*/React.createElement(ApexLogo, {
+    size: 76
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 26,
+      width: 120,
+      height: 3,
+      background: '#1a1a1a',
+      borderRadius: 3,
+      overflow: 'hidden',
+      marginLeft: 'auto',
+      marginRight: 'auto'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: '100%',
+      width: '40%',
+      background: 'linear-gradient(90deg,transparent,#FF3D3D,transparent)',
+      borderRadius: 3,
+      animation: 'apexSlide 1.2s ease-in-out infinite'
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: '#666',
+      fontSize: 11,
+      marginTop: 18,
+      letterSpacing: 2,
+      fontWeight: 700
+    }
+  }, label || 'YÜKLENİYOR')));
+}
+
 function App() {
   const [tab, setTab] = useState('workout');
   const [authUser, setAuthUser] = useState(undefined); // undefined = yükleniyor, null = giriş yok, obj = giriş var
@@ -3506,27 +3570,7 @@ function App() {
 
   // Auth durumu yükleniyor
   if (authUser === undefined) {
-    return /*#__PURE__*/React.createElement("div", {
-      style: {
-        ...S.app,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        textAlign: 'center'
-      }
-    }, /*#__PURE__*/React.createElement(ApexLogo, {
-      size: 64
-    }), /*#__PURE__*/React.createElement("div", {
-      style: {
-        color: '#555',
-        fontSize: 13,
-        marginTop: 16,
-        letterSpacing: 1
-      }
-    }, "YÜKLENİYOR...")));
+    return /*#__PURE__*/React.createElement(LoadingScreen, null);
   }
 
   // Giriş yapılmamış → giriş ekranı (Firebase varsa)
@@ -3536,13 +3580,7 @@ function App() {
 
   // Giriş var ama kullanıcı adı durumu daha yükleniyor (Firebase modunda)
   if (authUser && window.APEX_FIREBASE_OK && myUsername === undefined) {
-    return /*#__PURE__*/React.createElement("div", {
-      style: { ...S.app, display: 'flex', alignItems: 'center', justifyContent: 'center' }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: { textAlign: 'center' }
-    }, /*#__PURE__*/React.createElement(ApexLogo, { size: 64 }), /*#__PURE__*/React.createElement("div", {
-      style: { color: '#555', fontSize: 13, marginTop: 16, letterSpacing: 1 }
-    }, "YÜKLENİYOR...")));
+    return /*#__PURE__*/React.createElement(LoadingScreen, null);
   }
 
   // Giriş var ama kullanıcı adı yok → seçtir (mevcut kullanıcılar + güvenlik)
