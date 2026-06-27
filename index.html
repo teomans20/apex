@@ -898,7 +898,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.3'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.3.1'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2737,12 +2737,15 @@ function FeedView({
   const [items, setItems] = useState(null); // null = yükleniyor
   const [refreshing, setRefreshing] = useState(false);
   const load = async () => {
+    setRefreshing(true);
     const feed = await loadCombinedFeed(me.uid, friends, me);
     setItems(feed);
+    setRefreshing(false);
   };
+  // friends değişince (yüklenince) feed'i tazele — ilk açılışta boş gelme bug'ı çözümü
   useEffect(() => {
     load();
-  }, []);
+  }, [friends.length, me.uid]);
   const onReact = async (item, type) => {
     await toggleReaction(item.ownerUid, item.id, type, me.uid);
     // Anlık güncelle (optimistic)
@@ -2784,9 +2787,15 @@ function FeedView({
         fontSize: 14,
         lineHeight: 1.6
       }
-    }, "Akış boş 🌱", /*#__PURE__*/React.createElement("br", null), friends.length === 0 ? 'Arkadaş ekle, aktiviteleri burada gör' : 'Sen veya arkadaşların antrenman yapınca burada görünecek');
+    }, "Akış boş 🌱", /*#__PURE__*/React.createElement("br", null), friends.length === 0 ? 'Arkadaş ekle, aktiviteleri burada gör' : 'Sen veya arkadaşların antrenman yapınca burada görünecek', /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("button", {
+      onClick: load,
+      style: { marginTop: 18, background: '#141414', border: '1px solid #242424', borderRadius: 10, padding: '9px 20px', color: '#888', fontSize: 12, fontWeight: 700, cursor: 'pointer' }
+    }, refreshing ? '↻ Yenileniyor...' : '↻ Yenile'));
   }
-  return /*#__PURE__*/React.createElement("div", null, items.map(item => /*#__PURE__*/React.createElement(FeedCard, {
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+    onClick: load,
+    style: { width: '100%', background: '#141414', border: '1px solid #242424', borderRadius: 10, padding: '9px', color: '#888', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginBottom: 12 }
+  }, refreshing ? '↻ Yenileniyor...' : '↻ Yenile'), items.map(item => /*#__PURE__*/React.createElement(FeedCard, {
     key: item.ownerUid + '_' + item.id,
     item: item,
     myUid: me.uid,
