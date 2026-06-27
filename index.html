@@ -898,7 +898,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.2.3'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.3'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2259,7 +2259,7 @@ function FriendsTab({
   authUser,
   myUsername
 }) {
-  const [sub, setSub] = useState('friends'); // 'friends' | 'add'
+  const [sub, setSub] = useState('feed'); // 'feed' | 'friends' | 'add'
   const [friends, setFriends] = useState([]);
   const [requests, setRequests] = useState([]);
   const [sent, setSent] = useState([]);
@@ -2318,10 +2318,23 @@ function FriendsTab({
     style: S.header
   }, /*#__PURE__*/React.createElement("div", {
     style: S.gymSelectorName
-  }, "ARKADAŞLAR"), /*#__PURE__*/React.createElement("button", {
+  }, sub === 'feed' ? 'AKIŞ' : 'ARKADAŞLAR'), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSub(sub === 'add' ? 'friends' : 'add'),
     style: S.friendAddBtn
-  }, sub === 'add' ? '✕' : '＋ Ekle')), sub === 'add' ? /*#__PURE__*/React.createElement(AddFriendView, {
+  }, sub === 'add' ? '✕' : '＋ Ekle')),
+  sub !== 'add' && /*#__PURE__*/React.createElement("div", {
+    style: S.feedSeg
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setSub('feed'),
+    style: { ...S.feedSegBtn, ...(sub === 'feed' ? S.feedSegBtnOn : {}) }
+  }, "🔥 AKIŞ"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setSub('friends'),
+    style: { ...S.feedSegBtn, ...(sub === 'friends' ? S.feedSegBtnOn : {}) }
+  }, "👥 ARKADAŞLAR" + (requests.length > 0 ? ` (${requests.length})` : ''))),
+  sub === 'feed' ? /*#__PURE__*/React.createElement(FeedView, {
+    me: me,
+    friends: friends
+  }) : sub === 'add' ? /*#__PURE__*/React.createElement(AddFriendView, {
     me: me,
     friends: friends,
     sent: sent,
@@ -2595,6 +2608,282 @@ function AddFriendView({
   }, incomingFromThem ? "Kabul Et" : "İstek At")));
 }
 
+// ═══════════════════════════════════════════
+// FEED (AKIŞ) YARDIMCILARI (Faz 3)
+// ═══════════════════════════════════════════
+// Veri modeli (Yol A): users/{uid}/feed/{itemId}
+//   { type:'pr'|'plateau'|'workout', at, gymName, exerciseName?, weight?, reps?,
+//     delta?, weeksStuck?, setCount?, volume?, dayName?, reactions:{fire:[uids],muscle:[uids],clap:[uids]} }
+
+// Feed'e kart yaz (kendi kutuna). shared=false ise yazma (gizli salon).
+async function writeFeedItem(uid, item) {
+  if (!window.APEX_DB || !uid) return;
+  try {
+    const id = 'f' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    await window.APEX_DB.collection('users').doc(uid).collection('feed').doc(id).set({
+      ...item,
+      at: item.at || Date.now(),
+      reactions: {
+        fire: [],
+        muscle: [],
+        clap: []
+      }
+    });
+    // Eski kartları temizle (son 50 tut) - basit yaklaşım: çok eski olanları silme şimdilik atla
+  } catch (e) {}
+}
+
+// Bir arkadaşın son feed kartlarını çek
+async function loadFriendFeed(friendUid, limit) {
+  if (!window.APEX_DB) return [];
+  try {
+    const snap = await window.APEX_DB.collection('users').doc(friendUid).collection('feed').orderBy('at', 'desc').limit(limit || 20).get();
+    return snap.docs.map(d => ({
+      id: d.id,
+      ownerUid: friendUid,
+      ...d.data()
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
+// Tüm feed'i topla: kendim + arkadaşlar, birleştir, tarihe göre sırala
+async function loadCombinedFeed(myUid, friends, myInfo) {
+  const uids = [{
+    uid: myUid,
+    username: myInfo.username,
+    name: myInfo.name
+  }, ...friends];
+  const all = [];
+  await Promise.all(uids.map(async u => {
+    const items = await loadFriendFeed(u.uid, 15);
+    items.forEach(it => {
+      all.push({
+        ...it,
+        ownerUsername: u.username,
+        ownerName: u.name || u.username
+      });
+    });
+  }));
+  all.sort((a, b) => (b.at || 0) - (a.at || 0));
+  return all.slice(0, 50);
+}
+
+// Reaksiyon ekle/kaldır (toggle). reactionType: 'fire'|'muscle'|'clap'
+async function toggleReaction(ownerUid, itemId, reactionType, myUid) {
+  if (!window.APEX_DB) return;
+  const ref = window.APEX_DB.collection('users').doc(ownerUid).collection('feed').doc(itemId);
+  try {
+    const snap = await ref.get();
+    if (!snap.exists) return;
+    const data = snap.data();
+    const reactions = data.reactions || {
+      fire: [],
+      muscle: [],
+      clap: []
+    };
+    const arr = reactions[reactionType] || [];
+    const idx = arr.indexOf(myUid);
+    if (idx >= 0) arr.splice(idx, 1); // zaten var → kaldır
+    else arr.push(myUid); // yok → ekle
+    reactions[reactionType] = arr;
+    await ref.update({
+      reactions: reactions
+    });
+  } catch (e) {}
+}
+
+// Feed kartı için zaman formatı (Türkçe, "2 saat önce" gibi)
+function feedTimeAgo(ts) {
+  const diff = Date.now() - ts;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'az önce';
+  if (min < 60) return min + ' dk önce';
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr + ' saat önce';
+  const day = Math.floor(hr / 24);
+  if (day === 1) return 'dün';
+  if (day < 7) return day + ' gün önce';
+  return new Date(ts).toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'short'
+  });
+}
+
+// Bir hareketin kaç haftadır takılı olduğunu hesapla (plato feed kartı için)
+function getStuckWeeksForExercise(logs, exerciseName) {
+  const exLogs = logs.filter(l => l.exerciseName === exerciseName).sort((a, b) => a.timestamp - b.timestamp);
+  if (exLogs.length < 2) return 0;
+  const byDay = {};
+  exLogs.forEach(l => {
+    const k = dateKey(l.timestamp);
+    if (!byDay[k] || l.timestamp < byDay[k].timestamp) byDay[k] = l;
+  });
+  const days = Object.values(byDay).sort((a, b) => a.timestamp - b.timestamp);
+  let best = 0, lastImproveTs = days[0].timestamp;
+  for (let i = 0; i < days.length - 1; i++) {
+    if (days[i].weight > best) { best = days[i].weight; lastImproveTs = days[i].timestamp; }
+  }
+  const weeks = Math.floor((Date.now() - lastImproveTs) / (7 * 86400000));
+  return weeks;
+}
+
+// Feed görünümü (akış) — arkadaşların aktiviteleri
+function FeedView({
+  me,
+  friends
+}) {
+  const [items, setItems] = useState(null); // null = yükleniyor
+  const [refreshing, setRefreshing] = useState(false);
+  const load = async () => {
+    const feed = await loadCombinedFeed(me.uid, friends, me);
+    setItems(feed);
+  };
+  useEffect(() => {
+    load();
+  }, []);
+  const onReact = async (item, type) => {
+    await toggleReaction(item.ownerUid, item.id, type, me.uid);
+    // Anlık güncelle (optimistic)
+    setItems(prev => prev.map(it => {
+      if (it.id !== item.id || it.ownerUid !== item.ownerUid) return it;
+      const reactions = {
+        ...(it.reactions || {
+          fire: [],
+          muscle: [],
+          clap: []
+        })
+      };
+      const arr = [...(reactions[type] || [])];
+      const idx = arr.indexOf(me.uid);
+      if (idx >= 0) arr.splice(idx, 1);else arr.push(me.uid);
+      reactions[type] = arr;
+      return {
+        ...it,
+        reactions
+      };
+    }));
+  };
+  if (items === null) {
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center',
+        color: '#555',
+        marginTop: 40,
+        fontSize: 13
+      }
+    }, "Akış yükleniyor...");
+  }
+  if (items.length === 0) {
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center',
+        color: '#666',
+        marginTop: 50,
+        fontSize: 14,
+        lineHeight: 1.6
+      }
+    }, "Akış boş 🌱", /*#__PURE__*/React.createElement("br", null), friends.length === 0 ? 'Arkadaş ekle, aktiviteleri burada gör' : 'Sen veya arkadaşların antrenman yapınca burada görünecek');
+  }
+  return /*#__PURE__*/React.createElement("div", null, items.map(item => /*#__PURE__*/React.createElement(FeedCard, {
+    key: item.ownerUid + '_' + item.id,
+    item: item,
+    myUid: me.uid,
+    onReact: onReact
+  })));
+}
+
+// Tek feed kartı
+function FeedCard({
+  item,
+  myUid,
+  onReact
+}) {
+  const a = avatarFor(item.ownerName || item.ownerUsername);
+  const reactions = item.reactions || {
+    fire: [],
+    muscle: [],
+    clap: []
+  };
+  const reactBtn = (type, emoji) => {
+    const arr = reactions[type] || [];
+    const active = arr.indexOf(myUid) >= 0;
+    return /*#__PURE__*/React.createElement("button", {
+      onClick: () => onReact(item, type),
+      style: {
+        ...S.reactBtn,
+        ...(active ? S.reactBtnActive : {})
+      }
+    }, emoji, arr.length > 0 && /*#__PURE__*/React.createElement("span", {
+      style: S.reactCount
+    }, arr.length));
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: S.feedCard
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.feedHead
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 38,
+      height: 38,
+      borderRadius: '50%',
+      background: a.bg,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontWeight: 800,
+      fontSize: 15,
+      fontFamily: "'Big Shoulders Display',sans-serif",
+      flexShrink: 0
+    }
+  }, a.letter), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.feedName
+  }, item.ownerName || item.ownerUsername), /*#__PURE__*/React.createElement("div", {
+    style: S.feedTime
+  }, feedTimeAgo(item.at))), item.gymName && /*#__PURE__*/React.createElement("span", {
+    style: S.feedGymChip
+  }, "📍 ", item.gymName)), item.type === 'plateau' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: S.feedBody
+  }, item.weeksStuck, " haftalık platoyu kırdı! ⚡"), /*#__PURE__*/React.createElement("div", {
+    style: S.feedPlato
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.feedExLabel
+  }, item.exerciseName, " · uzun süredir takılıydı"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...S.feedBigVal,
+      color: '#FFA726'
+    }
+  }, item.weight, /*#__PURE__*/React.createElement("span", {
+    style: S.feedUnit
+  }, " kg × ", item.reps)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...S.feedTag,
+      background: '#FFA726'
+    }
+  }, "⚡ PLATO KIRILDI"))), item.type === 'pr' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: S.feedBody
+  }, "Yeni kişisel rekor 🔥"), /*#__PURE__*/React.createElement("div", {
+    style: S.feedPr
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.feedExLabel
+  }, item.exerciseName), /*#__PURE__*/React.createElement("div", {
+    style: S.feedBigVal
+  }, item.weight, /*#__PURE__*/React.createElement("span", {
+    style: S.feedUnit
+  }, " kg × ", item.reps)), /*#__PURE__*/React.createElement("div", {
+    style: S.feedTag
+  }, "🏆 YENİ REKOR", item.delta ? ` · +${item.delta}kg` : ''))), item.type === 'workout' && /*#__PURE__*/React.createElement("div", {
+    style: S.feedBody
+  }, "💪 ", item.dayName, " günü tamamladı · ", item.setCount, " set", item.volume ? ` · ${(item.volume / 1000).toFixed(1)}t hacim` : ''), /*#__PURE__*/React.createElement("div", {
+    style: S.feedReactRow
+  }, reactBtn('fire', '🔥'), reactBtn('muscle', '💪'), reactBtn('clap', '👏')));
+}
+
 function App() {
   const [tab, setTab] = useState('workout');
   const [authUser, setAuthUser] = useState(undefined); // undefined = yükleniyor, null = giriş yok, obj = giriş var
@@ -2666,6 +2955,12 @@ function App() {
     persistGyms(gyms.map(g => g.id === id ? {
       ...g,
       name: name.trim() || g.name
+    } : g));
+  };
+  const toggleGymShare = (id) => {
+    persistGyms(gyms.map(g => g.id === id ? {
+      ...g,
+      shared: g.shared === false ? true : false
     } : g));
   };
   const deleteGym = id => {
@@ -2761,6 +3056,7 @@ function App() {
     onAdd: addGym,
     onRename: renameGym,
     onDelete: deleteGym,
+    onToggleShare: toggleGymShare,
     onClose: () => setShowGymPicker(false)
   }));
 }
@@ -2773,6 +3069,7 @@ function GymPickerModal({
   onAdd,
   onRename,
   onDelete,
+  onToggleShare,
   onClose
 }) {
   const [adding, setAdding] = useState(false);
@@ -2793,7 +3090,7 @@ function GymPickerModal({
       color: '#777',
       marginBottom: 16
     }
-  }, "Her salonun kendi egzersizleri ve rekorları ayrıdır"), gyms.map(g => /*#__PURE__*/React.createElement("div", {
+  }, "Her salonun kendi egzersizleri ve rekorları ayrıdır. 🌐 = arkadaşlar görür, 🔒 = gizli"), gyms.map(g => /*#__PURE__*/React.createElement("div", {
     key: g.id,
     style: {
       ...S.gymItem,
@@ -2826,6 +3123,10 @@ function GymPickerModal({
       marginLeft: 'auto'
     }
   }, "✓")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onToggleShare(g.id),
+    style: S.gymMiniBtn,
+    title: "Paylaşım"
+  }, g.shared === false ? '🔒' : '🌐'), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setEditId(g.id);
       setEditName(g.name);
@@ -3364,6 +3665,31 @@ function WorkoutTab({
           exerciseName,
           type: setType
         });
+        // FEED: yeni rekor kartı yaz (salon paylaşımlıysa)
+        if (authUser && myUsername && activeGym && activeGym.shared !== false && window.APEX_FIREBASE_OK) {
+          const delta = previousPR.weight ? Math.max(0, w - previousPR.weight) : 0;
+          // Plato kırıldı mı kontrolü: bu hareket uzun süredir takılıysa "plateau" kartı
+          const stuckWeeks = getStuckWeeksForExercise(data.logs, exerciseName);
+          if (stuckWeeks >= 4) {
+            writeFeedItem(authUser.uid, {
+              type: 'plateau',
+              gymName: activeGym.name,
+              exerciseName,
+              weight: w,
+              reps: r,
+              weeksStuck: stuckWeeks
+            });
+          } else {
+            writeFeedItem(authUser.uid, {
+              type: 'pr',
+              gymName: activeGym.name,
+              exerciseName,
+              weight: w,
+              reps: r,
+              delta: delta
+            });
+          }
+        }
       }
     }
   };
@@ -3443,6 +3769,17 @@ function WorkoutTab({
       setToast(`Antrenman kaydedildi · ${formatDurationLong(endTime - active.startTime)}`);
     } else {
       setSessionSummary(summary);
+      // FEED: antrenman tamamlandı kartı (salon paylaşımlıysa)
+      if (authUser && myUsername && activeGym && activeGym.shared !== false && window.APEX_FIREBASE_OK) {
+        const dayCfg = dayConfig[active.dayType];
+        writeFeedItem(authUser.uid, {
+          type: 'workout',
+          gymName: activeGym.name,
+          dayName: (dayCfg && dayCfg.name) || active.dayType,
+          setCount: summary.setCount,
+          volume: summary.totalTonnage || 0
+        });
+      }
     }
   };
   const computeSessionSummary = (session, src) => {
@@ -6324,6 +6661,25 @@ const S = {
   btnAccept: { background: '#FF3D3D', color: '#fff', border: 'none', borderRadius: 9, padding: '8px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', flexShrink: 0 },
   btnReject: { background: '#1a1a1a', color: '#888', border: 'none', borderRadius: 9, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, marginLeft: 6 },
   friendSearchGo: { background: '#FF3D3D', color: '#fff', border: 'none', borderRadius: 11, padding: '0 18px', fontWeight: 800, fontSize: 14, cursor: 'pointer' },
+  feedSeg: { display: 'flex', gap: 2, background: '#141414', borderRadius: 10, padding: 3, marginBottom: 16 },
+  feedSegBtn: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: 800, padding: '9px 4px', borderRadius: 8, color: '#777', letterSpacing: 0.5, background: 'transparent', border: 'none', cursor: 'pointer' },
+  feedSegBtnOn: { background: '#FF3D3D', color: '#fff' },
+  feedCard: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 16, padding: 14, marginBottom: 11 },
+  feedHead: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 },
+  feedName: { fontSize: 13, fontWeight: 700 },
+  feedTime: { fontSize: 10, color: '#666' },
+  feedGymChip: { fontSize: 10, color: '#777', background: '#161616', borderRadius: 6, padding: '2px 7px', marginLeft: 'auto', whiteSpace: 'nowrap' },
+  feedBody: { fontSize: 13, lineHeight: 1.45, color: '#e8e8e8' },
+  feedPr: { background: 'linear-gradient(135deg, rgba(255,61,61,0.14), #0f0f0f)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 12, padding: 12, marginTop: 6 },
+  feedPlato: { background: 'linear-gradient(135deg, rgba(255,167,38,0.16), #0f0f0f)', border: '1px solid rgba(255,167,38,0.4)', borderRadius: 12, padding: 12, marginTop: 6 },
+  feedExLabel: { fontSize: 12, color: '#aaa' },
+  feedBigVal: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 30, lineHeight: 1, marginTop: 3 },
+  feedUnit: { fontSize: 15 },
+  feedTag: { display: 'inline-block', background: '#FF3D3D', color: '#fff', fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 10, marginTop: 8, letterSpacing: 0.5 },
+  feedReactRow: { display: 'flex', gap: 8, marginTop: 11, paddingTop: 10, borderTop: '1px solid #1a1a1a' },
+  reactBtn: { background: '#161616', border: '1px solid #242424', borderRadius: 20, padding: '5px 11px', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 },
+  reactBtnActive: { background: 'rgba(255,61,61,0.15)', borderColor: '#FF3D3D' },
+  reactCount: { fontSize: 11, color: '#999', fontWeight: 700 },
   progHero: {
     background: 'linear-gradient(135deg,#1a1a1a,#0d0d0d)',
     border: '1px solid #2a2a2a',
