@@ -898,7 +898,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.3.1'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.3.2'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2333,7 +2333,8 @@ function FriendsTab({
   }, "👥 ARKADAŞLAR" + (requests.length > 0 ? ` (${requests.length})` : ''))),
   sub === 'feed' ? /*#__PURE__*/React.createElement(FeedView, {
     me: me,
-    friends: friends
+    friends: friends,
+    friendsLoaded: !loading
   }) : sub === 'add' ? /*#__PURE__*/React.createElement(AddFriendView, {
     me: me,
     friends: friends,
@@ -2732,7 +2733,8 @@ function getStuckWeeksForExercise(logs, exerciseName) {
 // Feed görünümü (akış) — arkadaşların aktiviteleri
 function FeedView({
   me,
-  friends
+  friends,
+  friendsLoaded
 }) {
   const [items, setItems] = useState(null); // null = yükleniyor
   const [refreshing, setRefreshing] = useState(false);
@@ -2742,10 +2744,12 @@ function FeedView({
     setItems(feed);
     setRefreshing(false);
   };
-  // friends değişince (yüklenince) feed'i tazele — ilk açılışta boş gelme bug'ı çözümü
+  // Arkadaş listesi yüklendiğinde feed'i yükle (ilk açılışta boş gelme bug'ı çözümü).
+  // friendsLoaded false→true olduğunda ve arkadaş id'leri değiştiğinde tetiklenir.
+  const friendKey = friends.map(f => f.uid).join(',');
   useEffect(() => {
-    load();
-  }, [friends.length, me.uid]);
+    if (friendsLoaded) load();
+  }, [friendsLoaded, friendKey, me.uid]);
   const onReact = async (item, type) => {
     await toggleReaction(item.ownerUid, item.id, type, me.uid);
     // Anlık güncelle (optimistic)
