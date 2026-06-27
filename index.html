@@ -898,7 +898,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.3.2'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.4.1'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2259,12 +2259,13 @@ function FriendsTab({
   authUser,
   myUsername
 }) {
-  const [sub, setSub] = useState('feed'); // 'feed' | 'friends' | 'add'
+  const [sub, setSub] = useState('feed'); // 'feed' | 'leaderboard' | 'friends' | 'add'
   const [friends, setFriends] = useState([]);
   const [requests, setRequests] = useState([]);
   const [sent, setSent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState('');
+  const [profileFriend, setProfileFriend] = useState(null);
   const cloudReady = !!(authUser && window.APEX_FIREBASE_OK && window.APEX_DB);
   const me = {
     uid: authUser && authUser.uid,
@@ -2312,6 +2313,15 @@ function FriendsTab({
       }
     }, "Arkadaşlar için internet", /*#__PURE__*/React.createElement("br", null), "ve giriş gerekli 🌐"));
   }
+
+  // Bir arkadaşın profili açıksa onu göster
+  if (profileFriend) {
+    return /*#__PURE__*/React.createElement(FriendProfileView, {
+      friend: profileFriend,
+      onBack: () => setProfileFriend(null)
+    });
+  }
+
   return /*#__PURE__*/React.createElement("div", {
     style: S.screen
   }, /*#__PURE__*/React.createElement("div", {
@@ -2328,13 +2338,19 @@ function FriendsTab({
     onClick: () => setSub('feed'),
     style: { ...S.feedSegBtn, ...(sub === 'feed' ? S.feedSegBtnOn : {}) }
   }, "🔥 AKIŞ"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setSub('leaderboard'),
+    style: { ...S.feedSegBtn, ...(sub === 'leaderboard' ? S.feedSegBtnOn : {}) }
+  }, "🏆 LİDER"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSub('friends'),
     style: { ...S.feedSegBtn, ...(sub === 'friends' ? S.feedSegBtnOn : {}) }
-  }, "👥 ARKADAŞLAR" + (requests.length > 0 ? ` (${requests.length})` : ''))),
+  }, "👥 ARKADAŞ" + (requests.length > 0 ? ` (${requests.length})` : ''))),
   sub === 'feed' ? /*#__PURE__*/React.createElement(FeedView, {
     me: me,
     friends: friends,
     friendsLoaded: !loading
+  }) : sub === 'leaderboard' ? /*#__PURE__*/React.createElement(LeaderboardView, {
+    me: me,
+    friends: friends
   }) : sub === 'add' ? /*#__PURE__*/React.createElement(AddFriendView, {
     me: me,
     friends: friends,
@@ -2395,6 +2411,9 @@ function FriendsTab({
   }, "Henüz arkadaşın yok.", /*#__PURE__*/React.createElement("br", null), "＋ Ekle ile @kullanıcı adından ekle 🔥") : friends.map(f => /*#__PURE__*/React.createElement("div", {
     key: f.uid,
     style: S.friendRow
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setProfileFriend(f),
+    style: { display: 'flex', alignItems: 'center', gap: 11, flex: 1, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }
   }, /*#__PURE__*/React.createElement(Avatar, {
     name: f.name || f.username
   }), /*#__PURE__*/React.createElement("div", {
@@ -2405,7 +2424,7 @@ function FriendsTab({
     style: S.friendName
   }, f.name || f.username), /*#__PURE__*/React.createElement("div", {
     style: S.friendUser
-  }, "@", f.username)), /*#__PURE__*/React.createElement("button", {
+  }, "@", f.username))), /*#__PURE__*/React.createElement("button", {
     onClick: async () => {
       if (confirm(`@${f.username} arkadaşlıktan çıkarılsın mı?`)) {
         await removeFriend(authUser.uid, f.uid);
@@ -2895,6 +2914,392 @@ function FeedCard({
   }, "💪 ", item.dayName, " günü tamamladı · ", item.setCount, " set", item.volume ? ` · ${(item.volume / 1000).toFixed(1)}t hacim` : ''), /*#__PURE__*/React.createElement("div", {
     style: S.feedReactRow
   }, reactBtn('fire', '🔥'), reactBtn('muscle', '💪'), reactBtn('clap', '👏')));
+}
+
+// ═══════════════════════════════════════════
+// PROFİL/İSTATİSTİK + LİDER TABLOSU (Faz 4)
+// ═══════════════════════════════════════════
+// Veri modeli: users/{uid}/public/stats
+//   { username, name, updatedAt,
+//     workoutCount, prCount, streak, weeklyGain, weeklyWorkouts, weeklyPRs,
+//     topPRs:[{exerciseName,weight,reps}], gymName }
+
+// Paylaşılabilir istatistikleri hesapla (verilen salon verisinden)
+function computePublicStats(data, gymName) {
+  const logs = data.logs || [];
+  const now = Date.now();
+  const weekStart = now - 7 * 86400000;
+
+  // Antrenman günleri (benzersiz gün)
+  const workoutDays = new Set(logs.map(l => dateKey(l.timestamp)));
+  const workoutCount = workoutDays.size;
+
+  // Bu hafta antrenman
+  const weeklyWorkouts = new Set(logs.filter(l => l.timestamp >= weekStart).map(l => dateKey(l.timestamp))).size;
+
+  // Egzersiz başına PR geçmişi (rekor sayısı + bu hafta gelişim)
+  const exNames = [...new Set(logs.map(l => l.exerciseName))];
+  let prCount = 0;
+  let weeklyGain = 0;
+  let weeklyPRs = 0;
+  const topPRs = [];
+  exNames.forEach(name => {
+    const exLogs = logs.filter(l => l.exerciseName === name);
+    // Günlük top setler
+    const byDay = {};
+    exLogs.forEach(l => {
+      const k = dateKey(l.timestamp);
+      if (!byDay[k] || l.timestamp < byDay[k].timestamp) byDay[k] = l;
+    });
+    const days = Object.values(byDay).sort((a, b) => a.timestamp - b.timestamp);
+    if (days.length === 0) return;
+
+    // Kümülatif rekor + bu hafta gelişim
+    let best = 0,
+      weekStartBest = 0,
+      foundWeekStart = false;
+    days.forEach(d => {
+      if (d.timestamp < weekStart) {
+        if (d.weight > best) best = d.weight;
+      }
+    });
+    weekStartBest = best; // hafta başındaki rekor
+    let improvements = 0;
+    let runningBest = 0;
+    days.forEach(d => {
+      if (d.weight > runningBest) {
+        runningBest = d.weight;
+        improvements++;
+      }
+    });
+    prCount += improvements;
+    const currentBest = runningBest;
+    if (currentBest > weekStartBest && weekStartBest > 0) {
+      weeklyGain += currentBest - weekStartBest;
+      weeklyPRs++;
+    } else if (currentBest > weekStartBest && weekStartBest === 0) {
+      // İlk kez bu hafta yapılan hareket
+      weeklyPRs++;
+    }
+
+    // En iyi PR (top set)
+    const bestDay = days.reduce((b, d) => !b || d.weight > b.weight ? d : b, null);
+    if (bestDay) topPRs.push({
+      exerciseName: name,
+      weight: bestDay.weight,
+      reps: bestDay.reps
+    });
+  });
+
+  // Top PR'ları ağırlığa göre sırala, ilk 5
+  topPRs.sort((a, b) => b.weight - a.weight);
+
+  // Gün serisi (streak)
+  let streak = 0;
+  let cursor = new Date();
+  for (let i = 0; i < 365; i++) {
+    const k = dateKey(cursor.getTime());
+    if (workoutDays.has(k)) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else if (i === 0) {
+      cursor.setDate(cursor.getDate() - 1);
+    } else break;
+  }
+  return {
+    workoutCount,
+    prCount,
+    streak,
+    weeklyGain,
+    weeklyWorkouts,
+    weeklyPRs,
+    topPRs: topPRs.slice(0, 5),
+    gymName: gymName || ''
+  };
+}
+
+// İstatistikleri buluta yaz (paylaşımlı salondan)
+async function writePublicStats(uid, username, name, stats) {
+  if (!window.APEX_DB || !uid) return;
+  try {
+    await window.APEX_DB.collection('users').doc(uid).collection('public').doc('stats').set({
+      username: username || '',
+      name: name || '',
+      updatedAt: Date.now(),
+      ...stats
+    });
+  } catch (e) {}
+}
+
+// Bir kullanıcının public istatistiklerini oku
+async function loadPublicStats(uid) {
+  if (!window.APEX_DB) return null;
+  try {
+    const snap = await window.APEX_DB.collection('users').doc(uid).collection('public').doc('stats').get();
+    if (snap.exists) return snap.data();
+  } catch (e) {}
+  return null;
+}
+
+// Lider tablosu için: kendim + arkadaşların statlarını topla
+async function loadLeaderboard(myUid, myInfo, friends) {
+  const all = [{
+    uid: myUid,
+    username: myInfo.username,
+    name: myInfo.name,
+    isMe: true
+  }, ...friends.map(f => ({
+    ...f,
+    isMe: false
+  }))];
+  const results = [];
+  await Promise.all(all.map(async u => {
+    const stats = await loadPublicStats(u.uid);
+    if (stats) {
+      results.push({
+        uid: u.uid,
+        username: stats.username || u.username,
+        name: stats.name || u.name,
+        isMe: u.isMe,
+        ...stats
+      });
+    } else if (u.isMe) {
+      // Kendim için stat yoksa boş göster
+      results.push({
+        uid: u.uid,
+        username: u.username,
+        name: u.name,
+        isMe: true,
+        weeklyGain: 0,
+        prCount: 0,
+        workoutCount: 0,
+        weeklyWorkouts: 0
+      });
+    }
+  }));
+  return results;
+}
+
+// Lider tablosu görünümü (3 sekme: gelişim / rekor / antrenman)
+function LeaderboardView({
+  me,
+  friends
+}) {
+  const [board, setBoard] = useState(null);
+  const [metric, setMetric] = useState('gain'); // gain | pr | workout
+
+  useEffect(() => {
+    loadLeaderboard(me.uid, me, friends).then(setBoard);
+  }, [friends.length]);
+  if (board === null) {
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center',
+        color: '#555',
+        marginTop: 30,
+        fontSize: 13
+      }
+    }, "Yükleniyor...");
+  }
+
+  // Metriğe göre değer + sıralama
+  const metricVal = u => {
+    if (metric === 'gain') return u.weeklyGain || 0;
+    if (metric === 'pr') return u.prCount || 0;
+    return u.workoutCount || 0;
+  };
+  const sorted = [...board].sort((a, b) => metricVal(b) - metricVal(a));
+  const metricLabel = {
+    gain: 'Bu Hafta Gelişim',
+    pr: 'Toplam Rekor',
+    workout: 'Toplam Antrenman'
+  }[metric];
+  const valSuffix = {
+    gain: ' kg',
+    pr: '',
+    workout: ''
+  }[metric];
+  const valPrefix = {
+    gain: '+',
+    pr: '',
+    workout: ''
+  }[metric];
+  const rankColor = i => i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#666';
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: S.feedSeg
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMetric('gain'),
+    style: {
+      ...S.feedSegBtn,
+      ...(metric === 'gain' ? S.feedSegBtnOn : {})
+    }
+  }, "📈 GELİŞİM"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMetric('pr'),
+    style: {
+      ...S.feedSegBtn,
+      ...(metric === 'pr' ? S.feedSegBtnOn : {})
+    }
+  }, "🏆 REKOR"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMetric('workout'),
+    style: {
+      ...S.feedSegBtn,
+      ...(metric === 'workout' ? S.feedSegBtnOn : {})
+    }
+  }, "🔥 ANTRENMAN")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#777',
+      textAlign: 'center',
+      marginBottom: 14
+    }
+  }, metricLabel), sorted.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      color: '#666',
+      marginTop: 30,
+      fontSize: 13,
+      lineHeight: 1.6
+    }
+  }, "Henüz veri yok 🌱", /*#__PURE__*/React.createElement("br", null), "Arkadaşların antrenman yaptıkça dolacak") : sorted.map((u, i) => /*#__PURE__*/React.createElement("div", {
+    key: u.uid,
+    style: {
+      ...S.lbRow,
+      ...(u.isMe ? S.lbRowMe : {})
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...S.lbRank,
+      color: rankColor(i)
+    }
+  }, i + 1), /*#__PURE__*/React.createElement(Avatar, {
+    name: u.name || u.username,
+    size: 36
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.lbName
+  }, u.isMe ? 'Sen' : u.name || u.username), /*#__PURE__*/React.createElement("div", {
+    style: S.lbSub
+  }, "@", u.username)), /*#__PURE__*/React.createElement("div", {
+    style: S.lbVal
+  }, valPrefix, metricVal(u), /*#__PURE__*/React.createElement("span", {
+    style: S.lbUnit
+  }, valSuffix)))), metric === 'gain' && /*#__PURE__*/React.createElement("div", {
+    style: S.lbNote
+  }, "💡 ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: '#4A90E2'
+    }
+  }, "Gelişim"), " en adil sıralama — kim ne kaldırırsa kaldırsın, bu hafta ne kadar ilerlediğine bakar."));
+}
+
+// Arkadaş profili (bir arkadaşa dokununca)
+function FriendProfileView({
+  friend,
+  onBack
+}) {
+  const [stats, setStats] = useState(undefined);
+  useEffect(() => {
+    loadPublicStats(friend.uid).then(s => setStats(s || null));
+  }, [friend.uid]);
+  const a = avatarFor(friend.name || friend.username);
+  return /*#__PURE__*/React.createElement("div", {
+    style: S.screen
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.topBar
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    style: S.iconBtn
+  }, "‹ Geri"), /*#__PURE__*/React.createElement("div", {
+    style: S.topBarTitle
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 60
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      padding: '8px 0 16px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 74,
+      height: 74,
+      borderRadius: '50%',
+      background: a.bg,
+      margin: '0 auto 10px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: "'Big Shoulders Display',sans-serif",
+      fontWeight: 900,
+      fontSize: 32
+    }
+  }, a.letter), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: "'Big Shoulders Display',sans-serif",
+      fontWeight: 800,
+      fontSize: 22
+    }
+  }, friend.name || friend.username), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: '#777'
+    }
+  }, "@", friend.username, stats && stats.gymName ? ` · 📍 ${stats.gymName}` : '')), stats === undefined ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      color: '#555',
+      marginTop: 20,
+      fontSize: 13
+    }
+  }, "Yükleniyor...") : stats === null ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      color: '#666',
+      marginTop: 30,
+      fontSize: 13,
+      lineHeight: 1.6
+    }
+  }, "Bu arkadaşın paylaştığı veri yok 🤔", /*#__PURE__*/React.createElement("br", null), "Antrenman yapıp paylaşınca görünecek") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr 1fr',
+      gap: 8,
+      margin: '14px 0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.pfStat
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.pfStatV
+  }, stats.workoutCount || 0), /*#__PURE__*/React.createElement("div", {
+    style: S.pfStatL
+  }, "ANTRENMAN")), /*#__PURE__*/React.createElement("div", {
+    style: S.pfStat
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.pfStatV
+  }, stats.prCount || 0), /*#__PURE__*/React.createElement("div", {
+    style: S.pfStatL
+  }, "REKOR")), /*#__PURE__*/React.createElement("div", {
+    style: S.pfStat
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.pfStatV
+  }, stats.streak || 0), /*#__PURE__*/React.createElement("div", {
+    style: S.pfStatL
+  }, "GÜN SERİSİ"))), stats.topPRs && stats.topPRs.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: S.pfSection
+  }, "EN İYİ REKORLARI"), stats.topPRs.map((pr, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: S.pfPr
+  }, /*#__PURE__*/React.createElement("span", {
+    style: S.pfPrName
+  }, "🏋️ ", pr.exerciseName), /*#__PURE__*/React.createElement("span", {
+    style: S.pfPrW
+  }, pr.weight, " kg", pr.reps ? ` × ${pr.reps}` : '')))), /*#__PURE__*/React.createElement("div", {
+    style: S.lbNote
+  }, "💡 Sadece bu arkadaşın paylaştığı salonun özeti görünür. Detaylı logları gizli.")));
 }
 
 function App() {
@@ -3792,6 +4197,9 @@ function WorkoutTab({
           setCount: summary.setCount,
           volume: summary.totalTonnage || 0
         });
+        // İSTATİSTİK: lider tablosu + profil için public stats güncelle
+        const pubStats = computePublicStats(newData, activeGym.name);
+        writePublicStats(authUser.uid, myUsername, (authUser.displayName || ''), pubStats);
       }
     }
   };
@@ -6693,6 +7101,21 @@ const S = {
   reactBtn: { background: '#161616', border: '1px solid #242424', borderRadius: 20, padding: '5px 11px', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 },
   reactBtnActive: { background: 'rgba(255,61,61,0.15)', borderColor: '#FF3D3D' },
   reactCount: { fontSize: 11, color: '#999', fontWeight: 700 },
+  lbRow: { display: 'flex', alignItems: 'center', gap: 12, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '11px 13px', marginBottom: 8 },
+  lbRowMe: { borderColor: '#FF3D3D', background: 'rgba(255,61,61,0.07)' },
+  lbRank: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 20, width: 26, textAlign: 'center', flexShrink: 0 },
+  lbName: { fontSize: 13, fontWeight: 700 },
+  lbSub: { fontSize: 10, color: '#777' },
+  lbVal: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 800, fontSize: 19, textAlign: 'right' },
+  lbUnit: { fontSize: 10, color: '#777', fontWeight: 600 },
+  lbNote: { background: 'rgba(74,144,226,0.08)', border: '1px solid rgba(74,144,226,0.3)', borderRadius: 10, padding: 11, fontSize: 11, color: '#bbb', lineHeight: 1.5, marginTop: 14 },
+  pfStat: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: '12px 6px', textAlign: 'center' },
+  pfStatV: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 800, fontSize: 22 },
+  pfStatL: { fontSize: 8, color: '#777', fontWeight: 700, letterSpacing: 0.5, marginTop: 3 },
+  pfSection: { fontSize: 11, fontWeight: 800, letterSpacing: 1, color: '#666', margin: '14px 0 9px' },
+  pfPr: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 11, padding: '11px 13px', marginBottom: 7 },
+  pfPrName: { fontSize: 13, fontWeight: 600 },
+  pfPrW: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 800, fontSize: 17 },
   progHero: {
     background: 'linear-gradient(135deg,#1a1a1a,#0d0d0d)',
     border: '1px solid #2a2a2a',
