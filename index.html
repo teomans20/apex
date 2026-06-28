@@ -900,7 +900,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.7.3'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.8'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -6854,6 +6854,7 @@ function ExerciseProgressDetail({
   const [touchIdx, setTouchIdx] = useState(null); // crosshair için seçili nokta
   const svgRef = React.useRef(null);
   const periodMs = {
+    '1H': 7,
     '1A': 30,
     '3A': 90,
     '6A': 180,
@@ -7009,7 +7010,7 @@ function ExerciseProgressDetail({
     }
   }, gain >= 0 ? '+' : '', gain), /*#__PURE__*/React.createElement("div", {
     style: S.exStatL
-  }, "6 AYDA (KG)")), /*#__PURE__*/React.createElement("div", {
+  }, ({ '1H': '1 HAFTADA', '1A': '1 AYDA', '3A': '3 AYDA', '6A': '6 AYDA', '1Y': '1 YILDA', 'TÜM': 'TÜM ZAMAN' }[period] || '') + " (KG)")), /*#__PURE__*/React.createElement("div", {
     style: S.exStat
   }, /*#__PURE__*/React.createElement("div", {
     style: S.exStatV
@@ -7017,7 +7018,7 @@ function ExerciseProgressDetail({
     style: S.exStatL
   }, "TAHMİNİ 1RM"))), /*#__PURE__*/React.createElement("div", {
     style: S.periodToggle
-  }, ['1A', '3A', '6A', '1Y', 'TÜM'].map(p => /*#__PURE__*/React.createElement("button", {
+  }, ['1H', '1A', '3A', '6A', '1Y', 'TÜM'].map(p => /*#__PURE__*/React.createElement("button", {
     key: p,
     onClick: () => {
       setPeriod(p);
@@ -7308,7 +7309,7 @@ const S = {
   feedBigVal: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 30, lineHeight: 1, marginTop: 3 },
   feedUnit: { fontSize: 15 },
   feedTag: { display: 'inline-block', background: '#FF3D3D', color: '#fff', fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 10, marginTop: 8, letterSpacing: 0.5 },
-  feedReactRow: { display: 'flex', gap: 8, marginTop: 11, paddingTop: 10, borderTop: '1px solid #1a1a1a' },
+  feedReactRow: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 11, paddingTop: 10, borderTop: '1px solid #1a1a1a' },
   reactBtn: { background: '#161616', border: '1px solid #242424', borderRadius: 20, padding: '5px 11px', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 },
   reactBtnActive: { background: 'rgba(255,61,61,0.15)', borderColor: '#FF3D3D' },
   reactCount: { fontSize: 11, color: '#999', fontWeight: 700 },
