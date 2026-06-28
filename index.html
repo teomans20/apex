@@ -900,7 +900,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.8'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.8.1'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -7039,7 +7039,7 @@ function ExerciseProgressDetail({
     style: S.crosshairDate
   }, fmtDate(active.ts)), /*#__PURE__*/React.createElement("span", {
     style: S.crosshairVal
-  }, active.weight, "kg × ", active.reps)), points.length >= 2 ? /*#__PURE__*/React.createElement("svg", {
+  }, active.weight, "kg × ", active.reps)), points.length >= 1 ? /*#__PURE__*/React.createElement("svg", {
     ref: svgRef,
     viewBox: "0 0 300 170",
     style: {
