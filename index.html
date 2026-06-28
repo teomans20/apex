@@ -900,7 +900,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.7.2'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '4.7.3'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -4004,7 +4004,7 @@ function WorkoutTab({
   const [prCelebration, setPrCelebration] = useState(null);
   const [toast, setToast] = useState(null);
   const [dayDetailKey, setDayDetailKey] = useState(null);
-  const [autoEdit, setAutoEdit] = useState(false); // takvimden DÜZENLE → DayView açılınca edit modunu aç
+  const [dayEditMode, setDayEditMode] = useState(false); // gün düzenleme modu (egzersize girip çıkınca korunur)
   const [logDate, setLogDate] = useState(null); // null = today; "YYYY-M-D" string = backdated
   const [sessionSummary, setSessionSummary] = useState(null);
   const [showAddDay, setShowAddDay] = useState(false);
@@ -4597,13 +4597,14 @@ function WorkoutTab({
       const dk = logDate || dateKey(Date.now());
       return data.sessions.some(s => s.dayType === currentDay && s.endTime && dateKey(s.startTime) === dk);
     })(),
-    autoEdit: autoEdit,
-    onAutoEditConsumed: () => setAutoEdit(false),
+    editMode: dayEditMode,
+    onSetEditMode: setDayEditMode,
     onStartSession: startSession,
     onEndSession: endSession,
     onBack: () => {
       setView('home');
       setLogDate(null);
+      setDayEditMode(false);
     },
     onSelectExercise: e => {
       setCurrentExercise(e);
@@ -4666,7 +4667,7 @@ function WorkoutTab({
       setCurrentDay(dayType);
       setLogDate(dk === todayKey ? null : dk);
       setDayDetailKey(null);
-      setAutoEdit(true);
+      setDayEditMode(true);
       setView('day');
     }
   }), sessionSummary && /*#__PURE__*/React.createElement(SessionSummaryModal, {
@@ -5434,8 +5435,8 @@ function DayView({
   getLastPerformance,
   activeSession,
   isCompleted,
-  autoEdit,
-  onAutoEditConsumed,
+  editMode,
+  onSetEditMode,
   onStartSession,
   onEndSession,
   onBack,
@@ -5445,14 +5446,6 @@ function DayView({
   onReorderExercises,
   logDate
 }) {
-  const [editMode, setEditMode] = useState(false);
-  // Takvimden DÜZENLE ile gelindiyse düzenleme modunu otomatik aç
-  useEffect(() => {
-    if (autoEdit) {
-      setEditMode(true);
-      if (onAutoEditConsumed) onAutoEditConsumed();
-    }
-  }, [autoEdit]);
   const isBackdated = !!logDate;
 
   // Count today's (or logDate's) sets per exercise
@@ -5495,7 +5488,7 @@ function DayView({
         const ok = confirm('Bu antrenmanı tamamlamıştın. Düzeltmek istediğine emin misin?\n\n(Setleri, tekrarları ve egzersiz sırasını değiştirebilirsin. Süre değişmez.)');
         if (!ok) return;
       }
-      setEditMode(!editMode);
+      onSetEditMode(!editMode);
     },
     style: S.editBtn
   }, editMode ? 'BİTTİ' : 'DÜZENLE')), isBackdated ? /*#__PURE__*/React.createElement("div", {
