@@ -6891,7 +6891,20 @@ function ExerciseProgressDetail({
     padB = 24;
   const plotW = W - padL - padR,
     plotH = H - padT - padB;
-  const xFor = i => points.length <= 1 ? padL + plotW / 2 : padL + i / (points.length - 1) * plotW;
+  // ZAMAN EKSENİ: X ekseni gerçek zamana göre. Dönem ne ise eksen o aralığı gösterir.
+  // TÜM → ilk veriden bugüne; diğerleri → bugünden dönem kadar geriye.
+  const allTs = es.curve.map(p => p.ts);
+  const firstEverTs = allTs.length ? Math.min(...allTs) : now;
+  let domainStart;
+  if (period === 'TÜM') {
+    domainStart = firstEverTs;
+  } else {
+    domainStart = now - periodMs[period] * 86400000;
+  }
+  const domainSpan = Math.max(now - domainStart, 86400000); // en az 1 gün (sıfıra bölme yok)
+  // Tek nokta varsa ve dönem genişse, nokta gerçek tarihinde durur (zaman-orantılı)
+  const xForTs = ts => padL + (ts - domainStart) / domainSpan * plotW;
+  const xFor = i => points.length === 1 ? xForTs(points[0].ts) : xForTs(points[i].ts);
   const yFor = w => padT + plotH - (w - minW) / range * plotH;
   let linePath = '',
     areaPath = '';
@@ -7132,19 +7145,19 @@ function ExerciseProgressDetail({
     fill: "#666",
     fontSize: "9",
     textAnchor: "start"
-  }, fmtDate(points[0].ts)), points.length > 2 && /*#__PURE__*/React.createElement("text", {
+  }, fmtDate(domainStart)), /*#__PURE__*/React.createElement("text", {
     x: padL + plotW / 2,
     y: H - 6,
     fill: "#666",
     fontSize: "9",
     textAnchor: "middle"
-  }, fmtDate(points[Math.floor(points.length / 2)].ts)), /*#__PURE__*/React.createElement("text", {
+  }, fmtDate(domainStart + domainSpan / 2)), /*#__PURE__*/React.createElement("text", {
     x: W - padR,
     y: H - 6,
     fill: "#666",
     fontSize: "9",
     textAnchor: "end"
-  }, fmtDate(points[points.length - 1].ts)), /*#__PURE__*/React.createElement("rect", {
+  }, "bugün"), /*#__PURE__*/React.createElement("rect", {
     x: "0",
     y: "0",
     width: W,
