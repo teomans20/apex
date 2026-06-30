@@ -3088,16 +3088,7 @@ function computePublicStats(data, gymName) {
     const days = Object.values(byDay).sort((a, b) => a.timestamp - b.timestamp);
     if (days.length === 0) return;
 
-    // Kümülatif rekor + bu hafta gelişim
-    let best = 0,
-      weekStartBest = 0,
-      foundWeekStart = false;
-    days.forEach(d => {
-      if (d.timestamp < weekStart) {
-        if (d.weight > best) best = d.weight;
-      }
-    });
-    weekStartBest = best; // hafta başındaki rekor
+    // Toplam rekor sayısı (kümülatif iyileşmeler)
     let improvements = 0;
     let runningBest = 0;
     days.forEach(d => {
@@ -3107,13 +3098,31 @@ function computePublicStats(data, gymName) {
       }
     });
     prCount += improvements;
-    const currentBest = runningBest;
-    if (currentBest > weekStartBest && weekStartBest > 0) {
-      weeklyGain += currentBest - weekStartBest;
-      weeklyPRs++;
-    } else if (currentBest > weekStartBest && weekStartBest === 0) {
-      // İlk kez bu hafta yapılan hareket
-      weeklyPRs++;
+
+    // BU HAFTA GELİŞİM:
+    // Hafta başından önceki en iyi rekoru bul (varsa)
+    let bestBeforeWeek = 0;
+    days.forEach(d => {
+      if (d.timestamp < weekStart && d.weight > bestBeforeWeek) bestBeforeWeek = d.weight;
+    });
+    // Bu hafta içindeki günler
+    const thisWeekDays = days.filter(d => d.timestamp >= weekStart);
+    if (thisWeekDays.length > 0) {
+      const bestThisWeek = Math.max(...thisWeekDays.map(d => d.weight));
+      if (bestBeforeWeek > 0) {
+        // Geçmiş rekor var → bu haftaki en iyi, ona göre ne kadar arttı
+        if (bestThisWeek > bestBeforeWeek) {
+          weeklyGain += bestThisWeek - bestBeforeWeek;
+          weeklyPRs++;
+        }
+      } else {
+        // Bu egzersizi ilk kez bu hafta yaptı → hafta içi ilk gün vs en iyi gün farkı
+        const firstThisWeek = thisWeekDays[0].weight;
+        if (bestThisWeek > firstThisWeek) {
+          weeklyGain += bestThisWeek - firstThisWeek;
+        }
+        weeklyPRs++;
+      }
     }
 
     // En iyi PR (top set)
@@ -4101,6 +4110,15 @@ function WorkoutTab({
       } catch (e) {}
     }
   };
+
+  // Public istatistikleri güncel tut (lider tablosu + profil için).
+  // Veri yüklendiğinde/değiştiğinde, paylaşımlı salonsa kendi stats'ını yeniden yaz.
+  useEffect(() => {
+    if (cloudReady && myUsername && activeGym && activeGym.shared !== false && (data.logs || []).length > 0) {
+      const pubStats = computePublicStats(data, activeGym.name);
+      writePublicStats(authUser.uid, myUsername, authUser.displayName || '', pubStats);
+    }
+  }, [cloudReady, myUsername, data.logs, activeGym && activeGym.id]);
 
   // Custom day management
   const addCustomDay = (name, subtitle, paletteId, exercises) => {
