@@ -1949,15 +1949,16 @@ function isValidUsername(u) {
   return n.length >= 3 && n.length <= 20;
 }
 
-// Kullanıcı adı müsait mi? (Firestore'da usernames/{username} var mı)
+// Kullanıcı adı müsait mi? Döner: 'available' | 'taken' | 'error'
 async function isUsernameAvailable(username) {
   const u = normalizeUsername(username);
-  if (!window.APEX_DB) return false;
+  if (!window.APEX_DB) return 'error';
   try {
     const snap = await window.APEX_DB.collection('usernames').doc(u).get();
-    return !snap.exists;
+    return snap.exists ? 'taken' : 'available';
   } catch (e) {
-    return false;
+    // Kontrol edilemedi (izin/ağ) — "alınmış" deme, "error" de
+    return 'error';
   }
 }
 
@@ -2028,9 +2029,14 @@ function UsernameSetup({
     setBusy(true);
     setError('');
     try {
-      const available = await isUsernameAvailable(u);
-      if (!available) {
+      const status = await isUsernameAvailable(u);
+      if (status === 'taken') {
         setError('Bu kullanıcı adı alınmış, başka dene');
+        setBusy(false);
+        return;
+      }
+      if (status === 'error') {
+        setError('Kullanıcı adı kontrol edilemedi, tekrar dene');
         setBusy(false);
         return;
       }
@@ -3843,14 +3849,18 @@ function AuthScreen() {
       if (mode === 'login') {
         await window.APEX_AUTH.signInWithEmailAndPassword(email.trim(), password);
       } else {
-        // Önce kullanıcı adı müsait mi kontrol et
-        const available = await isUsernameAvailable(username);
-        if (!available) {
+        // Hesabı oluştur (auth olunca usernames okuma izni gelir — kayıt öncesi izin yok)
+        const cred = await window.APEX_AUTH.createUserWithEmailAndPassword(email.trim(), password);
+        // Şimdi (auth varken) kullanıcı adı müsait mi kontrol et
+        const status = await isUsernameAvailable(username);
+        if (status === 'taken') {
+          // Kullanıcı adı alınmış → oluşturulan hesabı sil, hata göster
           setError('Bu kullanıcı adı alınmış, başka dene');
+          try { await cred.user.delete(); } catch (e) {}
           setBusy(false);
           return;
         }
-        const cred = await window.APEX_AUTH.createUserWithEmailAndPassword(email.trim(), password);
+        // status 'error' ise yine de devam et (claim sırasında benzersizlik korunur)
         // İsmi + kullanıcı adını profile + Firestore'a yaz
         if (cred.user) {
           try {
