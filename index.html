@@ -538,12 +538,15 @@ const buildDayConfig = (name, subtitle, accent, dark) => {
 };
 
 // Merge built-in days with user's custom days into a single config map
-const buildDayConfigMap = customDays => {
-  const map = {
-    ...BUILTIN_DAYS
-  };
+const buildDayConfigMap = (customDays, hiddenDays) => {
+  const hidden = hiddenDays || [];
+  const map = {};
+  // Yerleşik günler — gizlenmemiş olanlar
+  Object.keys(BUILTIN_DAYS).forEach(k => {
+    if (!hidden.includes(k)) map[k] = BUILTIN_DAYS[k];
+  });
   (customDays || []).forEach(cd => {
-    map[cd.id] = buildDayConfig(cd.name, cd.subtitle, cd.accent, cd.dark);
+    if (!hidden.includes(cd.id)) map[cd.id] = buildDayConfig(cd.name, cd.subtitle, cd.accent, cd.dark);
   });
   return map;
 };
@@ -4096,7 +4099,7 @@ function WorkoutTab({
   }, [cloudReady, authUser, gymId]);
 
   // Build the merged day config (built-in + custom) — used everywhere
-  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays), [data.customDays]);
+  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays, data.hiddenDays), [data.customDays, data.hiddenDays]);
   const saveData = newData => {
     setData(newData);
     // Her zaman localStorage'a yaz (offline yedek)
@@ -4176,6 +4179,23 @@ function WorkoutTab({
       sessions: newSessions
     });
     setEditDayId(null);
+  };
+
+  // Yerleşik bir günü gizle (Push/Pull/Upper/Leg) — veri silinmez, sadece ana ekrandan kalkar
+  const hideDay = id => {
+    const hidden = data.hiddenDays || [];
+    if (hidden.includes(id)) return;
+    saveData({
+      ...data,
+      hiddenDays: [...hidden, id]
+    });
+  };
+  // Gizlenen günü geri getir
+  const unhideDay = id => {
+    saveData({
+      ...data,
+      hiddenDays: (data.hiddenDays || []).filter(d => d !== id)
+    });
   };
 
   // Save a user-defined muscle mapping for an exercise
@@ -4611,6 +4631,8 @@ function WorkoutTab({
     onTapCalendarDay: setDayDetailKey,
     onAddDay: () => setShowAddDay(true),
     onEditDay: setEditDayId,
+    onHideDay: hideDay,
+    onUnhideDay: unhideDay,
     onSaveMuscleMap: saveMuscleMap,
     activeGym: activeGym,
     onOpenGymPicker: onOpenGymPicker
@@ -4715,6 +4737,8 @@ function HomeView({
   onTapCalendarDay,
   onAddDay,
   onEditDay,
+  onHideDay,
+  onUnhideDay,
   onSaveMuscleMap,
   activeGym,
   onOpenGymPicker
@@ -4724,17 +4748,26 @@ function HomeView({
   const totalVolume = data.logs.reduce((s, l) => s + l.weight * l.reps, 0);
   const customIds = (data.customDays || []).map(d => d.id);
 
-  // Long-press handling for custom day cards
+  // Long-press handling for day cards
   const pressTimer = useRef(null);
   const startPress = id => {
     pressTimer.current = setTimeout(() => {
       haptic(40);
-      onEditDay(id);
+      const isCustom = customIds.includes(id);
+      if (isCustom) {
+        onEditDay(id);
+      } else {
+        // Yerleşik gün → gizleme sor (veri silinmez)
+        const cfg = dayConfig[id];
+        const ok = confirm(`"${cfg ? cfg.name : id}" gününü gizlemek istiyor musun?\n\n(Antrenman verilerin silinmez, istediğinde geri getirebilirsin.)`);
+        if (ok) onHideDay(id);
+      }
     }, 550);
   };
   const cancelPress = () => {
     clearTimeout(pressTimer.current);
   };
+  const hiddenDays = data.hiddenDays || [];
   return /*#__PURE__*/React.createElement("div", {
     style: S.screen
   }, /*#__PURE__*/React.createElement("div", {
@@ -4795,9 +4828,9 @@ function HomeView({
     return /*#__PURE__*/React.createElement("button", {
       key: key,
       onClick: () => onSelectDay(key),
-      onTouchStart: isCustom ? () => startPress(key) : undefined,
-      onTouchEnd: isCustom ? cancelPress : undefined,
-      onTouchMove: isCustom ? cancelPress : undefined,
+      onTouchStart: () => startPress(key),
+      onTouchEnd: cancelPress,
+      onTouchMove: cancelPress,
       style: {
         ...S.dayCard,
         background: cfg.gradient,
@@ -4828,7 +4861,21 @@ function HomeView({
     style: S.addDayPlus
   }, "+"), /*#__PURE__*/React.createElement("div", {
     style: S.addDayText
-  }, "GÜN EKLE")))), /*#__PURE__*/React.createElement("div", {
+  }, "GÜN EKLE")))), hiddenDays.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: { marginTop: 14 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 11, color: '#666', fontWeight: 700, marginBottom: 8, letterSpacing: 0.5 }
+  }, "GİZLİ GÜNLER · geri getirmek için dokun"), /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', flexWrap: 'wrap', gap: 8 }
+  }, hiddenDays.map(id => {
+    const cfg = BUILTIN_DAYS[id] || (data.customDays || []).find(d => d.id === id);
+    const label = cfg ? (cfg.name || id) : id;
+    return /*#__PURE__*/React.createElement("button", {
+      key: id,
+      onClick: () => onUnhideDay(id),
+      style: { background: '#141414', border: '1px solid #2a2a2a', borderRadius: 20, padding: '7px 14px', color: '#aaa', fontSize: 12, fontWeight: 700, cursor: 'pointer' }
+    }, "↺ " + label);
+  }))), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.sectionLabel,
       marginTop: 28
@@ -6559,7 +6606,7 @@ function ProgressTab({
       }).catch(() => {});
     }
   }, [cloudReady, authUser, gymId]);
-  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays), [data.customDays]);
+  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays, data.hiddenDays), [data.customDays, data.hiddenDays]);
 
   // Tüm benzersiz egzersizler
   const allExercises = useMemo(() => {
