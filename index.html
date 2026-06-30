@@ -3821,7 +3821,6 @@ function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const trError = code => {
@@ -3852,28 +3851,14 @@ function AuthScreen() {
       setError('İsim girin');
       return;
     }
-    if (mode === 'signup' && !isValidUsername(username)) {
-      setError('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _)');
-      return;
-    }
     setBusy(true);
     try {
       if (mode === 'login') {
         await window.APEX_AUTH.signInWithEmailAndPassword(email.trim(), password);
       } else {
-        // Hesabı oluştur (auth olunca usernames okuma izni gelir — kayıt öncesi izin yok)
+        // Hesabı oluştur (kullanıcı adı sonraki ekranda — UsernameSetup — seçilir)
         const cred = await window.APEX_AUTH.createUserWithEmailAndPassword(email.trim(), password);
-        // Şimdi (auth varken) kullanıcı adı müsait mi kontrol et
-        const status = await isUsernameAvailable(username);
-        if (status === 'taken') {
-          // Kullanıcı adı alınmış → oluşturulan hesabı sil, hata göster
-          setError('Bu kullanıcı adı alınmış, başka dene');
-          try { await cred.user.delete(); } catch (e) {}
-          setBusy(false);
-          return;
-        }
-        // status 'error' ise yine de devam et (claim sırasında benzersizlik korunur)
-        // İsmi + kullanıcı adını profile + Firestore'a yaz
+        // İsmi profile + Firestore'a yaz
         if (cred.user) {
           try {
             await cred.user.updateProfile({
@@ -3889,12 +3874,9 @@ function AuthScreen() {
               merge: true
             });
           } catch (e) {}
-          try {
-            await claimUsername(cred.user.uid, username);
-          } catch (e) {}
         }
       }
-      // onAuthStateChanged otomatik yönlendirir
+      // onAuthStateChanged otomatik yönlendirir; kullanıcı adı yoksa UsernameSetup açılır
     } catch (e) {
       setError(trError(e.code));
       setBusy(false);
@@ -3919,20 +3901,7 @@ function AuthScreen() {
     autoCapitalize: "sentences",
     autoCorrect: "off",
     spellCheck: "false"
-  }), mode === 'signup' && /*#__PURE__*/React.createElement("div", {
-    style: { display: 'flex', alignItems: 'center', background: '#141414', border: '1px solid #2a2a2a', borderRadius: 12, padding: '0 14px', marginBottom: 10 }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: { color: '#FF3D3D', fontSize: 16, fontWeight: 800 }
-  }, "@"), /*#__PURE__*/React.createElement("input", {
-    style: { flex: 1, background: 'transparent', border: 'none', padding: '14px 8px', fontSize: 15, color: '#fff', outline: 'none', fontFamily: "'Manrope',sans-serif" },
-    placeholder: "kullaniciadi",
-    value: username,
-    onChange: e => setUsername(normalizeUsername(e.target.value)),
-    type: "text",
-    autoCapitalize: "none",
-    autoCorrect: "off",
-    spellCheck: "false"
-  })), /*#__PURE__*/React.createElement("input", {
+  }), /*#__PURE__*/React.createElement("input", {
     style: S.authInput,
     type: "email",
     placeholder: "E-posta",
