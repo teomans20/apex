@@ -4019,7 +4019,8 @@ function WorkoutTab({
     exercises: DEFAULT_EXERCISES,
     logs: [],
     sessions: [],
-    customDays: []
+    customDays: [],
+    hiddenDays: []
   });
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -4053,7 +4054,8 @@ function WorkoutTab({
           logs: parsed.logs || [],
           sessions: parsed.sessions || [],
           customDays: parsed.customDays || [],
-          customMuscleMap: parsed.customMuscleMap || {}
+          customMuscleMap: parsed.customMuscleMap || {},
+          hiddenDays: parsed.hiddenDays || []
         };
         setData(localData);
       } else {
@@ -4063,7 +4065,8 @@ function WorkoutTab({
           logs: [],
           sessions: [],
           customDays: [],
-          customMuscleMap: {}
+          customMuscleMap: {},
+          hiddenDays: []
         });
       }
     } catch (e) {}
@@ -4082,7 +4085,8 @@ function WorkoutTab({
             logs: cloud.logs || [],
             sessions: cloud.sessions || [],
             customDays: cloud.customDays || [],
-            customMuscleMap: cloud.customMuscleMap || {}
+            customMuscleMap: cloud.customMuscleMap || {},
+            hiddenDays: cloud.hiddenDays || []
           };
           setData(merged);
           try {
@@ -4576,7 +4580,8 @@ function WorkoutTab({
               logs: imp.logs,
               sessions: imp.sessions || [],
               customDays: imp.customDays || [],
-              customMuscleMap: imp.customMuscleMap || {}
+              customMuscleMap: imp.customMuscleMap || {},
+              hiddenDays: imp.hiddenDays || []
             });
             alert('Yedek yüklendi!');
           }
@@ -6552,7 +6557,8 @@ function ProgressTab({
     exercises: DEFAULT_EXERCISES,
     logs: [],
     sessions: [],
-    customDays: []
+    customDays: [],
+    hiddenDays: []
   });
   const [detailExercise, setDetailExercise] = useState(null);
   const cloudReady = !!(authUser && window.APEX_FIREBASE_OK && window.APEX_DB);
@@ -6575,7 +6581,8 @@ function ProgressTab({
           logs: parsed.logs || [],
           sessions: parsed.sessions || [],
           customDays: parsed.customDays || [],
-          customMuscleMap: parsed.customMuscleMap || {}
+          customMuscleMap: parsed.customMuscleMap || {},
+          hiddenDays: parsed.hiddenDays || []
         };
         setData(localData);
       } else {
@@ -6584,7 +6591,8 @@ function ProgressTab({
           logs: [],
           sessions: [],
           customDays: [],
-          customMuscleMap: {}
+          customMuscleMap: {},
+          hiddenDays: []
         });
       }
     } catch (e) {}
@@ -6600,7 +6608,8 @@ function ProgressTab({
             logs: cloud.logs || [],
             sessions: cloud.sessions || [],
             customDays: cloud.customDays || [],
-            customMuscleMap: cloud.customMuscleMap || {}
+            customMuscleMap: cloud.customMuscleMap || {},
+            hiddenDays: cloud.hiddenDays || []
           });
         }
       }).catch(() => {});
