@@ -2274,7 +2274,8 @@ function avatarFor(name) {
 // ═══════════════════════════════════════════
 function FriendsTab({
   authUser,
-  myUsername
+  myUsername,
+  resetSignal
 }) {
   const [sub, setSub] = useState('feed'); // 'feed' | 'leaderboard' | 'friends' | 'add'
   const [friends, setFriends] = useState([]);
@@ -2283,6 +2284,14 @@ function FriendsTab({
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState('');
   const [profileFriend, setProfileFriend] = useState(null);
+  // Alt sekmeye tekrar basınca iç ekranları kapat (profil/ekle) + yukarı kaydır
+  const firstResetRefF = useRef(true);
+  useEffect(() => {
+    if (firstResetRefF.current) { firstResetRefF.current = false; return; }
+    setProfileFriend(null);
+    setSub(prev => prev === 'add' ? 'feed' : prev);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [resetSignal]);
   const cloudReady = !!(authUser && window.APEX_FIREBASE_OK && window.APEX_DB);
   const me = {
     uid: authUser && authUser.uid,
@@ -3509,6 +3518,16 @@ function LoadingScreen({
 
 function App() {
   const [tab, setTab] = useState('workout');
+  // Instagram tarzı: aynı sekmeye tekrar basınca o sekmeyi köküne al / en yukarı kaydır
+  const [resetSignals, setResetSignals] = useState({ workout: 0, progress: 0, friends: 0 });
+  const handleTabPress = target => {
+    if (target === tab) {
+      // Zaten bu sekmedeyiz → reset sinyali gönder (köke dön + yukarı kaydır)
+      setResetSignals(prev => ({ ...prev, [target]: prev[target] + 1 }));
+    } else {
+      setTab(target);
+    }
+  };
   const [authUser, setAuthUser] = useState(undefined); // undefined = yükleniyor, null = giriş yok, obj = giriş var
   const [myUsername, setMyUsername] = useState(undefined); // undefined = bilinmiyor, null = yok (seçilmeli), string = var
   const [gyms, setGyms] = useState(loadGyms);
@@ -3634,18 +3653,21 @@ function App() {
     authUser: authUser,
     activeGym: activeGym,
     myUsername: myUsername,
+    resetSignal: resetSignals.workout,
     onOpenGymPicker: () => setShowGymPicker(true)
   }), tab === 'progress' && /*#__PURE__*/React.createElement(ProgressTab, {
     key: activeGymId,
     authUser: authUser,
     activeGym: activeGym,
+    resetSignal: resetSignals.progress,
     onOpenGymPicker: () => setShowGymPicker(true)
   }), tab === 'friends' && /*#__PURE__*/React.createElement(FriendsTab, {
     authUser: authUser,
-    myUsername: myUsername
+    myUsername: myUsername,
+    resetSignal: resetSignals.friends
   })), /*#__PURE__*/React.createElement(BottomTabs, {
     tab: tab,
-    onChange: setTab
+    onChange: handleTabPress
   }), showGymPicker && /*#__PURE__*/React.createElement(GymPickerModal, {
     gyms: gyms,
     activeGymId: activeGymId,
@@ -3979,6 +4001,7 @@ function WorkoutTab({
   authUser,
   activeGym,
   myUsername,
+  resetSignal,
   onOpenGymPicker
 }) {
   const [view, setView] = useState('home');
@@ -3998,6 +4021,17 @@ function WorkoutTab({
   const [dayDetailKey, setDayDetailKey] = useState(null);
   const [dayEditMode, setDayEditMode] = useState(false); // gün düzenleme modu (egzersize girip çıkınca korunur)
   const [logDate, setLogDate] = useState(null); // null = today; "YYYY-M-D" string = backdated
+  // Alt sekmeye tekrar basınca köke dön + en yukarı kaydır (Instagram gibi)
+  const firstResetRef = useRef(true);
+  useEffect(() => {
+    if (firstResetRef.current) { firstResetRef.current = false; return; }
+    setView('home');
+    setCurrentDay(null);
+    setCurrentExercise(null);
+    setLogDate(null);
+    setDayEditMode(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [resetSignal]);
   const [sessionSummary, setSessionSummary] = useState(null);
   const [showAddDay, setShowAddDay] = useState(false);
   const [editDayId, setEditDayId] = useState(null); // custom day being edited
@@ -4328,6 +4362,40 @@ function WorkoutTab({
       }
     });
   };
+  // Egzersiz adını düzelt — bu günün listesinde, tüm kayıtlarda (logs) ve kas haritasında güncelle
+  const renameExercise = (oldName, newName) => {
+    const nn = newName.trim();
+    if (!nn || nn === oldName) return;
+    // Bu günde aynı isim zaten varsa çakışma olmasın
+    const dayList = data.exercises[currentDay] || [];
+    if (dayList.includes(nn)) {
+      alert('Bu günde "' + nn + '" adlı bir egzersiz zaten var.');
+      return;
+    }
+    // Egzersiz listesinde adı değiştir (sırayı koru)
+    const newDayList = dayList.map(e => e === oldName ? nn : e);
+    // Tüm kayıtlarda exerciseName güncelle (geçmiş + grafik korunur)
+    const newLogs = data.logs.map(l => l.exerciseName === oldName && l.dayType === currentDay ? {
+      ...l,
+      exerciseName: nn
+    } : l);
+    // Kas haritası anahtarını taşı (varsa)
+    const newMuscleMap = { ...(data.customMuscleMap || {}) };
+    if (newMuscleMap[oldName] !== undefined) {
+      newMuscleMap[nn] = newMuscleMap[oldName];
+      delete newMuscleMap[oldName];
+    }
+    saveData({
+      ...data,
+      exercises: {
+        ...data.exercises,
+        [currentDay]: newDayList
+      },
+      logs: newLogs,
+      customMuscleMap: newMuscleMap
+    });
+    haptic(30);
+  };
   const reorderExercises = newOrder => {
     saveData({
       ...data,
@@ -4636,6 +4704,7 @@ function WorkoutTab({
     },
     onAddExercise: () => setShowAddExercise(true),
     onRemoveExercise: removeExercise,
+    onRenameExercise: renameExercise,
     onReorderExercises: reorderExercises,
     logDate: logDate
   }), view === 'exercise' && /*#__PURE__*/React.createElement(ExerciseView, {
@@ -5492,6 +5561,7 @@ function DayView({
   onSelectExercise,
   onAddExercise,
   onRemoveExercise,
+  onRenameExercise,
   onReorderExercises,
   logDate
 }) {
@@ -5643,6 +5713,14 @@ function DayView({
           color: '#555'
         }
       }, "→"))), editMode && /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          const yeni = prompt('Egzersiz adını düzelt:', name);
+          if (yeni && yeni.trim() && yeni.trim() !== name) {
+            onRenameExercise(name, yeni.trim());
+          }
+        },
+        style: { ...S.removeBtn, marginRight: 8 }
+      }, "✏️"), editMode && /*#__PURE__*/React.createElement("button", {
         onClick: () => onRemoveExercise(name),
         style: S.removeBtn
       }, /*#__PURE__*/React.createElement(Icon.Trash, null)));
@@ -6520,6 +6598,7 @@ function estimate1RM(weight, reps) {
 function ProgressTab({
   authUser,
   activeGym,
+  resetSignal,
   onOpenGymPicker
 }) {
   const [data, setData] = useState({
@@ -6530,6 +6609,13 @@ function ProgressTab({
     hiddenDays: []
   });
   const [detailExercise, setDetailExercise] = useState(null);
+  // Alt sekmeye tekrar basınca listeye dön + yukarı kaydır
+  const firstResetRefP = useRef(true);
+  useEffect(() => {
+    if (firstResetRefP.current) { firstResetRefP.current = false; return; }
+    setDetailExercise(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [resetSignal]);
   const cloudReady = !!(authUser && window.APEX_FIREBASE_OK && window.APEX_DB);
   const gymId = activeGym && activeGym.id || 'default';
   const lsKey = gymStorageKey(gymId);
