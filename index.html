@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.1.2'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.1.5'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1737,7 +1737,7 @@ function NotificationPanel({
     style: { flex: 1, minWidth: 0 }
   }, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 13.5, lineHeight: 1.4 }
-  }, /*#__PURE__*/React.createElement("b", null, n.fromName), " ", n.type === 'clap' ? 'seni alkışladı' : 'seni dürttü', n.message && n.type === 'poke' ? ': "' + n.message + '"' : n.message && n.type === 'clap' && n.message !== 'seni alkışladı' ? ' · ' + n.message : ''), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", null, n.fromName), " ", n.type === 'clap' ? 'rekoruna tepki verdi' : 'seni dürttü', n.message && n.type === 'poke' ? ': "' + n.message + '"' : n.message && n.type === 'clap' ? ' · ' + n.message : ''), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 11, color: '#666', marginTop: 3 }
   }, feedTimeAgo(n.createdAt))), /*#__PURE__*/React.createElement("button", {
     onClick: () => onDismissOne(n.id),
@@ -3210,6 +3210,19 @@ function FeedView({
   }, [friendsLoaded, friendKey, me.uid]);
   const onReact = async (item, type) => {
     await toggleReaction(item.ownerUid, item.id, type, me.uid);
+    // PR/plato kartına HERHANGİ emoji tepkisi → sahibine bildirim (sadece eklerken, silerken değil)
+    const alreadyReactedThis = (() => {
+      const r = item.reactions || {};
+      const emojiToLegacy = { '🔥': 'fire', '💪': 'muscle', '👏': 'clap' };
+      const inEmoji = (r[type] || []).indexOf(me.uid) >= 0;
+      const legacyKey = emojiToLegacy[type];
+      const inLegacy = legacyKey ? (r[legacyKey] || []).indexOf(me.uid) >= 0 : false;
+      return inEmoji || inLegacy;
+    })();
+    if (!alreadyReactedThis && item.ownerUid !== me.uid && (item.type === 'pr' || item.type === 'plateau')) {
+      const detail = item.type === 'pr' ? (type + ' ' + item.exerciseName + ' ' + item.weight + 'kg rekorun icin') : (type + ' plato karti');
+      sendClap(me.uid, me.name || '', item.ownerUid, detail);
+    }
     // Anlık güncelle (optimistic)
     setItems(prev => prev.map(it => {
       if (it.id !== item.id || it.ownerUid !== item.ownerUid) return it;
@@ -3266,12 +3279,6 @@ function FeedView({
     item: item,
     myUid: me.uid,
     onReact: onReact,
-    onClap: async it => {
-      // PR/plato sahibine alkış bildirimi gönder + feed'e 👏 tepki ekle
-      const detail = it.type === 'pr' ? (it.exerciseName + ' ' + it.weight + 'kg PR\'ın için 🔥') : 'seni alkışladı';
-      await sendClap(me.uid, me.name || '', it.ownerUid, detail);
-      onReact(it, '👏');
-    },
     userMap: userMap
   })));
 }
@@ -3283,7 +3290,6 @@ function FeedCard({
   item,
   myUid,
   onReact,
-  onClap,
   userMap
 }) {
   const a = avatarFor(item.ownerName || item.ownerUsername);
@@ -3425,10 +3431,7 @@ function FeedCard({
     }
   }, whoNames(showWho) || 'kimse')), /*#__PURE__*/React.createElement("div", {
     style: S.feedReactRow
-  }, (item.type === 'pr' || item.type === 'plateau') && item.ownerUid !== myUid && onClap && /*#__PURE__*/React.createElement("button", {
-    onClick: () => onClap(item),
-    style: { display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 20, border: '1px solid rgba(76,175,80,0.4)', background: 'rgba(76,175,80,0.12)', color: '#4CAF50', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }
-  }, "👏 Alkışla"), activeReactions.map(emoji => {
+  }, activeReactions.map(emoji => {
     const arr = normalized[emoji] || [];
     const active = arr.indexOf(myUid) >= 0;
     return /*#__PURE__*/React.createElement("button", {
@@ -3451,27 +3454,45 @@ function FeedCard({
       ...S.reactBtn,
       color: '#888'
     }
-  }, activeReactions.length === 0 ? '🔥 Tepki ver' : '＋'), picking && /*#__PURE__*/React.createElement("input", {
-    autoFocus: true,
-    value: emojiInput,
-    onChange: e => handleEmojiInput(e.target.value),
-    onBlur: () => {
-      setPicking(false);
-      setEmojiInput('');
-    },
-    placeholder: "emoji",
-    inputMode: "text",
+  }, activeReactions.length === 0 ? '🔥 Tepki ver' : '＋'), picking && /*#__PURE__*/React.createElement("div", {
     style: {
-      width: 70,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4,
       background: '#1a1a1a',
       border: '1px solid #FF3D3D',
-      borderRadius: 20,
-      padding: '5px 10px',
-      fontSize: 15,
-      color: '#fff',
-      outline: 'none'
+      borderRadius: 22,
+      padding: '4px 6px'
     }
-  })), activeReactions.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, ['🔥', '💪', '👏', '😤', '🙌', '👑'].map(em => /*#__PURE__*/React.createElement("button", {
+    key: em,
+    onClick: () => {
+      onReact(item, em);
+      setPicking(false);
+    },
+    style: {
+      background: 'transparent',
+      border: 'none',
+      fontSize: 20,
+      cursor: 'pointer',
+      padding: '2px 4px',
+      lineHeight: 1
+    }
+  }, em)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setPicking(false),
+    style: {
+      background: '#2a2a2a',
+      border: 'none',
+      borderRadius: '50%',
+      width: 22,
+      height: 22,
+      color: '#999',
+      fontSize: 13,
+      cursor: 'pointer',
+      marginLeft: 2,
+      flexShrink: 0
+    }
+  }, "✕"))), activeReactions.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 9,
       color: '#555',
