@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.0'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.1.1'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1630,6 +1630,120 @@ function MonthlyCalendar({
   })));
 }
 // Programı (egzersizleri) arkadaşlara gönderme modalı — çoklu seçim
+// Dürtme modalı — 3 hazır profesyonel mesaj seç, gönder
+function PokeModal({
+  friend,
+  myName,
+  onClose,
+  onSent
+}) {
+  const [sending, setSending] = useState(false);
+  const [done, setDone] = useState(false);
+  const send = async msg => {
+    setSending(true);
+    await sendPoke(window.APEX_AUTH.currentUser.uid, myName, friend.uid, msg);
+    setSending(false);
+    setDone(true);
+    setTimeout(onSent, 1000);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: S.modalOverlay,
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { ...S.modalCard, maxWidth: 400 },
+    onClick: e => e.stopPropagation()
+  }, done ? /*#__PURE__*/React.createElement("div", {
+    style: { textAlign: 'center', padding: '24px 10px' }
+  }, /*#__PURE__*/React.createElement("div", { style: { fontSize: 40, marginBottom: 8 } }, "👊"), /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800 } }, "Dürtüldü!"), /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, color: '#888', marginTop: 4 } }, (friend.name || friend.username) + " bildirimini görecek")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 17, fontWeight: 800, marginBottom: 4 }
+  }, "👊 " + (friend.name || friend.username) + " dürtülüyor"), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 13, color: '#888', marginBottom: 16 }
+  }, "Bir mesaj seç, ona bildirim gitsin:"), POKE_MESSAGES.slice(0, 3).map((msg, i) => /*#__PURE__*/React.createElement("button", {
+    key: i,
+    onClick: () => send(msg),
+    disabled: sending,
+    style: { width: '100%', textAlign: 'left', padding: '14px 16px', marginBottom: 10, background: '#141414', border: '1px solid #2a2a2a', borderRadius: 12, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1.4 }
+  }, msg)), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    style: { width: '100%', padding: '13px', marginTop: 4, background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 12, color: '#aaa', fontSize: 14, fontWeight: 700, cursor: 'pointer' }
+  }, "İptal"))));
+}
+// Bildirim paneli — dürtme, alkış, program istekleri (ana ekran zilinden açılır)
+function NotificationPanel({
+  me,
+  notifs,
+  progReqs,
+  onClose,
+  onClearAll,
+  onDismissOne,
+  onAcceptProgram,
+  onDismissProgram
+}) {
+  const iconFor = t => t === 'poke' ? '👊' : t === 'clap' ? '👏' : '🔔';
+  const iconBg = t => t === 'poke' ? 'linear-gradient(135deg,rgba(255,167,38,0.2),rgba(255,167,38,0.05))' : t === 'clap' ? 'linear-gradient(135deg,rgba(76,175,80,0.2),rgba(76,175,80,0.05))' : 'linear-gradient(135deg,rgba(255,61,61,0.2),rgba(255,61,61,0.05))';
+  const total = notifs.length + progReqs.length;
+  return /*#__PURE__*/React.createElement("div", {
+    style: S.modalOverlay,
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { ...S.modalCard, maxWidth: 420, padding: 0, overflow: 'hidden' },
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 18px', borderBottom: '1px solid #1a1a1a' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 15, fontWeight: 900, letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 8 }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: 17, height: 17, viewBox: "0 0 24 24", fill: "none", stroke: "#FF3D3D", strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", { d: "M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" }), /*#__PURE__*/React.createElement("path", { d: "M13.73 21a2 2 0 0 1-3.46 0" })), "Bildirimler"), total > 0 ? /*#__PURE__*/React.createElement("span", {
+    onClick: onClearAll,
+    style: { fontSize: 12, color: '#666', fontWeight: 700, cursor: 'pointer' }
+  }, "Tümünü temizle") : /*#__PURE__*/React.createElement("span", {
+    onClick: onClose,
+    style: { fontSize: 18, color: '#666', cursor: 'pointer', lineHeight: 1 }
+  }, "✕")),
+  // Boş durum
+  total === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: { padding: '44px 20px', textAlign: 'center', color: '#555', fontSize: 13 }
+  }, /*#__PURE__*/React.createElement("div", { style: { fontSize: 30, marginBottom: 8 } }, "🔕"), "Yeni bildirim yok", /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, opacity: 0.7, marginTop: 4 } }, "Arkadaşların seni dürtünce burada görürsün")) : /*#__PURE__*/React.createElement("div", {
+    style: { maxHeight: '60vh', overflowY: 'auto' }
+  },
+  // Program istekleri (üstte)
+  progReqs.map(pr => /*#__PURE__*/React.createElement("div", {
+    key: pr.id,
+    style: { display: 'flex', alignItems: 'center', gap: 13, padding: '14px 18px', borderBottom: '1px solid #141414', background: 'rgba(74,158,255,0.04)', position: 'relative' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'linear-gradient(180deg,#4a9eff,#1565c0)' }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: { width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, background: 'linear-gradient(135deg,rgba(74,158,255,0.2),rgba(74,158,255,0.05))' }
+  }, "📥"), /*#__PURE__*/React.createElement("div", {
+    style: { flex: 1, minWidth: 0 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 13.5, lineHeight: 1.4 }
+  }, /*#__PURE__*/React.createElement("b", null, pr.fromName), " sana \"" + pr.dayName + "\" programını gönderdi"), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 11, color: '#666', marginTop: 3 }
+  }, (pr.exercises || []).length + " egzersiz")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => { onAcceptProgram(pr.dayName, pr.fromName, pr.exercises); onDismissProgram(pr.id); },
+    style: { padding: '7px 13px', borderRadius: 9, border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer', background: '#4a9eff', color: '#fff', flexShrink: 0 }
+  }, "Ekle"))),
+  // Dürtme + alkış bildirimleri
+  notifs.map(n => /*#__PURE__*/React.createElement("div", {
+    key: n.id,
+    style: { display: 'flex', alignItems: 'center', gap: 13, padding: '14px 18px', borderBottom: '1px solid #141414', position: 'relative', background: n.read ? 'transparent' : 'rgba(255,61,61,0.035)' }
+  }, !n.read && /*#__PURE__*/React.createElement("div", {
+    style: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'linear-gradient(180deg,#FF3D3D,#c62828)' }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: { width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, background: iconBg(n.type) }
+  }, iconFor(n.type)), /*#__PURE__*/React.createElement("div", {
+    style: { flex: 1, minWidth: 0 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 13.5, lineHeight: 1.4 }
+  }, /*#__PURE__*/React.createElement("b", null, n.fromName), " ", n.type === 'clap' ? 'seni alkışladı' : 'seni dürttü', n.message && n.type === 'poke' ? ': "' + n.message + '"' : n.message && n.type === 'clap' && n.message !== 'seni alkışladı' ? ' · ' + n.message : ''), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 11, color: '#666', marginTop: 3 }
+  }, feedTimeAgo(n.createdAt))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onDismissOne(n.id),
+    style: { padding: '6px 10px', borderRadius: 8, border: '1px solid #2a2a2a', fontSize: 15, fontWeight: 700, cursor: 'pointer', background: '#161616', color: '#666', flexShrink: 0, lineHeight: 1 }
+  }, "✕"))))));
+}
 function ShareProgramModal({
   me,
   dayName,
@@ -2388,6 +2502,99 @@ async function dismissProgramRequest(uid, reqId) {
   } catch (e) {}
 }
 
+// ————— BİLDİRİMLER (dürtme + alkış) —————
+// Model: users/{alıcı}/notifications/{id} → { type, fromUid, fromName, message, createdAt, read }
+// Hazır dürtme mesajları (profesyonel + motive)
+const POKE_MESSAGES = [
+  'Hadi kalk, salon seni bekliyor 💪',
+  'Kaç gün oldu? Vakit geldi, toparlan 🔥',
+  'Bugün antrenman günü — bahane yok! ⚡',
+  'Ben gidiyorum, sen de gel 🏋️',
+  'Serini bozma, hadi harekete geç 🚀'
+];
+// Dürt: arkadaşın notifications'ına yaz
+async function sendPoke(fromUid, fromName, toUid, message) {
+  if (!window.APEX_DB) return;
+  const id = 'poke_' + fromUid + '_' + Date.now().toString(36);
+  try {
+    await window.APEX_DB.collection('users').doc(toUid).collection('notifications').doc(id).set({
+      type: 'poke',
+      fromUid: fromUid,
+      fromName: fromName || 'Biri',
+      message: message || POKE_MESSAGES[0],
+      createdAt: Date.now(),
+      read: false
+    });
+  } catch (e) {}
+}
+// Alkışla: bir PR/başarı için arkadaşını alkışla
+async function sendClap(fromUid, fromName, toUid, detail) {
+  if (!window.APEX_DB) return;
+  const id = 'clap_' + fromUid + '_' + Date.now().toString(36);
+  try {
+    await window.APEX_DB.collection('users').doc(toUid).collection('notifications').doc(id).set({
+      type: 'clap',
+      fromUid: fromUid,
+      fromName: fromName || 'Biri',
+      message: detail || 'seni alkışladı',
+      createdAt: Date.now(),
+      read: false
+    });
+  } catch (e) {}
+}
+// Bildirimleri çek (dürtme + alkış)
+async function loadNotifications(uid) {
+  if (!window.APEX_DB) return [];
+  try {
+    const snap = await window.APEX_DB.collection('users').doc(uid).collection('notifications').get();
+    return snap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  } catch (e) {
+    return [];
+  }
+}
+// Tek bildirimi sil
+async function dismissNotification(uid, notifId) {
+  if (!window.APEX_DB) return;
+  try {
+    await window.APEX_DB.collection('users').doc(uid).collection('notifications').doc(notifId).delete();
+  } catch (e) {}
+}
+// Tüm bildirimleri temizle
+async function clearAllNotifications(uid, notifIds) {
+  if (!window.APEX_DB || !notifIds) return;
+  try {
+    await Promise.all(notifIds.map(id => window.APEX_DB.collection('users').doc(uid).collection('notifications').doc(id).delete().catch(() => {})));
+  } catch (e) {}
+}
+
+// ————— CANLI DURUM ("şu an salonda") —————
+// Model: users/{uid}/public/status → { training: bool, dayName, since }
+// Aktif seans başlayınca/bitince yazılır; arkadaşlar okur.
+async function setLiveStatus(uid, training, dayName) {
+  if (!window.APEX_DB) return;
+  try {
+    await window.APEX_DB.collection('users').doc(uid).collection('public').doc('status').set({
+      training: !!training,
+      dayName: dayName || '',
+      since: training ? Date.now() : 0,
+      updatedAt: Date.now()
+    }, { merge: true });
+  } catch (e) {}
+}
+// Bir arkadaşın canlı durumunu oku
+async function loadLiveStatus(uid) {
+  if (!window.APEX_DB) return null;
+  try {
+    const snap = await window.APEX_DB.collection('users').doc(uid).collection('public').doc('status').get();
+    return snap.exists ? snap.data() : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // Avatar harfi + rengi (isimden)
 function avatarFor(name) {
   const letter = (name || '?').trim().charAt(0).toUpperCase() || '?';
@@ -2413,6 +2620,8 @@ function FriendsTab({
   const [friends, setFriends] = useState([]);
   const [requests, setRequests] = useState([]);
   const [programReqs, setProgramReqs] = useState([]);
+  const [friendStatuses, setFriendStatuses] = useState({}); // uid -> {training, dayName, lastWorkout}
+  const [pokeTarget, setPokeTarget] = useState(null); // dürtülecek arkadaş
   const [sent, setSent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState('');
@@ -2442,6 +2651,15 @@ function FriendsTab({
     setSent(s);
     setProgramReqs(pr);
     setLoading(false);
+    // Her arkadaşın canlı durumunu (salonda mı? son antrenman?) çek
+    if (f.length > 0) {
+      const statuses = {};
+      await Promise.all(f.map(async fr => {
+        const st = await loadLiveStatus(fr.uid);
+        if (st) statuses[fr.uid] = st;
+      }));
+      setFriendStatuses(statuses);
+    }
   };
   useEffect(() => {
     refresh();
@@ -2614,17 +2832,36 @@ function FriendsTab({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: S.friendName
-  }, f.name || f.username), /*#__PURE__*/React.createElement("div", {
-    style: S.friendUser
-  }, "@", f.username))), /*#__PURE__*/React.createElement("button", {
-    onClick: async () => {
-      if (confirm(`@${f.username} arkadaşlıktan çıkarılsın mı?`)) {
-        await removeFriend(authUser.uid, f.uid);
-        refresh();
-      }
-    },
-    style: S.btnReject
-  }, "Çıkar"))), sent.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, f.name || f.username), (() => {
+    const st = friendStatuses[f.uid];
+    if (st && st.training) {
+      return /*#__PURE__*/React.createElement("div", {
+        style: { fontSize: 12, color: '#4CAF50', fontWeight: 700, marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }
+      }, /*#__PURE__*/React.createElement("span", { style: { width: 7, height: 7, borderRadius: '50%', background: '#4CAF50', boxShadow: '0 0 6px #4CAF50', display: 'inline-block' } }), "şu an salonda" + (st.dayName ? ' · ' + st.dayName : ''));
+    }
+    return /*#__PURE__*/React.createElement("div", {
+      style: S.friendUser
+    }, "@", f.username);
+  })())), (() => {
+    const st = friendStatuses[f.uid];
+    const daysSince = st && st.lastWorkoutAt ? (Date.now() - st.lastWorkoutAt) / 86400000 : null;
+    const canPoke = daysSince !== null && daysSince >= 2 && !(st && st.training);
+    if (canPoke) {
+      return /*#__PURE__*/React.createElement("button", {
+        onClick: () => setPokeTarget(f),
+        style: { padding: '8px 14px', borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 800, cursor: 'pointer', background: '#FFA726', color: '#1a1a1a', flexShrink: 0 }
+      }, "👊 Dürt");
+    }
+    return /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        if (confirm(`@${f.username} arkadaşlıktan çıkarılsın mı?`)) {
+          await removeFriend(authUser.uid, f.uid);
+          refresh();
+        }
+      },
+      style: S.btnReject
+    }, "Çıkar");
+  })())), sent.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.friendSection
   }, "GÖNDERİLEN (", sent.length, ")"), sent.map(s => /*#__PURE__*/React.createElement("div", {
     key: s.uid,
@@ -2645,7 +2882,12 @@ function FriendsTab({
       refresh();
     },
     style: S.btnReject
-  }, "İptal"))))));
+  }, "İptal")))), pokeTarget && /*#__PURE__*/React.createElement(PokeModal, {
+    friend: pokeTarget,
+    myName: (authUser.displayName || 'Biri'),
+    onClose: () => setPokeTarget(null),
+    onSent: () => setPokeTarget(null)
+  })));
 }
 
 // Avatar bileşeni
@@ -3024,6 +3266,12 @@ function FeedView({
     item: item,
     myUid: me.uid,
     onReact: onReact,
+    onClap: async it => {
+      // PR/plato sahibine alkış bildirimi gönder + feed'e 👏 tepki ekle
+      const detail = it.type === 'pr' ? (it.exerciseName + ' ' + it.weight + 'kg PR\'ın için 🔥') : 'seni alkışladı';
+      await sendClap(me.uid, me.name || '', it.ownerUid, detail);
+      onReact(it, '👏');
+    },
     userMap: userMap
   })));
 }
@@ -3035,6 +3283,7 @@ function FeedCard({
   item,
   myUid,
   onReact,
+  onClap,
   userMap
 }) {
   const a = avatarFor(item.ownerName || item.ownerUsername);
@@ -3176,7 +3425,10 @@ function FeedCard({
     }
   }, whoNames(showWho) || 'kimse')), /*#__PURE__*/React.createElement("div", {
     style: S.feedReactRow
-  }, activeReactions.map(emoji => {
+  }, (item.type === 'pr' || item.type === 'plateau') && item.ownerUid !== myUid && onClap && /*#__PURE__*/React.createElement("button", {
+    onClick: () => onClap(item),
+    style: { display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 20, border: '1px solid rgba(76,175,80,0.4)', background: 'rgba(76,175,80,0.12)', color: '#4CAF50', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }
+  }, "👏 Alkışla"), activeReactions.map(emoji => {
     const arr = normalized[emoji] || [];
     const active = arr.indexOf(myUid) >= 0;
     return /*#__PURE__*/React.createElement("button", {
@@ -4196,6 +4448,9 @@ function WorkoutTab({
   const [toast, setToast] = useState(null);
   const [dayDetailKey, setDayDetailKey] = useState(null);
   const [shareProgram, setShareProgram] = useState(null); // {dayType, dayName, exercises} — arkadaşa gönderme modalı
+  const [showNotifs, setShowNotifs] = useState(false); // bildirim paneli açık mı
+  const [notifs, setNotifs] = useState([]); // dürtme + alkış bildirimleri
+  const [notifProgReqs, setNotifProgReqs] = useState([]); // program istekleri (bildirimde de göster)
   const [dayEditMode, setDayEditMode] = useState(false); // gün düzenleme modu (egzersize girip çıkınca korunur)
   const [logDate, setLogDate] = useState(null); // null = today; "YYYY-M-D" string = backdated
   // Alt sekmeye tekrar basınca köke dön + en yukarı kaydır (Instagram gibi)
@@ -4217,6 +4472,16 @@ function WorkoutTab({
   const gymId = activeGym && activeGym.id || 'default';
   const lsKey = gymStorageKey(gymId);
   const docName = gymDocName(gymId);
+
+  // Bildirimleri yükle (dürtme + alkış + program istekleri)
+  const refreshNotifs = React.useCallback(() => {
+    if (!cloudReady) return;
+    loadNotifications(authUser.uid).then(setNotifs);
+    loadProgramRequests(authUser.uid).then(setNotifProgReqs);
+  }, [cloudReady, authUser && authUser.uid]);
+  useEffect(() => {
+    refreshNotifs();
+  }, [refreshNotifs, resetSignal]);
 
   // Veri yükleme: önce localStorage (hızlı), sonra bulut (varsa)
   useEffect(() => {
@@ -4331,14 +4596,12 @@ function WorkoutTab({
     setShowAddDay(false);
   };
 
-  // Arkadaştan kabul edilen program → yeni gün olarak ekle (egzersizler boş: sadece isimler)
-  useEffect(() => {
-    if (!pendingProgram || !cloudLoaded) return;
+  // Arkadaştan gelen programı yeni gün olarak ekle (egzersizler boş: sadece isimler)
+  const onAcceptProgramToWorkout = (dayNameRaw, fromName, exercises) => {
     const palette = DAY_COLOR_PALETTE[Math.floor(Math.random() * DAY_COLOR_PALETTE.length)] || DAY_COLOR_PALETTE[0];
     const id = 'custom_' + Date.now().toString(36);
-    // "Push (Ahmet)" gibi — çakışmayı önlemek için gönderenin adını ekle
-    let dayName = pendingProgram.dayName || 'Program';
-    if (pendingProgram.fromName) dayName = dayName + ' (' + pendingProgram.fromName + ')';
+    let dayName = dayNameRaw || 'Program';
+    if (fromName) dayName = dayName + ' (' + fromName + ')';
     const newDay = {
       id,
       name: dayName,
@@ -4352,10 +4615,16 @@ function WorkoutTab({
       customDays: [...(data.customDays || []), newDay],
       exercises: {
         ...data.exercises,
-        [id]: (pendingProgram.exercises || []).filter(Boolean)
+        [id]: (exercises || []).filter(Boolean)
       }
     });
     setToast('📥 "' + dayName + '" programın eklendi!');
+  };
+
+  // Arkadaştan kabul edilen program (App'ten gelen pendingProgram) → yeni gün olarak ekle
+  useEffect(() => {
+    if (!pendingProgram || !cloudLoaded) return;
+    onAcceptProgramToWorkout(pendingProgram.dayName, pendingProgram.fromName, pendingProgram.exercises);
     onConsumePendingProgram();
   }, [pendingProgram, cloudLoaded]);  const updateCustomDay = (id, name, subtitle, paletteId) => {
     const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId) || DAY_COLOR_PALETTE[0];
@@ -4622,6 +4891,11 @@ function WorkoutTab({
       sessions: [...data.sessions, newSession]
     });
     haptic(50);
+    // Canlı durum: "şu an salonda" (arkadaşlar görsün) — paylaşımlı salonsa
+    if (cloudReady && myUsername && activeGym && activeGym.shared !== false) {
+      const dayCfg = dayConfig[currentDay];
+      setLiveStatus(authUser.uid, true, (dayCfg && dayCfg.name) || currentDay);
+    }
   };
   const endSession = () => {
     const active = getActiveSession();
@@ -4637,6 +4911,18 @@ function WorkoutTab({
     };
     saveData(newData);
     haptic([30, 30, 50]);
+    // Canlı durum: salondan çıktı + son antrenman zamanı
+    if (cloudReady && myUsername) {
+      try {
+        window.APEX_DB.collection('users').doc(authUser.uid).collection('public').doc('status').set({
+          training: false,
+          dayName: '',
+          since: 0,
+          lastWorkoutAt: Date.now(),
+          updatedAt: Date.now()
+        }, { merge: true }).catch(() => {});
+      } catch (e) {}
+    }
 
     // Build summary
     const endedSession = {
@@ -4881,6 +5167,8 @@ function WorkoutTab({
     onUnhideDay: unhideDay,
     onSaveMuscleMap: saveMuscleMap,
     activeGym: activeGym,
+    notifCount: notifs.filter(n => !n.read).length + notifProgReqs.length,
+    onOpenNotifs: () => setShowNotifs(true),
     onOpenGymPicker: onOpenGymPicker
   }), view === 'day' && /*#__PURE__*/React.createElement(DayView, {
     dayType: currentDay,
@@ -4981,6 +5269,40 @@ function WorkoutTab({
     exercises: shareProgram.exercises,
     onClose: () => setShareProgram(null),
     onSent: () => setShareProgram(null)
+  }), showNotifs && /*#__PURE__*/React.createElement(NotificationPanel, {
+    me: { uid: authUser.uid, name: authUser.displayName },
+    notifs: notifs,
+    progReqs: notifProgReqs,
+    onClose: () => {
+      // Panel kapanınca okunmamışları "okundu" işaretle (yerel + bulut)
+      const unread = notifs.filter(n => !n.read);
+      if (unread.length > 0 && cloudReady) {
+        unread.forEach(n => {
+          window.APEX_DB.collection('users').doc(authUser.uid).collection('notifications').doc(n.id).set({ read: true }, { merge: true }).catch(() => {});
+        });
+        setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+      }
+      setShowNotifs(false);
+    },
+    onClearAll: async () => {
+      await clearAllNotifications(authUser.uid, notifs.map(n => n.id));
+      setNotifs([]);
+      // Program isteklerini de temizle
+      for (const pr of notifProgReqs) { await dismissProgramRequest(authUser.uid, pr.id); }
+      setNotifProgReqs([]);
+      setShowNotifs(false);
+    },
+    onDismissOne: async id => {
+      await dismissNotification(authUser.uid, id);
+      setNotifs(prev => prev.filter(n => n.id !== id));
+    },
+    onAcceptProgram: (dayName, fromName, exercises) => {
+      onAcceptProgramToWorkout(dayName, fromName, exercises);
+    },
+    onDismissProgram: async id => {
+      await dismissProgramRequest(authUser.uid, id);
+      setNotifProgReqs(prev => prev.filter(p => p.id !== id));
+    }
   }));
 }
 function HomeView({
@@ -4995,6 +5317,8 @@ function HomeView({
   onUnhideDay,
   onSaveMuscleMap,
   activeGym,
+  notifCount,
+  onOpenNotifs,
   onOpenGymPicker
 }) {
   const todayLogs = data.logs.filter(l => dateKey(l.timestamp) === dateKey(Date.now()));
@@ -5044,10 +5368,58 @@ function HomeView({
     style: S.headerLogo
   }, /*#__PURE__*/React.createElement(ApexLogo, {
     size: 34
-  })), /*#__PURE__*/React.createElement("button", {
+  })), /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', alignItems: 'center', gap: 8 }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenNotifs,
+    style: {
+      position: 'relative',
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      background: notifCount > 0 ? 'linear-gradient(135deg,rgba(255,61,61,0.14),rgba(198,40,40,0.05))' : '#0f0f0f',
+      border: '1px solid ' + (notifCount > 0 ? 'rgba(255,61,61,0.4)' : '#1e1e1e'),
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: 19,
+    height: 19,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: notifCount > 0 ? '#FF6B6B' : '#bbb',
+    strokeWidth: 1.9,
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M13.73 21a2 2 0 0 1-3.46 0"
+  })), notifCount > 0 && /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: 'absolute',
+      top: -5,
+      right: -5,
+      minWidth: 19,
+      height: 19,
+      padding: '0 5px',
+      background: 'linear-gradient(135deg,#FF3D3D,#c62828)',
+      borderRadius: 10,
+      border: '2px solid #000',
+      fontSize: 10.5,
+      fontWeight: 900,
+      color: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxShadow: '0 2px 8px rgba(255,61,61,0.5)'
+    }
+  }, notifCount > 9 ? '9+' : notifCount)), /*#__PURE__*/React.createElement("button", {
     onClick: onMenu,
     style: S.menuBtn
-  }, "•••")), /*#__PURE__*/React.createElement("div", {
+  }, "•••"))), /*#__PURE__*/React.createElement("div", {
     style: S.date
   }, new Date().toLocaleDateString('tr-TR', {
     weekday: 'long',
