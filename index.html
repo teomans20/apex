@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.1.1'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.1.2'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1704,7 +1704,7 @@ function NotificationPanel({
   // Boş durum
   total === 0 ? /*#__PURE__*/React.createElement("div", {
     style: { padding: '44px 20px', textAlign: 'center', color: '#555', fontSize: 13 }
-  }, /*#__PURE__*/React.createElement("div", { style: { fontSize: 30, marginBottom: 8 } }, "🔕"), "Yeni bildirim yok", /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, opacity: 0.7, marginTop: 4 } }, "Arkadaşların seni dürtünce burada görürsün")) : /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", { style: { fontSize: 30, marginBottom: 8 } }, "🔕"), "Yeni bildirim yok") : /*#__PURE__*/React.createElement("div", {
     style: { maxHeight: '60vh', overflowY: 'auto' }
   },
   // Program istekleri (üstte)
