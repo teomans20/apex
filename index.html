@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '4.9.7'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.0'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1629,6 +1629,97 @@ function MonthlyCalendar({
     }))));
   })));
 }
+// Programı (egzersizleri) arkadaşlara gönderme modalı — çoklu seçim
+function ShareProgramModal({
+  me,
+  dayName,
+  exercises,
+  onClose,
+  onSent
+}) {
+  const [friends, setFriends] = useState(null);
+  const [selected, setSelected] = useState({});
+  const [sending, setSending] = useState(false);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    loadFriends(me.uid).then(setFriends);
+  }, []);
+  const toggle = uid => setSelected(prev => ({ ...prev, [uid]: !prev[uid] }));
+  const selectedUids = Object.keys(selected).filter(u => selected[u]);
+  const handleSend = async () => {
+    if (selectedUids.length === 0) return;
+    setSending(true);
+    await sendProgram(me.uid, me.name || me.displayName || 'Biri', selectedUids, dayName, exercises);
+    setSending(false);
+    setDone(true);
+    setTimeout(() => {
+      onSent();
+    }, 1100);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: S.modalOverlay,
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { ...S.modalCard, maxWidth: 400 },
+    onClick: e => e.stopPropagation()
+  }, done ? /*#__PURE__*/React.createElement("div", {
+    style: { textAlign: 'center', padding: '30px 10px' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 40, marginBottom: 10 }
+  }, "✅"), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 16, fontWeight: 800, color: '#fff' }
+  }, "Gönderildi!"), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 13, color: '#888', marginTop: 4 }
+  }, selectedUids.length + " arkadaşına " + dayName + " programı gitti")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 17, fontWeight: 800, color: '#fff', marginBottom: 4 }
+  }, "📤 Programı Gönder"), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 13, color: '#888', marginBottom: 16 }
+  }, "\"" + dayName + "\" günündeki " + exercises.length + " egzersiz gönderilecek. Ağırlıkların gitmez — arkadaşın kendi verilerini girer."), friends === null ? /*#__PURE__*/React.createElement("div", {
+    style: { textAlign: 'center', color: '#555', padding: '20px 0', fontSize: 13 }
+  }, "Yükleniyor...") : friends.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: { textAlign: 'center', color: '#555', padding: '20px 0', fontSize: 13 }
+  }, "Henüz arkadaşın yok. Önce arkadaş ekle.") : /*#__PURE__*/React.createElement("div", {
+    style: { maxHeight: 280, overflowY: 'auto', marginBottom: 14 }
+  }, friends.map(f => {
+    const av = avatarFor(f.name);
+    const isSel = !!selected[f.uid];
+    return /*#__PURE__*/React.createElement("button", {
+      key: f.uid,
+      onClick: () => toggle(f.uid),
+      style: {
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 12px',
+        marginBottom: 6,
+        background: isSel ? 'rgba(74,158,255,0.12)' : '#141414',
+        border: '1px solid ' + (isSel ? '#4a9eff' : '#2a2a2a'),
+        borderRadius: 12,
+        cursor: 'pointer'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: { width: 38, height: 38, borderRadius: '50%', background: av.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff', fontSize: 15, flexShrink: 0 }
+    }, av.letter), /*#__PURE__*/React.createElement("div", {
+      style: { flex: 1, textAlign: 'left' }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: { fontSize: 14, fontWeight: 700, color: '#fff' }
+    }, f.name), f.username ? /*#__PURE__*/React.createElement("div", {
+      style: { fontSize: 12, color: '#888' }
+    }, "@" + f.username) : null), /*#__PURE__*/React.createElement("div", {
+      style: { width: 22, height: 22, borderRadius: '50%', border: '2px solid ' + (isSel ? '#4a9eff' : '#444'), background: isSel ? '#4a9eff' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 800 }
+    }, isSel ? '✓' : ''));
+  })), /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', gap: 10 }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    style: { flex: 1, padding: '13px', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 12, color: '#aaa', fontSize: 14, fontWeight: 700, cursor: 'pointer' }
+  }, "İptal"), /*#__PURE__*/React.createElement("button", {
+    onClick: handleSend,
+    disabled: selectedUids.length === 0 || sending,
+    style: { flex: 2, padding: '13px', background: selectedUids.length > 0 ? '#4a9eff' : '#1a1a1a', border: 'none', borderRadius: 12, color: selectedUids.length > 0 ? '#fff' : '#555', fontSize: 14, fontWeight: 800, cursor: selectedUids.length > 0 ? 'pointer' : 'default' }
+  }, sending ? "Gönderiliyor..." : selectedUids.length > 0 ? "Gönder (" + selectedUids.length + ")" : "Arkadaş seç")))));
+}
 function DayDetailModal({
   targetDateKey,
   data,
@@ -2257,6 +2348,46 @@ async function loadSentRequests(uid) {
   }
 }
 
+// ————— PROGRAM PAYLAŞIMI —————
+// Model: users/{alıcı}/programRequests/{istekId} → { fromUid, fromName, dayName, exercises, createdAt }
+// Bir günün egzersizlerini (ağırlıksız/setsiz — sadece isimler) arkadaşlara gönder
+async function sendProgram(fromUid, fromName, toUids, dayName, exercises) {
+  if (!window.APEX_DB || !toUids || toUids.length === 0) return;
+  const cleanExercises = (exercises || []).filter(Boolean);
+  await Promise.all(toUids.map(async toUid => {
+    const reqId = fromUid + '_' + Date.now().toString(36);
+    try {
+      await window.APEX_DB.collection('users').doc(toUid).collection('programRequests').doc(reqId).set({
+        fromUid: fromUid,
+        fromName: fromName || 'Biri',
+        dayName: dayName || 'Program',
+        exercises: cleanExercises,
+        createdAt: Date.now()
+      });
+    } catch (e) {}
+  }));
+}
+// Gelen program isteklerini çek
+async function loadProgramRequests(uid) {
+  if (!window.APEX_DB) return [];
+  try {
+    const snap = await window.APEX_DB.collection('users').doc(uid).collection('programRequests').get();
+    return snap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  } catch (e) {
+    return [];
+  }
+}
+// Program isteğini reddet/sil
+async function dismissProgramRequest(uid, reqId) {
+  if (!window.APEX_DB) return;
+  try {
+    await window.APEX_DB.collection('users').doc(uid).collection('programRequests').doc(reqId).delete();
+  } catch (e) {}
+}
+
 // Avatar harfi + rengi (isimden)
 function avatarFor(name) {
   const letter = (name || '?').trim().charAt(0).toUpperCase() || '?';
@@ -2275,11 +2406,13 @@ function avatarFor(name) {
 function FriendsTab({
   authUser,
   myUsername,
-  resetSignal
+  resetSignal,
+  onAcceptProgram
 }) {
   const [sub, setSub] = useState('feed'); // 'feed' | 'leaderboard' | 'friends' | 'add'
   const [friends, setFriends] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [programReqs, setProgramReqs] = useState([]);
   const [sent, setSent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState('');
@@ -2303,10 +2436,11 @@ function FriendsTab({
       setLoading(false);
       return;
     }
-    const [f, r, s] = await Promise.all([loadFriends(authUser.uid), loadFriendRequests(authUser.uid), loadSentRequests(authUser.uid)]);
+    const [f, r, s, pr] = await Promise.all([loadFriends(authUser.uid), loadFriendRequests(authUser.uid), loadSentRequests(authUser.uid), loadProgramRequests(authUser.uid)]);
     setFriends(f);
     setRequests(r);
     setSent(s);
+    setProgramReqs(pr);
     setLoading(false);
   };
   useEffect(() => {
@@ -2369,7 +2503,7 @@ function FriendsTab({
   }, "🏆 LİDER"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSub('friends'),
     style: { ...S.feedSegBtn, ...(sub === 'friends' ? S.feedSegBtnOn : {}) }
-  }, "👥 ARKADAŞ" + (requests.length > 0 ? ` (${requests.length})` : ''))),
+  }, "👥 ARKADAŞ" + (requests.length + programReqs.length > 0 ? ` (${requests.length + programReqs.length})` : ''))),
   sub === 'feed' ? /*#__PURE__*/React.createElement(FeedView, {
     me: me,
     friends: friends,
@@ -2417,7 +2551,39 @@ function FriendsTab({
       refresh();
     },
     style: S.btnReject
-  }, "Sil")))), /*#__PURE__*/React.createElement("div", {
+  }, "Sil")))), programReqs.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: S.friendSection
+  }, "📥 GELEN PROGRAMLAR (", programReqs.length, ")"), programReqs.map(pr => /*#__PURE__*/React.createElement("div", {
+    key: pr.id,
+    style: { background: 'rgba(74,158,255,0.08)', border: '1px solid rgba(74,158,255,0.3)', borderRadius: 14, padding: 14, marginBottom: 10 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: pr.fromName
+  }), /*#__PURE__*/React.createElement("div", {
+    style: { flex: 1 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 14, fontWeight: 700, color: '#fff' }
+  }, pr.fromName), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 12.5, color: '#4a9eff', fontWeight: 600 }
+  }, "\"" + pr.dayName + "\" programını gönderdi"))), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 12, color: '#999', marginBottom: 10, lineHeight: 1.5 }
+  }, (pr.exercises || []).slice(0, 6).join(' · '), (pr.exercises || []).length > 6 ? ' +' + ((pr.exercises || []).length - 6) : '', /*#__PURE__*/React.createElement("span", { style: { color: '#666' } }, "  (" + (pr.exercises || []).length + " egzersiz)")), /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', gap: 8 }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      onAcceptProgram(pr.dayName, pr.fromName, pr.exercises);
+      await dismissProgramRequest(authUser.uid, pr.id);
+      refresh();
+    },
+    style: { flex: 2, padding: '11px', background: '#4a9eff', border: 'none', borderRadius: 10, color: '#fff', fontSize: 13.5, fontWeight: 800, cursor: 'pointer' }
+  }, "✓ Ekle"), /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      await dismissProgramRequest(authUser.uid, pr.id);
+      refresh();
+    },
+    style: { flex: 1, padding: '11px', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 10, color: '#999', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }
+  }, "Sil"))))), /*#__PURE__*/React.createElement("div", {
     style: S.friendSection
   }, "ARKADAŞLARIN (", friends.length, ")"), loading ? /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3520,6 +3686,8 @@ function App() {
   const [tab, setTab] = useState('workout');
   // Instagram tarzı: aynı sekmeye tekrar basınca o sekmeyi köküne al / en yukarı kaydır
   const [resetSignals, setResetSignals] = useState({ workout: 0, progress: 0, friends: 0 });
+  // Arkadaştan kabul edilen program → WorkoutTab'a iletilir, o kendi verisine yeni gün olarak ekler
+  const [pendingProgram, setPendingProgram] = useState(null);
   const handleTabPress = target => {
     if (target === tab) {
       // Zaten bu sekmedeyiz → reset sinyali gönder (köke dön + yukarı kaydır)
@@ -3654,6 +3822,8 @@ function App() {
     activeGym: activeGym,
     myUsername: myUsername,
     resetSignal: resetSignals.workout,
+    pendingProgram: pendingProgram,
+    onConsumePendingProgram: () => setPendingProgram(null),
     onOpenGymPicker: () => setShowGymPicker(true)
   }), tab === 'progress' && /*#__PURE__*/React.createElement(ProgressTab, {
     key: activeGymId,
@@ -3664,7 +3834,11 @@ function App() {
   }), tab === 'friends' && /*#__PURE__*/React.createElement(FriendsTab, {
     authUser: authUser,
     myUsername: myUsername,
-    resetSignal: resetSignals.friends
+    resetSignal: resetSignals.friends,
+    onAcceptProgram: (dayName, fromName, exercises) => {
+      setPendingProgram({ dayName, fromName, exercises });
+      setTab('workout');
+    }
   })), /*#__PURE__*/React.createElement(BottomTabs, {
     tab: tab,
     onChange: handleTabPress
@@ -4002,6 +4176,8 @@ function WorkoutTab({
   activeGym,
   myUsername,
   resetSignal,
+  pendingProgram,
+  onConsumePendingProgram,
   onOpenGymPicker
 }) {
   const [view, setView] = useState('home');
@@ -4019,6 +4195,7 @@ function WorkoutTab({
   const [prCelebration, setPrCelebration] = useState(null);
   const [toast, setToast] = useState(null);
   const [dayDetailKey, setDayDetailKey] = useState(null);
+  const [shareProgram, setShareProgram] = useState(null); // {dayType, dayName, exercises} — arkadaşa gönderme modalı
   const [dayEditMode, setDayEditMode] = useState(false); // gün düzenleme modu (egzersize girip çıkınca korunur)
   const [logDate, setLogDate] = useState(null); // null = today; "YYYY-M-D" string = backdated
   // Alt sekmeye tekrar basınca köke dön + en yukarı kaydır (Instagram gibi)
@@ -4153,7 +4330,34 @@ function WorkoutTab({
     });
     setShowAddDay(false);
   };
-  const updateCustomDay = (id, name, subtitle, paletteId) => {
+
+  // Arkadaştan kabul edilen program → yeni gün olarak ekle (egzersizler boş: sadece isimler)
+  useEffect(() => {
+    if (!pendingProgram || !cloudLoaded) return;
+    const palette = DAY_COLOR_PALETTE[Math.floor(Math.random() * DAY_COLOR_PALETTE.length)] || DAY_COLOR_PALETTE[0];
+    const id = 'custom_' + Date.now().toString(36);
+    // "Push (Ahmet)" gibi — çakışmayı önlemek için gönderenin adını ekle
+    let dayName = pendingProgram.dayName || 'Program';
+    if (pendingProgram.fromName) dayName = dayName + ' (' + pendingProgram.fromName + ')';
+    const newDay = {
+      id,
+      name: dayName,
+      subtitle: 'paylaşılan program',
+      accent: palette.accent,
+      dark: palette.dark,
+      paletteId: palette.id
+    };
+    saveData({
+      ...data,
+      customDays: [...(data.customDays || []), newDay],
+      exercises: {
+        ...data.exercises,
+        [id]: (pendingProgram.exercises || []).filter(Boolean)
+      }
+    });
+    setToast('📥 "' + dayName + '" programın eklendi!');
+    onConsumePendingProgram();
+  }, [pendingProgram, cloudLoaded]);  const updateCustomDay = (id, name, subtitle, paletteId) => {
     const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId) || DAY_COLOR_PALETTE[0];
     const newCustomDays = (data.customDays || []).map(d => d.id === id ? {
       ...d,
@@ -4706,6 +4910,7 @@ function WorkoutTab({
     onRemoveExercise: removeExercise,
     onRenameExercise: renameExercise,
     onReorderExercises: reorderExercises,
+    onShareProgram: (dayType, dayName, exercises) => setShareProgram({ dayType, dayName, exercises }),
     logDate: logDate
   }), view === 'exercise' && /*#__PURE__*/React.createElement(ExerciseView, {
     exerciseName: currentExercise,
@@ -4770,6 +4975,12 @@ function WorkoutTab({
   }), toast && /*#__PURE__*/React.createElement(Toast, {
     message: toast,
     onDone: () => setToast(null)
+  }), shareProgram && /*#__PURE__*/React.createElement(ShareProgramModal, {
+    me: { uid: authUser.uid, name: authUser.displayName, displayName: authUser.displayName },
+    dayName: shareProgram.dayName,
+    exercises: shareProgram.exercises,
+    onClose: () => setShareProgram(null),
+    onSent: () => setShareProgram(null)
   }));
 }
 function HomeView({
@@ -5563,6 +5774,7 @@ function DayView({
   onRemoveExercise,
   onRenameExercise,
   onReorderExercises,
+  onShareProgram,
   logDate
 }) {
   const isBackdated = !!logDate;
@@ -5736,7 +5948,22 @@ function DayView({
       marginTop: 16
     },
     className: "add-btn"
-  }, /*#__PURE__*/React.createElement(Icon.Plus, null), " EGZERSİZ EKLE"));
+  }, /*#__PURE__*/React.createElement(Icon.Plus, null), " EGZERSİZ EKLE"), editMode && exercises.length > 0 && onShareProgram && /*#__PURE__*/React.createElement("button", {
+    onClick: () => onShareProgram(dayType, cfg.name, exercises),
+    style: {
+      width: '100%',
+      marginTop: 10,
+      padding: '14px',
+      background: '#141414',
+      border: '1px solid #2a2a2a',
+      borderRadius: 12,
+      color: '#4a9eff',
+      fontSize: 14,
+      fontWeight: 800,
+      cursor: 'pointer',
+      letterSpacing: 0.3
+    }
+  }, "📤 Bu Programı Arkadaşa Gönder"));
 }
 function ExerciseView({
   exerciseName,
@@ -8269,6 +8496,15 @@ const S = {
     paddingTop: '5vh',
     zIndex: 100,
     overflowY: 'auto'
+  },
+  modalCard: {
+    width: '100%',
+    background: '#0e0e0e',
+    border: '1px solid #222',
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 'auto',
+    marginBottom: 'auto'
   },
   modal: {
     background: '#141414',
