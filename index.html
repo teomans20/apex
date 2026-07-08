@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.1.6'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.2'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2596,6 +2596,56 @@ async function loadLiveStatus(uid) {
 }
 
 // Avatar harfi + rengi (isimden)
+// Bir foto dosyasını kare kırp + 200x200 küçült + JPEG sıkıştır → base64 data URL döner
+// (küçük tutulur ki Firestore'a sığsın ~15-30KB, her yerde net görünsün)
+function processProfilePhoto(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const SIZE = 200;
+        const canvas = document.createElement('canvas');
+        canvas.width = SIZE;
+        canvas.height = SIZE;
+        const ctx = canvas.getContext('2d');
+        // Kare kırp (merkezden) — kısa kenara göre
+        const side = Math.min(img.width, img.height);
+        const sx = (img.width - side) / 2;
+        const sy = (img.height - side) / 2;
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
+        // JPEG %82 kalite — net ama küçük
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        resolve(dataUrl);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+// Profil fotoğrafını Firestore'a yaz (users/{uid}/public/profile → {photo})
+async function saveProfilePhoto(uid, dataUrl) {
+  if (!window.APEX_DB) return;
+  try {
+    await window.APEX_DB.collection('users').doc(uid).collection('public').doc('profile').set({
+      photo: dataUrl || '',
+      updatedAt: Date.now()
+    }, { merge: true });
+  } catch (e) {}
+}
+// Bir kullanıcının profil fotosunu oku
+async function loadProfilePhoto(uid) {
+  if (!window.APEX_DB) return null;
+  try {
+    const snap = await window.APEX_DB.collection('users').doc(uid).collection('public').doc('profile').get();
+    return snap.exists && snap.data().photo ? snap.data().photo : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function avatarFor(name) {
   const letter = (name || '?').trim().charAt(0).toUpperCase() || '?';
   const colors = ['linear-gradient(135deg,#FF3D3D,#8B1111)', 'linear-gradient(135deg,#4A90E2,#1E3A5F)', 'linear-gradient(135deg,#34D399,#064E3B)', 'linear-gradient(135deg,#A78BFA,#4C1D95)', 'linear-gradient(135deg,#FFA726,#8B6914)'];
@@ -2621,6 +2671,7 @@ function FriendsTab({
   const [requests, setRequests] = useState([]);
   const [programReqs, setProgramReqs] = useState([]);
   const [friendStatuses, setFriendStatuses] = useState({}); // uid -> {training, dayName, lastWorkout}
+  const [photoMap, setPhotoMap] = useState({}); // uid -> profil fotosu (base64)
   const [pokeTarget, setPokeTarget] = useState(null); // dürtülecek arkadaş
   const [sent, setSent] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2651,14 +2702,23 @@ function FriendsTab({
     setSent(s);
     setProgramReqs(pr);
     setLoading(false);
-    // Her arkadaşın canlı durumunu (salonda mı? son antrenman?) çek
+    // Her arkadaşın canlı durumunu + profil fotosunu çek
     if (f.length > 0) {
       const statuses = {};
+      const photos = {};
       await Promise.all(f.map(async fr => {
-        const st = await loadLiveStatus(fr.uid);
+        const [st, ph] = await Promise.all([loadLiveStatus(fr.uid), loadProfilePhoto(fr.uid)]);
         if (st) statuses[fr.uid] = st;
+        if (ph) photos[fr.uid] = ph;
       }));
       setFriendStatuses(statuses);
+      // Kendi fotomu da ekle (feed'de kendi kartım için)
+      const myPh = await loadProfilePhoto(authUser.uid);
+      if (myPh) photos[authUser.uid] = myPh;
+      setPhotoMap(photos);
+    } else {
+      const myPh = await loadProfilePhoto(authUser.uid);
+      if (myPh) setPhotoMap({ [authUser.uid]: myPh });
     }
   };
   useEffect(() => {
@@ -2725,9 +2785,11 @@ function FriendsTab({
   sub === 'feed' ? /*#__PURE__*/React.createElement(FeedView, {
     me: me,
     friends: friends,
+    photoMap: photoMap,
     friendsLoaded: !loading
   }) : sub === 'leaderboard' ? /*#__PURE__*/React.createElement(LeaderboardView, {
     me: me,
+    photoMap: photoMap,
     friends: friends
   }) : sub === 'add' ? /*#__PURE__*/React.createElement(AddFriendView, {
     me: me,
@@ -2743,7 +2805,8 @@ function FriendsTab({
     key: r.uid,
     style: S.friendRow
   }, /*#__PURE__*/React.createElement(Avatar, {
-    name: r.name || r.username
+    name: r.name || r.username,
+    photo: photoMap[r.uid]
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1
@@ -2777,7 +2840,8 @@ function FriendsTab({
   }, /*#__PURE__*/React.createElement("div", {
     style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }
   }, /*#__PURE__*/React.createElement(Avatar, {
-    name: pr.fromName
+    name: pr.fromName,
+    photo: photoMap[pr.fromUid]
   }), /*#__PURE__*/React.createElement("div", {
     style: { flex: 1 }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2825,7 +2889,8 @@ function FriendsTab({
     onClick: () => setProfileFriend(f),
     style: { display: 'flex', alignItems: 'center', gap: 11, flex: 1, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }
   }, /*#__PURE__*/React.createElement(Avatar, {
-    name: f.name || f.username
+    name: f.name || f.username,
+    photo: photoMap[f.uid]
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1
@@ -2867,7 +2932,8 @@ function FriendsTab({
     key: s.uid,
     style: S.friendRow
   }, /*#__PURE__*/React.createElement(Avatar, {
-    name: s.name || s.username
+    name: s.name || s.username,
+    photo: photoMap[s.uid]
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1
@@ -2893,9 +2959,31 @@ function FriendsTab({
 // Avatar bileşeni
 function Avatar({
   name,
+  photo,
   size = 38
 }) {
   const a = avatarFor(name);
+  if (photo) {
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        flexShrink: 0,
+        background: '#141414'
+      }
+    }, /*#__PURE__*/React.createElement("img", {
+      src: photo,
+      alt: name || '',
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        display: 'block'
+      }
+    }));
+  }
   return /*#__PURE__*/React.createElement("div", {
     style: {
       width: size,
@@ -3188,7 +3276,8 @@ function getStuckWeeksForExercise(logs, exerciseName) {
 function FeedView({
   me,
   friends,
-  friendsLoaded
+  friendsLoaded,
+  photoMap
 }) {
   const [items, setItems] = useState(null); // null = yükleniyor
   const [refreshing, setRefreshing] = useState(false);
@@ -3279,7 +3368,8 @@ function FeedView({
     item: item,
     myUid: me.uid,
     onReact: onReact,
-    userMap: userMap
+    userMap: userMap,
+    photoMap: photoMap
   })));
 }
 
@@ -3290,7 +3380,8 @@ function FeedCard({
   item,
   myUid,
   onReact,
-  userMap
+  userMap,
+  photoMap
 }) {
   const a = avatarFor(item.ownerName || item.ownerUsername);
   const [picking, setPicking] = useState(false);
@@ -3361,7 +3452,20 @@ function FeedCard({
     style: S.feedCard
   }, /*#__PURE__*/React.createElement("div", {
     style: S.feedHead
-  }, /*#__PURE__*/React.createElement("div", {
+  }, (photoMap && photoMap[item.ownerUid]) ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 38,
+      height: 38,
+      borderRadius: '50%',
+      overflow: 'hidden',
+      flexShrink: 0,
+      background: '#141414'
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: photoMap[item.ownerUid],
+    alt: '',
+    style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' }
+  })) : /*#__PURE__*/React.createElement("div", {
     style: {
       width: 38,
       height: 38,
@@ -3677,7 +3781,8 @@ async function loadLeaderboard(myUid, myInfo, friends) {
 // Lider tablosu görünümü (3 sekme: gelişim / rekor / antrenman)
 function LeaderboardView({
   me,
-  friends
+  friends,
+  photoMap
 }) {
   const [board, setBoard] = useState(null);
   const [metric, setMetric] = useState('gain'); // gain | pr | workout
@@ -3767,6 +3872,7 @@ function LeaderboardView({
     }
   }, i + 1), /*#__PURE__*/React.createElement(Avatar, {
     name: u.name || u.username,
+    photo: photoMap && photoMap[u.uid],
     size: 36
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3795,8 +3901,10 @@ function FriendProfileView({
   onBack
 }) {
   const [stats, setStats] = useState(undefined);
+  const [profilePhoto, setProfilePhoto] = useState(null);
   useEffect(() => {
     loadPublicStats(friend.uid).then(s => setStats(s || null));
+    loadProfilePhoto(friend.uid).then(p => setProfilePhoto(p));
   }, [friend.uid]);
   const a = avatarFor(friend.name || friend.username);
   return /*#__PURE__*/React.createElement("div", {
@@ -3817,7 +3925,20 @@ function FriendProfileView({
       textAlign: 'center',
       padding: '8px 0 16px'
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, profilePhoto ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 74,
+      height: 74,
+      borderRadius: '50%',
+      overflow: 'hidden',
+      margin: '0 auto 10px',
+      background: '#141414'
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: profilePhoto,
+    alt: '',
+    style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' }
+  })) : /*#__PURE__*/React.createElement("div", {
     style: {
       width: 74,
       height: 74,
@@ -4470,6 +4591,7 @@ function WorkoutTab({
   const [dayDetailKey, setDayDetailKey] = useState(null);
   const [shareProgram, setShareProgram] = useState(null); // {dayType, dayName, exercises} — arkadaşa gönderme modalı
   const [showNotifs, setShowNotifs] = useState(false); // bildirim paneli açık mı
+  const [myPhoto, setMyPhoto] = useState(null); // kendi profil fotom (base64)
   const [notifs, setNotifs] = useState([]); // dürtme + alkış bildirimleri
   const [notifProgReqs, setNotifProgReqs] = useState([]); // program istekleri (bildirimde de göster)
   const [dayEditMode, setDayEditMode] = useState(false); // gün düzenleme modu (egzersize girip çıkınca korunur)
@@ -4503,6 +4625,11 @@ function WorkoutTab({
   useEffect(() => {
     refreshNotifs();
   }, [refreshNotifs, resetSignal]);
+
+  // Kendi profil fotomu yükle
+  useEffect(() => {
+    if (cloudReady) loadProfilePhoto(authUser.uid).then(setMyPhoto);
+  }, [cloudReady, authUser && authUser.uid]);
 
   // Veri yükleme: önce localStorage (hızlı), sonra bulut (varsa)
   useEffect(() => {
@@ -5249,7 +5376,12 @@ function WorkoutTab({
     onExport: exportData,
     onImport: importData,
     authUser: authUser,
-    myUsername: myUsername
+    myUsername: myUsername,
+    myPhoto: myPhoto,
+    onPhotoChange: async dataUrl => {
+      setMyPhoto(dataUrl || null);
+      await saveProfilePhoto(authUser.uid, dataUrl);
+    }
   }), showAddDay && /*#__PURE__*/React.createElement(DayEditorModal, {
     onClose: () => setShowAddDay(false),
     onSave: addCustomDay,
@@ -6825,8 +6957,12 @@ function MenuModal({
   onExport,
   onImport,
   authUser,
-  myUsername
+  myUsername,
+  myPhoto,
+  onPhotoChange
 }) {
+  const fileRef = useRef(null);
+  const [busy, setBusy] = useState(false);
   const logout = async () => {
     if (window.APEX_AUTH) {
       try {
@@ -6834,15 +6970,56 @@ function MenuModal({
       } catch (e) {}
     }
   };
+  const pickPhoto = () => fileRef.current && fileRef.current.click();
+  const handleFile = async e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      const dataUrl = await processProfilePhoto(file);
+      await onPhotoChange(dataUrl);
+    } catch (err) {}
+    setBusy(false);
+    e.target.value = '';
+  };
+  const removePhoto = async () => {
+    setBusy(true);
+    await onPhotoChange('');
+    setBusy(false);
+  };
   return /*#__PURE__*/React.createElement("div", {
     style: S.modalOverlay,
     onClick: onClose
   }, /*#__PURE__*/React.createElement("div", {
     style: S.modal,
     onClick: e => e.stopPropagation()
-  }, authUser && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("input", {
+    ref: fileRef,
+    type: "file",
+    accept: "image/*",
+    onChange: handleFile,
+    style: { display: 'none' }
+  }), authUser && /*#__PURE__*/React.createElement("div", {
     style: S.menuUserBox
   }, /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 12 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { position: 'relative', width: 84, height: 84, marginBottom: 6 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { width: 84, height: 84, borderRadius: '50%', border: '2.5px solid #FF3D3D', padding: 3, boxSizing: 'border-box' }
+  }, /*#__PURE__*/React.createElement(Avatar, {
+    name: authUser.displayName || myUsername,
+    photo: myPhoto,
+    size: 73
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: pickPhoto,
+    disabled: busy,
+    style: { position: 'absolute', bottom: -2, right: -2, width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#FF3D3D,#c62828)', border: '2.5px solid #0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, cursor: 'pointer', boxShadow: '0 2px 8px rgba(255,61,61,0.5)' }
+  }, busy ? '…' : '📷')), myPhoto && /*#__PURE__*/React.createElement("button", {
+    onClick: removePhoto,
+    disabled: busy,
+    style: { background: 'none', border: 'none', color: '#FF5252', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginTop: 2 }
+  }, "Fotoğrafı kaldır")), /*#__PURE__*/React.createElement("div", {
     style: S.menuUserName
   }, authUser.displayName || 'Kullanıcı', myUsername && /*#__PURE__*/React.createElement("span", {
     style: { color: '#FF3D3D', fontSize: 13, fontWeight: 700, marginLeft: 8 }
