@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.1.5'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.1.6'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -4763,7 +4763,12 @@ function WorkoutTab({
     const previousPR = setType === 'top' ? getTopPR(exerciseName) : getBackoffPR(exerciseName);
     if (logDate) {
       const parts = logDate.split('-').map(Number);
-      timestamp = new Date(parts[0], parts[1], parts[2], 12, 0, 0).getTime() + existingSetsToday * 60000 + Math.floor(Math.random() * 1000);
+      // O gün bu harekette zaten kayıtlı setlerin en son timestamp'ini bul — yeni set ondan SONRA gelsin
+      const sameDaySets = data.logs.filter(l => l.exerciseName === exerciseName && dateKey(l.timestamp) === targetDayKey);
+      const noon = new Date(parts[0], parts[1], parts[2], 12, 0, 0).getTime();
+      const lastTs = sameDaySets.length ? Math.max(...sameDaySets.map(l => l.timestamp)) : noon;
+      // Mevcut en son setten 1 dk sonra (ilk set ise öğlen 12:00'dan başla)
+      timestamp = (sameDaySets.length ? lastTs : noon) + 60000 + Math.floor(Math.random() * 1000);
     } else {
       timestamp = Date.now();
     }
