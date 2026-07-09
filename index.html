@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.3'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.3.1'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2960,11 +2960,15 @@ function buildJournalEntries(data) {
         topPRval = { weight: todayTop.weight, reps: todayTop.reps, prev: null, firstEver: true };
       }
 
-      // Kas hacmi topla
+      // Kas hacmi topla (getExerciseMuscles obje döndürür: {chest:1, triceps:0.5, ...})
       const muscles = getExerciseMuscles(exName, data.customMuscleMap);
       const exVol = exLogs.reduce((s, l) => s + l.weight * l.reps, 0);
-      if (muscles && muscles.length) {
-        muscles.forEach(m => { muscleVol[m] = (muscleVol[m] || 0) + exVol / muscles.length; });
+      if (muscles && typeof muscles === 'object') {
+        const weights = Object.entries(muscles); // [[kas, ağırlık], ...]
+        const totalW = weights.reduce((s, [, w]) => s + w, 0);
+        if (totalW > 0) {
+          weights.forEach(([m, w]) => { muscleVol[m] = (muscleVol[m] || 0) + exVol * (w / totalW); });
+        }
       }
 
       exercises.push({ name: exName, sets: setCards, topPR: topPRval, backoffPR: backoffPRval });
@@ -2973,7 +2977,7 @@ function buildJournalEntries(data) {
     // Kas dağılımı yüzdeye çevir (en büyük 4)
     const totalMuscleVol = Object.values(muscleVol).reduce((a, b) => a + b, 0);
     const muscleDist = Object.entries(muscleVol)
-      .map(([m, v]) => ({ muscle: m, pct: totalMuscleVol > 0 ? Math.round(v / totalMuscleVol * 100) : 0 }))
+      .map(([m, v]) => ({ muscle: (MUSCLES[m] && MUSCLES[m].tr) || m, pct: totalMuscleVol > 0 ? Math.round(v / totalMuscleVol * 100) : 0 }))
       .sort((a, b) => b.pct - a.pct)
       .slice(0, 4)
       .filter(x => x.pct > 0);
