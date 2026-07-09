@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.4.1'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.5'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1631,9 +1631,263 @@ function MonthlyCalendar({
 }
 // Programı (egzersizleri) arkadaşlara gönderme modalı — çoklu seçim
 // Dürtme modalı — 3 hazır profesyonel mesaj seç, gönder
+// ————— GÜNLÜK: STORY KARTI ÜRETİCİ (canvas → PNG) —————
+// entry verisinden paylaşılabilir story görseli üretir (1080x1920)
+function generateStoryImage(entry) {
+  return new Promise((resolve) => {
+    const W = 1080, H = 1920;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const scale = W / 300; // önizleme 300px genişlikti, ölçekle
+    const S = n => n * scale;
+
+    // yardımcı: yuvarlak dikdörtgen
+    const rr = (x, y, w, h, r) => {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    };
+
+    // arka plan (gradient)
+    const bg = ctx.createLinearGradient(0, 0, W * 0.6, H * 0.55);
+    bg.addColorStop(0, '#140404');
+    bg.addColorStop(0.55, '#000000');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    const PAD = S(20);
+    let y = S(24);
+    const accent = entry.accent || '#FF3D3D';
+
+    // ——— HEADER: APEX + tarih ———
+    // logo (üçgen A)
+    ctx.fillStyle = '#FF3D3D';
+    ctx.beginPath();
+    const lx = PAD, ly = y + S(2), lsz = S(20);
+    ctx.moveTo(lx + lsz * 0.5, ly);
+    ctx.lineTo(lx + lsz * 0.82, ly + lsz * 0.7);
+    ctx.lineTo(lx + lsz * 0.62, ly + lsz * 0.7);
+    ctx.lineTo(lx + lsz * 0.5, ly + lsz * 0.36);
+    ctx.lineTo(lx + lsz * 0.38, ly + lsz * 0.7);
+    ctx.lineTo(lx + lsz * 0.18, ly + lsz * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '800 ' + S(14) + "px 'Big Shoulders Display', sans-serif";
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillText('APEX', lx + lsz + S(7), ly + lsz * 0.42);
+    // tarih (sağ)
+    ctx.fillStyle = '#888';
+    ctx.font = '700 ' + S(10) + "px Manrope, sans-serif";
+    ctx.textAlign = 'right';
+    const dateStr = (entry.day + ' ' + entry.monthFull + ' ' + entry.year + ' · ' + entry.weekday).toUpperCase();
+    ctx.fillText(dateStr, W - PAD, ly + lsz * 0.42);
+    y += S(20) + S(14);
+
+    // ——— BAŞLIK KUTUSU (gün adı) ———
+    const tbH = S(64);
+    const tbGrad = ctx.createLinearGradient(PAD, y, W - PAD, y + tbH);
+    tbGrad.addColorStop(0, accent);
+    tbGrad.addColorStop(1, accent + '88');
+    ctx.fillStyle = tbGrad;
+    rr(PAD, y, W - PAD * 2, tbH, S(15));
+    ctx.fill();
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = '800 ' + S(10) + "px Manrope, sans-serif";
+    if (entry.timeRange) ctx.fillText('🕐 ' + entry.timeRange, PAD + S(16), y + S(15));
+    ctx.fillStyle = '#fff';
+    ctx.font = '900 ' + S(28) + "px 'Big Shoulders Display', sans-serif";
+    ctx.fillText((entry.dayName || 'ANTRENMAN').toUpperCase(), PAD + S(16), y + S(38));
+    y += tbH + S(9);
+
+    // ——— İSTATİSTİK KUTULARI (Süre/Set/Rekor) ———
+    const stats = [];
+    if (entry.durationMin) stats.push({ v: entry.durationMin, u: 'dk', l: 'SÜRE' });
+    stats.push({ v: entry.totalSets, u: '', l: 'SET' });
+    stats.push({ v: entry.prCount, u: '🏆', l: 'REKOR', gold: true });
+    const sGap = S(7);
+    const sW = (W - PAD * 2 - sGap * (stats.length - 1)) / stats.length;
+    const sH = S(58);
+    stats.forEach((st, i) => {
+      const sx = PAD + i * (sW + sGap);
+      ctx.fillStyle = '#0f0f0f';
+      rr(sx, y, sW, sH, S(12));
+      ctx.fill();
+      ctx.strokeStyle = '#1c1c1c'; ctx.lineWidth = S(1);
+      rr(sx, y, sW, sH, S(12)); ctx.stroke();
+      // değer
+      ctx.textAlign = 'center';
+      ctx.fillStyle = st.gold ? '#FFB74D' : '#fff';
+      ctx.font = '800 ' + S(21) + "px 'Big Shoulders Display', sans-serif";
+      const valTxt = st.v + (st.u ? st.u : '');
+      ctx.fillText(valTxt, sx + sW / 2, y + S(24));
+      // label
+      ctx.fillStyle = '#888';
+      ctx.font = '700 ' + S(8.5) + "px Manrope, sans-serif";
+      ctx.fillText(st.l, sx + sW / 2, y + S(44));
+    });
+    y += sH + S(9);
+
+    // ——— KAS DAĞILIMI ———
+    if (entry.muscleDist && entry.muscleDist.length > 0) {
+      const mH = S(56);
+      ctx.fillStyle = '#0f0f0f';
+      rr(PAD, y, W - PAD * 2, mH, S(12)); ctx.fill();
+      ctx.strokeStyle = '#1c1c1c'; ctx.lineWidth = S(1);
+      rr(PAD, y, W - PAD * 2, mH, S(12)); ctx.stroke();
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#888';
+      ctx.font = '800 ' + S(8.5) + "px Manrope, sans-serif";
+      ctx.fillText('KAS GRUBU DAĞILIMI', PAD + S(13), y + S(12));
+      // bar
+      const barY = y + S(22), barX = PAD + S(13), barW = W - PAD * 2 - S(26), barH = S(9);
+      const COLORS = ['#FF3D3D', '#FFB74D', '#4A90E2', '#A78BFA', '#34D399', '#26a69a'];
+      let cx = barX;
+      entry.muscleDist.forEach((m, i) => {
+        const segW = barW * (m.pct / 100);
+        ctx.fillStyle = COLORS[i % COLORS.length];
+        rr(cx, barY, Math.max(segW - S(2), S(2)), barH, S(3)); ctx.fill();
+        cx += segW;
+      });
+      // legend
+      let legX = barX;
+      const legY = barY + barH + S(13);
+      ctx.font = '600 ' + S(9.5) + "px Manrope, sans-serif";
+      entry.muscleDist.forEach((m, i) => {
+        ctx.fillStyle = COLORS[i % COLORS.length];
+        ctx.beginPath();
+        rr(legX, legY - S(3.5), S(7), S(7), S(2)); ctx.fill();
+        ctx.fillStyle = '#aaa';
+        ctx.textAlign = 'left';
+        const txt = m.muscle + ' ' + m.pct + '%';
+        ctx.fillText(txt, legX + S(10), legY);
+        legX += ctx.measureText(txt).width + S(20);
+      });
+      y += mH + S(9);
+    }
+
+    // ——— REKORLAR KUTUSU (kısa satırlar, top🏆/backoff⭐) ———
+    // rekor listesi topla
+    const recs = [];
+    entry.exercises.forEach(ex => {
+      if (ex.topPR && !ex.topPR.firstEver) {
+        const d = ex.sets.find(s => s.prType === 'top');
+        recs.push({ type: 'top', name: ex.name, weight: ex.topPR.weight, reps: ex.topPR.reps, delta: d ? d.delta : null });
+      }
+      if (ex.backoffPR) {
+        const d = ex.sets.find(s => s.prType === 'backoff');
+        recs.push({ type: 'back', name: ex.name, weight: ex.backoffPR.weight, reps: ex.backoffPR.reps, delta: d ? d.delta : null });
+      }
+    });
+
+    if (recs.length > 0) {
+      const availH = H - y - S(20) - S(18); // kalan alan (footer için pay)
+      const titleH = S(20);
+      const rowH = Math.min(S(20), Math.max(S(13), (availH - titleH - S(20)) / recs.length));
+      const boxH = titleH + rowH * recs.length + S(18);
+      // kutu
+      ctx.fillStyle = 'rgba(255,183,77,0.08)';
+      rr(PAD, y, W - PAD * 2, boxH, S(12)); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,183,77,0.28)'; ctx.lineWidth = S(1);
+      rr(PAD, y, W - PAD * 2, boxH, S(12)); ctx.stroke();
+      // başlık
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#FFB74D';
+      ctx.font = '800 ' + S(9) + "px Manrope, sans-serif";
+      ctx.fillText('🏆 ' + recs.length + ' REKOR  (🏆 top · ⭐ backoff)', PAD + S(13), y + S(14));
+      // satırlar
+      const fontSz = Math.min(S(11), rowH * 0.62);
+      let ry = y + titleH + S(6);
+      recs.forEach(r => {
+        const icon = r.type === 'top' ? '🏆' : '⭐';
+        const vColor = r.type === 'top' ? '#FFB74D' : '#4A90E2';
+        ctx.font = '500 ' + fontSz + "px Manrope, sans-serif";
+        ctx.textAlign = 'left';
+        // ikon
+        ctx.fillText(icon, PAD + S(13), ry + rowH / 2);
+        // isim (kısalt)
+        ctx.fillStyle = '#ccc';
+        let name = r.name;
+        const maxNameW = W - PAD * 2 - S(200);
+        while (ctx.measureText(name).width > maxNameW && name.length > 4) name = name.slice(0, -1);
+        if (name !== r.name) name = name.trim() + '…';
+        ctx.fillText(name, PAD + S(34), ry + rowH / 2);
+        // değer (sağdan)
+        ctx.textAlign = 'right';
+        ctx.fillStyle = vColor;
+        ctx.font = '800 ' + fontSz + "px Manrope, sans-serif";
+        let rightX = W - PAD - S(13);
+        // kazanç etiketi
+        if (r.delta && r.delta.dir === 'up') {
+          const gainTxt = r.delta.type === 'kg' ? '+' + r.delta.kg + 'kg' : '+' + r.delta.reps + 'tk';
+          ctx.font = '800 ' + (fontSz * 0.82) + "px Manrope, sans-serif";
+          const gw = ctx.measureText(gainTxt).width + S(10);
+          ctx.fillStyle = 'rgba(76,175,80,0.15)';
+          rr(rightX - gw, ry + rowH / 2 - S(7), gw, S(14), S(7)); ctx.fill();
+          ctx.fillStyle = '#4CAF50';
+          ctx.textAlign = 'center';
+          ctx.fillText(gainTxt, rightX - gw / 2, ry + rowH / 2);
+          rightX -= gw + S(8);
+        }
+        ctx.textAlign = 'right';
+        ctx.fillStyle = vColor;
+        ctx.font = '800 ' + fontSz + "px Manrope, sans-serif";
+        ctx.fillText(r.weight + '×' + r.reps, rightX, ry + rowH / 2);
+        ry += rowH;
+      });
+      y += boxH + S(8);
+    }
+
+    // ——— FOOTER ———
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#666';
+    ctx.font = '600 ' + S(9) + "px Manrope, sans-serif";
+    ctx.fillText('APEX', W / 2, H - S(20));
+
+    canvas.toBlob(blob => resolve(blob), 'image/png', 0.95);
+  });
+}
+
 // ————— GÜNLÜK: DETAY GÖRÜNÜMÜ —————
 // Bir antrenman gününün tam dökümü: tüm setler, top/backoff PR, karşılaştırma
 function JournalDetailView({ entry, onBack }) {
+  const [sharing, setSharing] = useState(false);
+  const handleShare = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      haptic(20);
+      const blob = await generateStoryImage(entry);
+      if (!blob) { setSharing(false); return; }
+      const fileName = 'apex-' + (entry.dayName || 'antrenman').toLowerCase().replace(/\s+/g, '-') + '-' + entry.day + '-' + entry.monthShort + '.png';
+      const file = new File([blob], fileName, { type: 'image/png' });
+      // Paylaş menüsü (varsa)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: 'APEX Antrenman' });
+          setSharing(false);
+          return;
+        } catch (e) {
+          // kullanıcı iptal etti ya da desteklemiyor → indirmeye düş
+          if (e && e.name === 'AbortError') { setSharing(false); return; }
+        }
+      }
+      // Fallback: indir
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {}
+    setSharing(false);
+  };
   const gt = (delta, prType) => {
     // kazanç/kayıp etiketi
     if (!delta) return null;
@@ -1737,7 +1991,34 @@ function JournalDetailView({ entry, onBack }) {
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 800, flex: 1, minWidth: 0 } }, ex.name),
       chip && /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0, background: chip.bg, color: chip.c, border: '1px solid ' + chip.bc } }, chip.txt)),
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, ...ex.sets.map((s, si) => renderSet(s, si))));
-  })));
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: handleShare,
+    disabled: sharing,
+    style: {
+      position: 'fixed',
+      right: 20,
+      bottom: 24,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      padding: '13px 20px',
+      borderRadius: 30,
+      border: 'none',
+      background: sharing ? '#333' : 'linear-gradient(135deg,#FF3D3D,#c62828)',
+      color: '#fff',
+      fontSize: 15,
+      fontWeight: 800,
+      fontFamily: 'inherit',
+      cursor: sharing ? 'default' : 'pointer',
+      boxShadow: '0 6px 24px rgba(255,61,61,0.4)',
+      zIndex: 10
+    }
+  }, sharing ? /*#__PURE__*/React.createElement("span", null, '⏳ Hazırlanıyor…') : /*#__PURE__*/React.createElement(React.Fragment, null,
+    /*#__PURE__*/React.createElement("svg", { width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none', stroke: '#fff', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+      /*#__PURE__*/React.createElement("path", { d: 'M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8' }),
+      /*#__PURE__*/React.createElement("polyline", { points: '16 6 12 2 8 6' }),
+      /*#__PURE__*/React.createElement("line", { x1: 12, y1: 2, x2: 12, y2: 15 })),
+    'Paylaş')));
 }
 
 // ————— GÜNLÜK: ANA LİSTE —————
