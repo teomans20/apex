@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.5'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.5.1'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1808,25 +1808,36 @@ function generateStoryImage(entry) {
       recs.forEach(r => {
         const icon = r.type === 'top' ? '🏆' : '⭐';
         const vColor = r.type === 'top' ? '#FFB74D' : '#4A90E2';
-        ctx.font = '500 ' + fontSz + "px Manrope, sans-serif";
         ctx.textAlign = 'left';
         // ikon
-        ctx.fillText(icon, PAD + S(13), ry + rowH / 2);
-        // isim (kısalt)
+        ctx.font = '500 ' + fontSz + "px Manrope, sans-serif";
         ctx.fillStyle = '#ccc';
+        ctx.fillText(icon, PAD + S(13), ry + rowH / 2);
+        // sağ blok genişliğini önceden ölç (değer + kazanç)
+        const valTxt = r.weight + 'kg×' + r.reps;
+        ctx.font = '800 ' + fontSz + "px Manrope, sans-serif";
+        const valW = ctx.measureText(valTxt).width;
+        let gainTxt = '', gainBlockW = 0;
+        if (r.delta && r.delta.dir === 'up') {
+          gainTxt = r.delta.type === 'kg' ? '+' + r.delta.kg + 'kg' : '+' + r.delta.reps + 'tk';
+          ctx.font = '800 ' + (fontSz * 0.82) + "px Manrope, sans-serif";
+          gainBlockW = ctx.measureText(gainTxt).width + S(10) + S(8);
+        }
+        // isim (kalan alana göre kısalt)
+        ctx.fillStyle = '#ccc';
+        ctx.font = '500 ' + fontSz + "px Manrope, sans-serif";
         let name = r.name;
-        const maxNameW = W - PAD * 2 - S(200);
+        const nameStartX = PAD + S(34);
+        const maxNameW = (W - PAD - S(13)) - valW - gainBlockW - nameStartX - S(10);
         while (ctx.measureText(name).width > maxNameW && name.length > 4) name = name.slice(0, -1);
         if (name !== r.name) name = name.trim() + '…';
-        ctx.fillText(name, PAD + S(34), ry + rowH / 2);
+        ctx.textAlign = 'left';
+        ctx.fillText(name, nameStartX, ry + rowH / 2);
         // değer (sağdan)
         ctx.textAlign = 'right';
-        ctx.fillStyle = vColor;
-        ctx.font = '800 ' + fontSz + "px Manrope, sans-serif";
         let rightX = W - PAD - S(13);
         // kazanç etiketi
-        if (r.delta && r.delta.dir === 'up') {
-          const gainTxt = r.delta.type === 'kg' ? '+' + r.delta.kg + 'kg' : '+' + r.delta.reps + 'tk';
+        if (gainTxt) {
           ctx.font = '800 ' + (fontSz * 0.82) + "px Manrope, sans-serif";
           const gw = ctx.measureText(gainTxt).width + S(10);
           ctx.fillStyle = 'rgba(76,175,80,0.15)';
@@ -1839,7 +1850,7 @@ function generateStoryImage(entry) {
         ctx.textAlign = 'right';
         ctx.fillStyle = vColor;
         ctx.font = '800 ' + fontSz + "px Manrope, sans-serif";
-        ctx.fillText(r.weight + '×' + r.reps, rightX, ry + rowH / 2);
+        ctx.fillText(valTxt, rightX, ry + rowH / 2);
         ry += rowH;
       });
       y += boxH + S(8);
@@ -1942,10 +1953,10 @@ function JournalDetailView({ entry, onBack }) {
     : null);
   };
 
-  return /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: { ...S.modalOverlay, alignItems: 'flex-start', overflowY: 'auto', padding: '0' }
   }, /*#__PURE__*/React.createElement("div", {
-    style: { width: '100%', minHeight: '100%', background: 'linear-gradient(180deg,#0b0b0b,#000)', padding: '20px 16px 40px' }
+    style: { width: '100%', minHeight: '100%', background: 'linear-gradient(180deg,#0b0b0b,#000)', padding: '20px 16px 100px' }
   },
   // topbar
   /*#__PURE__*/React.createElement("div", {
@@ -1991,7 +2002,7 @@ function JournalDetailView({ entry, onBack }) {
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 800, flex: 1, minWidth: 0 } }, ex.name),
       chip && /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0, background: chip.bg, color: chip.c, border: '1px solid ' + chip.bc } }, chip.txt)),
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, ...ex.sets.map((s, si) => renderSet(s, si))));
-  })), /*#__PURE__*/React.createElement("button", {
+  }))), /*#__PURE__*/React.createElement("button", {
     onClick: handleShare,
     disabled: sharing,
     style: {
