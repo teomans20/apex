@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.3.1'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.4.1'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1730,10 +1730,10 @@ function JournalDetailView({ entry, onBack }) {
       : null;
     return /*#__PURE__*/React.createElement("div", {
       key: i,
-      style: { background: 'linear-gradient(180deg,#121212,#0b0b0b)', border: '1px solid #1e1e1e', borderRadius: 16, padding: 15, marginBottom: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }
+      style: { position: 'relative', background: 'linear-gradient(180deg,#121212,#0b0b0b)', border: '1px solid #1e1e1e', borderRadius: 16, padding: '15px 15px 15px 22px', marginBottom: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.3)', overflow: 'hidden' }
     },
+    /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', left: 0, top: 12, bottom: 12, width: 4, borderRadius: 3, background: 'linear-gradient(180deg,' + entry.accent + ',' + entry.accent + '66)' } }),
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 } },
-      /*#__PURE__*/React.createElement("div", { style: { width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,' + entry.accent + ',' + entry.accent + '88)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 } }, '💪'),
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 800, flex: 1, minWidth: 0 } }, ex.name),
       chip && /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0, background: chip.bg, color: chip.c, border: '1px solid ' + chip.bc } }, chip.txt)),
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, ...ex.sets.map((s, si) => renderSet(s, si))));
@@ -5023,6 +5023,14 @@ function WorkoutTab({
   const [shareProgram, setShareProgram] = useState(null); // {dayType, dayName, exercises} — arkadaşa gönderme modalı
   const [showNotifs, setShowNotifs] = useState(false); // bildirim paneli açık mı
   const [showJournal, setShowJournal] = useState(false); // günlük açık mı
+  const [journalSeenTs, setJournalSeenTs] = useState(() => {
+    const stored = localStorage.getItem('apex-journal-seen');
+    if (stored) return Number(stored);
+    // İlk kez: mevcut tüm antrenmanları "görülmüş" say (rozet 0'dan başlasın)
+    const now = Date.now();
+    localStorage.setItem('apex-journal-seen', String(now));
+    return now;
+  }); // en son deftere bakılan zaman (ms)
   const [myPhoto, setMyPhoto] = useState(null); // kendi profil fotom (base64)
   const [notifs, setNotifs] = useState([]); // dürtme + alkış bildirimleri
   const [notifProgReqs, setNotifProgReqs] = useState([]); // program istekleri (bildirimde de göster)
@@ -5754,7 +5762,27 @@ function WorkoutTab({
     activeGym: activeGym,
     notifCount: notifs.filter(n => !n.read).length + notifProgReqs.length,
     onOpenNotifs: () => setShowNotifs(true),
-    onOpenJournal: () => setShowJournal(true),
+    journalUnseen: (() => {
+      // journalSeenTs'den sonra kaydı olan benzersiz antrenman günü sayısı
+      if (!data || !data.logs) return 0;
+      const seenDayKeys = new Set();
+      const newDayKeys = new Set();
+      data.logs.forEach(l => {
+        const k = dateKey(l.timestamp);
+        if (l.timestamp > journalSeenTs) newDayKeys.add(k);
+        else seenDayKeys.add(k);
+      });
+      // sadece tamamen yeni günler (daha önce hiç görülmemiş)
+      let count = 0;
+      newDayKeys.forEach(k => { if (!seenDayKeys.has(k)) count++; });
+      return count;
+    })(),
+    onOpenJournal: () => {
+      const now = Date.now();
+      localStorage.setItem('apex-journal-seen', String(now));
+      setJournalSeenTs(now);
+      setShowJournal(true);
+    },
     onOpenGymPicker: onOpenGymPicker
   }), view === 'day' && /*#__PURE__*/React.createElement(DayView, {
     dayType: currentDay,
@@ -5913,6 +5941,7 @@ function HomeView({
   activeGym,
   notifCount,
   onOpenNotifs,
+  journalUnseen,
   onOpenJournal,
   onOpenGymPicker
 }) {
@@ -5968,6 +5997,7 @@ function HomeView({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onOpenJournal,
     style: {
+      position: 'relative',
       width: 40,
       height: 40,
       borderRadius: 12,
@@ -5991,7 +6021,27 @@ function HomeView({
     d: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20"
   }), /*#__PURE__*/React.createElement("path", {
     d: "M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
-  }))), /*#__PURE__*/React.createElement("button", {
+  })), journalUnseen > 0 && /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: 'absolute',
+      top: -5,
+      right: -5,
+      minWidth: 19,
+      height: 19,
+      padding: '0 5px',
+      background: 'linear-gradient(135deg,#FF3D3D,#c62828)',
+      borderRadius: 10,
+      border: '2px solid #000',
+      fontSize: 10.5,
+      fontWeight: 900,
+      color: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxShadow: '0 2px 8px rgba(255,61,61,0.5)',
+      animation: 'apexPulse 1.6s infinite'
+    }
+  }, journalUnseen > 9 ? '9+' : journalUnseen)), /*#__PURE__*/React.createElement("button", {
     onClick: onOpenNotifs,
     style: {
       position: 'relative',
@@ -6035,7 +6085,8 @@ function HomeView({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      boxShadow: '0 2px 8px rgba(255,61,61,0.5)'
+      boxShadow: '0 2px 8px rgba(255,61,61,0.5)',
+      animation: 'apexPulse 1.6s infinite'
     }
   }, notifCount > 9 ? '9+' : notifCount)), /*#__PURE__*/React.createElement("button", {
     onClick: onMenu,
