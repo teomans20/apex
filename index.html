@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.5.2'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.5.3'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1737,18 +1737,42 @@ function generateStoryImage(entry) {
 
     // ——— KAS DAĞILIMI ———
     if (entry.muscleDist && entry.muscleDist.length > 0) {
-      const mH = S(56);
+      const barX = PAD + S(13), barW = W - PAD * 2 - S(26);
+      const COLORS = ['#FF3D3D', '#FFB74D', '#4A90E2', '#A78BFA', '#34D399', '#26a69a'];
+      const legRight = PAD + (W - PAD * 2) - S(13); // kutu iç sağ kenar
+      const availW = legRight - barX; // legend için kullanılabilir genişlik
+      // tek satır: sığması için font boyutunu otomatik küçült
+      let legFont = S(9.5);       // ideal boyut
+      const gapBase = S(14);      // öğeler arası boşluk (idealde)
+      const dotBase = S(10);      // nokta + boşluk
+      const measureTotal = (fs, gap) => {
+        ctx.font = '600 ' + fs + "px Manrope, sans-serif";
+        let total = 0;
+        entry.muscleDist.forEach((m, i) => {
+          total += dotBase + ctx.measureText(m.muscle + ' ' + m.pct + '%').width;
+          if (i < entry.muscleDist.length - 1) total += gap;
+        });
+        return total;
+      };
+      // sığana kadar fontu küçült (min S(6.5))
+      let gap = gapBase;
+      while (measureTotal(legFont, gap) > availW && legFont > S(6.5)) {
+        legFont -= S(0.3);
+        gap = Math.max(S(7), gapBase * (legFont / S(9.5)));
+      }
+      const mH = S(52);
+      // kutu çiz
       ctx.fillStyle = '#0f0f0f';
       rr(PAD, y, W - PAD * 2, mH, S(12)); ctx.fill();
       ctx.strokeStyle = '#1c1c1c'; ctx.lineWidth = S(1);
       rr(PAD, y, W - PAD * 2, mH, S(12)); ctx.stroke();
+      // başlık
       ctx.textAlign = 'left';
       ctx.fillStyle = '#888';
       ctx.font = '800 ' + S(8.5) + "px Manrope, sans-serif";
       ctx.fillText('KAS GRUBU DAĞILIMI', PAD + S(13), y + S(12));
       // bar
-      const barY = y + S(22), barX = PAD + S(13), barW = W - PAD * 2 - S(26), barH = S(9);
-      const COLORS = ['#FF3D3D', '#FFB74D', '#4A90E2', '#A78BFA', '#34D399', '#26a69a'];
+      const barY = y + S(22), barH = S(9);
       let cx = barX;
       entry.muscleDist.forEach((m, i) => {
         const segW = barW * (m.pct / 100);
@@ -1756,19 +1780,19 @@ function generateStoryImage(entry) {
         rr(cx, barY, Math.max(segW - S(2), S(2)), barH, S(3)); ctx.fill();
         cx += segW;
       });
-      // legend
-      let legX = barX;
+      // legend (tek satır, küçültülmüş font)
       const legY = barY + barH + S(13);
-      ctx.font = '600 ' + S(9.5) + "px Manrope, sans-serif";
+      const dotSz = Math.max(S(5), legFont * 0.7);
+      let lx = barX;
       entry.muscleDist.forEach((m, i) => {
         ctx.fillStyle = COLORS[i % COLORS.length];
-        ctx.beginPath();
-        rr(legX, legY - S(3.5), S(7), S(7), S(2)); ctx.fill();
+        rr(lx, legY - dotSz / 2 - S(1), dotSz, dotSz, S(2)); ctx.fill();
         ctx.fillStyle = '#aaa';
         ctx.textAlign = 'left';
+        ctx.font = '600 ' + legFont + "px Manrope, sans-serif";
         const txt = m.muscle + ' ' + m.pct + '%';
-        ctx.fillText(txt, legX + S(10), legY);
-        legX += ctx.measureText(txt).width + S(20);
+        ctx.fillText(txt, lx + dotSz + S(3), legY);
+        lx += dotSz + S(3) + ctx.measureText(txt).width + gap;
       });
       y += mH + S(9);
     }
