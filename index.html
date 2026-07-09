@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.2'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.3'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1631,6 +1631,233 @@ function MonthlyCalendar({
 }
 // Programı (egzersizleri) arkadaşlara gönderme modalı — çoklu seçim
 // Dürtme modalı — 3 hazır profesyonel mesaj seç, gönder
+// ————— GÜNLÜK: DETAY GÖRÜNÜMÜ —————
+// Bir antrenman gününün tam dökümü: tüm setler, top/backoff PR, karşılaştırma
+function JournalDetailView({ entry, onBack }) {
+  const gt = (delta, prType) => {
+    // kazanç/kayıp etiketi
+    if (!delta) return null;
+    if (delta.dir === 'same') return null;
+    const cls = delta.dir === 'down' ? { bg: 'rgba(255,61,61,0.15)', c: '#FF5252' } : (prType === 'backoff' ? { bg: 'rgba(74,144,226,0.15)', c: '#4A90E2' } : { bg: 'rgba(76,175,80,0.15)', c: '#4CAF50' });
+    const sign = delta.dir === 'down' ? '−' : '+';
+    const txt = delta.type === 'kg' ? sign + delta.kg + 'kg' : sign + delta.reps + ' tekrar';
+    return /*#__PURE__*/React.createElement("span", {
+      style: { display: 'inline-block', fontSize: 8.5, fontWeight: 800, padding: '2px 8px', borderRadius: 9, background: cls.bg, color: cls.c }
+    }, txt);
+  };
+
+  const renderSet = (s, idx) => {
+    const isPRtop = s.prType === 'top';
+    const isPRback = s.prType === 'backoff';
+    const isDrop = s.delta && s.delta.dir === 'down';
+    let borderColor = '#1a1a1a', bg = '#0c0c0c';
+    if (isPRtop || s.firstEver) { borderColor = '#FFB74D'; bg = 'linear-gradient(180deg,rgba(255,183,77,0.08),transparent)'; }
+    else if (isPRback) { borderColor = '#4A90E2'; bg = 'linear-gradient(180deg,rgba(74,144,226,0.08),transparent)'; }
+    else if (isDrop) { borderColor = 'rgba(255,61,61,0.3)'; }
+    else if (s.isTop) { borderColor = 'rgba(255,183,77,0.35)'; }
+
+    return /*#__PURE__*/React.createElement("div", {
+      key: idx,
+      style: { flex: 1, minWidth: 'calc(50% - 4px)', background: bg, border: '1px solid ' + borderColor, borderRadius: 11, padding: '16px 8px 12px', textAlign: 'center', position: 'relative' }
+    },
+    /*#__PURE__*/React.createElement("span", {
+      style: { position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', fontSize: 8, fontWeight: 800, padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap', background: s.isTop ? 'linear-gradient(135deg,#FFB74D,#F57C00)' : '#1e1e1e', color: s.isTop ? '#1a1a1a' : '#888' }
+    }, s.isTop ? 'TOP' : 'SET ' + (idx + 1)),
+    (isPRtop || s.firstEver) && /*#__PURE__*/React.createElement("span", { style: { position: 'absolute', top: 7, right: 7, fontSize: 11 } }, '🏆'),
+    isPRback && /*#__PURE__*/React.createElement("span", { style: { position: 'absolute', top: 7, right: 7, fontSize: 11 } }, '⭐'),
+    /*#__PURE__*/React.createElement("div", {
+      style: { fontSize: 20, fontWeight: 800, marginTop: 6, fontFamily: "'Big Shoulders Display',sans-serif" }
+    }, s.weight, /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: '#888', fontFamily: "'Manrope'" } }, 'kg')),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#999', marginTop: 2 } }, s.reps, ' tekrar'),
+    // karşılaştırma
+    s.firstEver ? /*#__PURE__*/React.createElement("div", {
+      style: { marginTop: 8, paddingTop: 8, borderTop: '1px solid #1a1a1a' }
+    }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#4CAF50', fontWeight: 800 } }, '✦ İLK KAYIT'))
+    : s.prev ? /*#__PURE__*/React.createElement("div", {
+      style: { marginTop: 8, paddingTop: 8, borderTop: '1px solid #1a1a1a' }
+    },
+    /*#__PURE__*/React.createElement("div", {
+      style: { fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }
+    },
+    /*#__PURE__*/React.createElement("span", { style: { color: '#666' } }, s.prev.weight + '×' + s.prev.reps),
+    s.delta && s.delta.dir === 'same' ? /*#__PURE__*/React.createElement("span", { style: { color: '#666' } }, '=') : /*#__PURE__*/React.createElement("span", { style: { fontWeight: 800, color: s.delta && s.delta.dir === 'down' ? '#FF5252' : '#4CAF50' } }, '→'),
+    /*#__PURE__*/React.createElement("span", {
+      style: { fontWeight: 800, color: s.delta && s.delta.dir === 'same' ? '#888' : isPRback ? '#4A90E2' : (s.delta && s.delta.dir === 'down' ? '#fff' : '#FFB74D') }
+    }, s.delta && s.delta.dir === 'same' ? 'aynı' : s.weight + '×' + s.reps)),
+    (s.delta && s.delta.dir !== 'same') && /*#__PURE__*/React.createElement("div", { style: { marginTop: 4 } }, gt(s.delta, s.prType)))
+    : null);
+  };
+
+  return /*#__PURE__*/React.createElement("div", {
+    style: { ...S.modalOverlay, alignItems: 'flex-start', overflowY: 'auto', padding: '0' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { width: '100%', minHeight: '100%', background: 'linear-gradient(180deg,#0b0b0b,#000)', padding: '20px 16px 40px' }
+  },
+  // topbar
+  /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    style: { width: 36, height: 36, borderRadius: 11, background: '#141414', border: '1px solid #262626', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 16, cursor: 'pointer' }
+  }, '←'), /*#__PURE__*/React.createElement("span", { style: { fontSize: 13, color: '#888' } }, 'Günlük')),
+  // hero
+  /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', marginBottom: 18 } },
+    /*#__PURE__*/React.createElement("div", {
+      style: { display: 'inline-block', padding: '3px 12px', borderRadius: 20, fontSize: 10, fontWeight: 800, letterSpacing: 1, background: 'linear-gradient(135deg,' + entry.accent + ',' + entry.accent + '99)', marginBottom: 10 }
+    }, (entry.dayName || '').toUpperCase()),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 32, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.day + ' ' + entry.monthFull.toUpperCase()),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 6 } }, entry.weekday + (entry.timeRange ? ' · 🕐 ' + entry.timeRange : '') + (entry.durationMin ? ' · ' + entry.durationMin + ' dakika' : ''))),
+  // stat row
+  /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginBottom: 18 } },
+    entry.durationMin && /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '12px 6px', textAlign: 'center' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.durationMin, /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: '#888', fontFamily: "'Manrope'" } }, 'dk')),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, 'SÜRE')),
+    /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '12px 6px', textAlign: 'center' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.totalSets),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, 'SET')),
+    /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '12px 6px', textAlign: 'center' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.totalReps),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, 'TEKRAR')),
+    entry.prCount > 0 && /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '12px 6px', textAlign: 'center' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, color: '#FFB74D', fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.prCount),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, 'REKOR'))),
+  // egzersiz kartları
+  ...entry.exercises.map((ex, i) => {
+    const chip = ex.topPR && !ex.topPR.firstEver && ex.backoffPR ? { txt: '🏆⭐ ÇİFT', bg: 'linear-gradient(135deg,rgba(255,183,77,0.15),rgba(74,144,226,0.15))', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
+      : ex.topPR && ex.topPR.firstEver ? { txt: '✦ İLK', bg: 'rgba(255,183,77,0.15)', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
+      : ex.topPR ? { txt: '🏆 PR', bg: 'rgba(255,183,77,0.15)', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
+      : ex.backoffPR ? { txt: '⭐ PR', bg: 'rgba(74,144,226,0.15)', c: '#4A90E2', bc: 'rgba(74,144,226,0.3)' }
+      : null;
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: { background: 'linear-gradient(180deg,#121212,#0b0b0b)', border: '1px solid #1e1e1e', borderRadius: 16, padding: 15, marginBottom: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }
+    },
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 } },
+      /*#__PURE__*/React.createElement("div", { style: { width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,' + entry.accent + ',' + entry.accent + '88)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 } }, '💪'),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 800, flex: 1, minWidth: 0 } }, ex.name),
+      chip && /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0, background: chip.bg, color: chip.c, border: '1px solid ' + chip.bc } }, chip.txt)),
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, ...ex.sets.map((s, si) => renderSet(s, si))));
+  })));
+}
+
+// ————— GÜNLÜK: ANA LİSTE —————
+function JournalModal({ data, onClose }) {
+  const [detailEntry, setDetailEntry] = useState(null);
+  const entries = React.useMemo(() => buildJournalEntries(data), [data]);
+
+  if (detailEntry) {
+    return /*#__PURE__*/React.createElement(JournalDetailView, { entry: detailEntry, onBack: () => setDetailEntry(null) });
+  }
+
+  // özet: toplam antrenman, toplam rekor, haftalık seri (basit)
+  const totalWorkouts = entries.length;
+  const totalPRs = entries.reduce((n, e) => n + e.prCount, 0);
+  // haftalık seri: kaç ardışık hafta antrenman var (basit hesap)
+  const weekStreak = (() => {
+    if (entries.length === 0) return 0;
+    const weekOf = ts => { const d = new Date(ts); const day = (d.getDay() + 6) % 7; const monday = new Date(d); monday.setDate(d.getDate() - day); monday.setHours(0, 0, 0, 0); return monday.getTime(); };
+    const weeks = new Set(entries.map(e => weekOf(e.ts)));
+    const sortedWeeks = [...weeks].sort((a, b) => b - a);
+    let streak = 0;
+    let cur = weekOf(Date.now());
+    const WEEK = 604800000;
+    for (let i = 0; i < sortedWeeks.length; i++) {
+      if (sortedWeeks[i] === cur || sortedWeeks[i] === cur - WEEK) { streak++; cur = sortedWeeks[i] - WEEK; }
+      else if (sortedWeeks[i] < cur - WEEK) break;
+    }
+    return streak;
+  })();
+
+  // aylara böl
+  const byMonth = [];
+  let lastMonthKey = null;
+  entries.forEach(e => {
+    const mk = e.year + '-' + e.monthFull;
+    if (mk !== lastMonthKey) { byMonth.push({ label: e.monthFull + ' ' + e.year, entries: [] }); lastMonthKey = mk; }
+    byMonth[byMonth.length - 1].entries.push(e);
+  });
+
+  return /*#__PURE__*/React.createElement("div", {
+    style: { ...S.modalOverlay, alignItems: 'flex-start', overflowY: 'auto', padding: 0 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { width: '100%', minHeight: '100%', background: 'linear-gradient(180deg,#0b0b0b,#000)', padding: '20px 16px 40px' }
+  },
+  // header
+  /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 13, marginBottom: 8 } },
+    /*#__PURE__*/React.createElement("div", { style: { width: 46, height: 46, borderRadius: 14, background: 'linear-gradient(135deg,rgba(255,183,77,0.16),rgba(230,126,0,0.04))', border: '1px solid rgba(255,183,77,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(255,183,77,0.08)' } },
+      /*#__PURE__*/React.createElement("svg", { width: 23, height: 23, viewBox: '0 0 24 24', fill: 'none', stroke: '#FFB74D', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' },
+        /*#__PURE__*/React.createElement("path", { d: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20' }),
+        /*#__PURE__*/React.createElement("path", { d: 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' }))),
+    /*#__PURE__*/React.createElement("div", { style: { flex: 1 } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 30, fontWeight: 800, letterSpacing: 0.5, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, 'GÜNLÜK'),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 3 } }, totalWorkouts + ' antrenman' + (weekStreak > 1 ? ' · ' + weekStreak + ' haftalık seri 🔥' : ''))),
+    /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { width: 36, height: 36, borderRadius: 11, background: '#141414', border: '1px solid #262626', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', cursor: 'pointer' } }, '✕')),
+  // summary strip
+  /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 10, margin: '20px 0 22px' } },
+    /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: 'linear-gradient(180deg,#0f0f0f,#0a0a0a)', border: '1px solid #1c1c1c', borderRadius: 14, padding: '13px 10px', textAlign: 'center' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 24, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, totalWorkouts),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.6, marginTop: 5 } }, 'ANTRENMAN')),
+    /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: 'linear-gradient(180deg,#0f0f0f,#0a0a0a)', border: '1px solid #1c1c1c', borderRadius: 14, padding: '13px 10px', textAlign: 'center' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 24, fontWeight: 800, lineHeight: 1, color: '#FFB74D', fontFamily: "'Big Shoulders Display',sans-serif" } }, totalPRs),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.6, marginTop: 5 } }, 'REKOR')),
+    /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: 'linear-gradient(180deg,#0f0f0f,#0a0a0a)', border: '1px solid #1c1c1c', borderRadius: 14, padding: '13px 10px', textAlign: 'center' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 24, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, weekStreak),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.6, marginTop: 5 } }, 'HAFTA SERİ'))),
+  // boş durum
+  entries.length === 0 ? /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', padding: '50px 20px', color: '#555' } },
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 34, marginBottom: 10 } }, '📔'),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 14 } }, 'Henüz kayıtlı antrenman yok'),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, opacity: 0.7, marginTop: 4 } }, 'İlk antrenmanını kaydet, burada görünsün'))
+  : byMonth.map((month, mi) => /*#__PURE__*/React.createElement("div", { key: mi },
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, fontWeight: 800, letterSpacing: 2, color: '#666', margin: mi === 0 ? '0 0 14px 2px' : '20px 0 14px 2px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 10 } },
+      month.label.toUpperCase(),
+      /*#__PURE__*/React.createElement("span", { style: { flex: 1, height: 1, background: 'linear-gradient(90deg,#1e1e1e,transparent)' } })),
+    ...month.entries.map((e, ei) => /*#__PURE__*/React.createElement("div", {
+      key: ei,
+      onClick: () => { haptic(20); setDetailEntry(e); },
+      style: { position: 'relative', borderRadius: 22, marginBottom: 15, overflow: 'hidden', background: 'linear-gradient(180deg,#121212,#0b0b0b)', border: '1px solid #1e1e1e', boxShadow: '0 6px 28px rgba(0,0,0,0.5)', cursor: 'pointer' }
+    },
+    /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'linear-gradient(180deg,' + e.accent + ',' + e.accent + '66)' } }),
+    /*#__PURE__*/React.createElement("div", { style: { padding: '17px 18px 15px 20px' } },
+      // top
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 13, marginBottom: 15 } },
+        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 50, height: 56, borderRadius: 13, flexShrink: 0, background: 'linear-gradient(180deg,#191919,#111)', border: '1px solid #262626' } },
+          /*#__PURE__*/React.createElement("span", { style: { fontSize: 26, fontWeight: 800, lineHeight: 0.9, fontFamily: "'Big Shoulders Display',sans-serif" } }, e.day),
+          /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, fontWeight: 700, color: '#888', marginTop: 3, textTransform: 'uppercase' } }, e.monthShort)),
+        /*#__PURE__*/React.createElement("div", { style: { flex: 1 } },
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 21, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, (e.dayName || '').toUpperCase()),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 5 } }, e.weekday + (e.timeRange ? ' · 🕐 ' + e.timeRange : ''))),
+        e.prCount > 0 && /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, fontWeight: 800, padding: '5px 10px', borderRadius: 20, background: 'linear-gradient(135deg,#FFB74D,#F57C00)', color: '#1a1a1a', whiteSpace: 'nowrap', boxShadow: '0 2px 10px rgba(255,183,77,0.25)' } }, '🏆 ' + e.prCount + ' REKOR')),
+      // stats
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', background: '#0c0c0c', border: '1px solid #181818', borderRadius: 13, padding: '12px 0', marginBottom: e.muscleDist.length ? 14 : (e.volCompare ? 14 : 4) } },
+        e.durationMin && /*#__PURE__*/React.createElement("div", { style: { flex: 1, textAlign: 'center', borderRight: '1px solid #1e1e1e' } },
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, e.durationMin, /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#888', fontFamily: "'Manrope'" } }, 'dk')),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.5, marginTop: 5 } }, 'SÜRE')),
+        /*#__PURE__*/React.createElement("div", { style: { flex: 1, textAlign: 'center', borderRight: '1px solid #1e1e1e' } },
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, e.totalSets),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.5, marginTop: 5 } }, 'SET')),
+        /*#__PURE__*/React.createElement("div", { style: { flex: 1, textAlign: 'center' } },
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, e.totalReps),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.5, marginTop: 5 } }, 'TEKRAR'))),
+      // kas dağılımı
+      e.muscleDist.length > 0 && /*#__PURE__*/React.createElement("div", { style: { marginBottom: e.volCompare ? 14 : 0 } },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, fontWeight: 800, letterSpacing: 1, color: '#666', marginBottom: 8, textTransform: 'uppercase' } }, 'Kas Grubu Dağılımı'),
+        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', height: 8, borderRadius: 5, overflow: 'hidden', gap: 2 } },
+          ...e.muscleDist.map((m, mmi) => /*#__PURE__*/React.createElement("div", { key: mmi, style: { width: m.pct + '%', height: '100%', borderRadius: 2, background: MUSCLE_COLORS[mmi % MUSCLE_COLORS.length] } }))),
+        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 9 } },
+          ...e.muscleDist.map((m, mmi) => /*#__PURE__*/React.createElement("div", { key: mmi, style: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#aaa' } },
+            /*#__PURE__*/React.createElement("span", { style: { width: 8, height: 8, borderRadius: 3, background: MUSCLE_COLORS[mmi % MUSCLE_COLORS.length] } }),
+            m.muscle + ' ' + m.pct + '%')))),
+      // karşılaştırma
+      e.volCompare && e.volCompare.dir !== 'same' && /*#__PURE__*/React.createElement("div", {
+        style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: e.volCompare.dir === 'up' ? 'rgba(76,175,80,0.06)' : 'rgba(255,61,61,0.06)', border: '1px solid ' + (e.volCompare.dir === 'up' ? 'rgba(76,175,80,0.18)' : 'rgba(255,61,61,0.18)'), borderRadius: 11, padding: '10px 13px' }
+      },
+        /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#aaa' } }, 'Geçen ' + (e.dayName || '') + '\'a göre'),
+        /*#__PURE__*/React.createElement("span", { style: { fontSize: 13, fontWeight: 800, color: e.volCompare.dir === 'up' ? '#4CAF50' : '#FF5252' } }, (e.volCompare.dir === 'up' ? '↑ +' : '↓ ') + e.volCompare.diff + 't')),
+      // tap hint
+      /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', fontSize: 10, color: '#4a4a4a', marginTop: 12, letterSpacing: 1, textTransform: 'uppercase' } }, '✦ Detay için dokun ✦'))))))));
+}
+
 function PokeModal({
   friend,
   myName,
@@ -2593,6 +2820,206 @@ async function loadLiveStatus(uid) {
   } catch (e) {
     return null;
   }
+}
+
+// ————— ANTRENMAN GÜNLÜĞÜ (JOURNAL) —————
+// Kas dağılımı bar renkleri (sırayla)
+const MUSCLE_COLORS = ['#FF3D3D', '#FFB74D', '#4A90E2', '#A78BFA', '#34D399', '#26a69a'];
+// Tüm antrenman günlerini kart verisiyle hazırlar. En yeni gün başta.
+// Her gün: tarih, gün adı, süre, saat aralığı, set, tekrar, kas dağılımı, PR'lar, geçen sefere göre karşılaştırma.
+function buildJournalEntries(data) {
+  if (!data || !data.logs || data.logs.length === 0) return [];
+  const isBetter = (a, b) => a.weight > b.weight || a.weight === b.weight && a.reps > b.reps;
+  const bestOf = sets => sets.reduce((best, s) => !best || isBetter(s, best) ? s : best, null);
+
+  // Logları güne + dayType'a göre grupla (bir günde birden fazla gün-tipi olabilir ama genelde tek)
+  const dayGroups = {}; // key: dateKey -> { logs, dayTypes:Set }
+  data.logs.forEach(l => {
+    const k = dateKey(l.timestamp);
+    if (!dayGroups[k]) dayGroups[k] = { logs: [], dayTypes: new Set() };
+    dayGroups[k].logs.push(l);
+    if (l.dayType) dayGroups[k].dayTypes.add(l.dayType);
+  });
+
+  const dayConfigMap = buildDayConfigMap(data.customDays || [], data.hiddenDays || []);
+  const weekdays = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+  const months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+  const monthsFull = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+  const entries = [];
+  Object.entries(dayGroups).forEach(([dk, grp]) => {
+    const parts = dk.split('-').map(Number);
+    const dateObj = new Date(parts[0], parts[1], parts[2]);
+    const dayStart = new Date(parts[0], parts[1], parts[2]).setHours(0, 0, 0, 0);
+    const dayEnd = dayStart + 86400000;
+
+    // Bu güne ait session (saat aralığı + süre)
+    const session = (data.sessions || []).find(s => dateKey(s.startTime) === dk && s.endTime);
+    let timeRange = null, durationMin = null;
+    if (session && session.endTime) {
+      const st = new Date(session.startTime), en = new Date(session.endTime);
+      const pad = n => String(n).padStart(2, '0');
+      timeRange = pad(st.getHours()) + ':' + pad(st.getMinutes()) + '–' + pad(en.getHours()) + ':' + pad(en.getMinutes());
+      durationMin = Math.max(1, Math.round((session.endTime - session.startTime) / 60000));
+    }
+
+    // Gün tipi adı + renk
+    const primaryDayType = grp.dayTypes.size > 0 ? [...grp.dayTypes][0] : (session && session.dayType) || null;
+    const cfg = primaryDayType && dayConfigMap[primaryDayType] ? dayConfigMap[primaryDayType] : null;
+    const dayName = cfg ? cfg.name : (primaryDayType || 'Antrenman');
+    const accent = cfg ? cfg.accent : '#FF3D3D';
+
+    // Egzersizlere göre grupla
+    const byExercise = {};
+    grp.logs.forEach(l => {
+      if (!byExercise[l.exerciseName]) byExercise[l.exerciseName] = [];
+      byExercise[l.exerciseName].push(l);
+    });
+
+    let totalSets = 0, totalReps = 0, totalVolume = 0;
+    const exercises = []; // { name, sets:[{weight,reps,isTop,prType,prev,delta}], topPR, backoffPR }
+    const muscleVol = {}; // kas -> hacim
+
+    Object.entries(byExercise).forEach(([exName, exLogs]) => {
+      const sorted = [...exLogs].sort((a, b) => a.timestamp - b.timestamp);
+      const todayTop = sorted[0];
+      const todayBackoffs = sorted.slice(1);
+      const todayBestBackoff = todayBackoffs.length ? bestOf(todayBackoffs) : null;
+
+      // Önceki günlerin verisi (bu günden önce)
+      const priorLogs = data.logs.filter(l => l.exerciseName === exName && l.timestamp < dayStart);
+      const priorByDay = {};
+      priorLogs.forEach(l => {
+        const k = dateKey(l.timestamp);
+        if (!priorByDay[k]) priorByDay[k] = [];
+        priorByDay[k].push(l);
+      });
+      const priorTops = [], priorBackoffs = [];
+      Object.values(priorByDay).forEach(dl => {
+        const ds = [...dl].sort((a, b) => a.timestamp - b.timestamp);
+        if (ds[0]) priorTops.push(ds[0]);
+        ds.slice(1).forEach(s => priorBackoffs.push(s));
+      });
+      const priorTopPR = priorTops.length ? bestOf(priorTops) : null;
+      const priorBackoffPR = priorBackoffs.length ? bestOf(priorBackoffs) : null;
+      // Son antrenman günü (karşılaştırma için)
+      const priorDayKeys = Object.keys(priorByDay).sort((a, b) => {
+        const pa = a.split('-').map(Number), pb = b.split('-').map(Number);
+        return new Date(pb[0], pb[1], pb[2]) - new Date(pa[0], pa[1], pa[2]);
+      });
+      const lastDayKey = priorDayKeys[0];
+      let lastTop = null, lastBackoff = null;
+      if (lastDayKey) {
+        const ld = [...priorByDay[lastDayKey]].sort((a, b) => a.timestamp - b.timestamp);
+        lastTop = ld[0];
+        const lb = ld.slice(1);
+        lastBackoff = lb.length ? bestOf(lb) : null;
+      }
+
+      // Set kartları
+      const setCards = sorted.map((s, idx) => {
+        totalSets++; totalReps += s.reps; totalVolume += s.weight * s.reps;
+        const isTop = idx === 0;
+        // Karşılaştırma referansı: top ise lastTop, backoff ise lastBackoff
+        const ref = isTop ? lastTop : lastBackoff;
+        let prType = null; // 'top' | 'backoff' | null
+        let firstEver = false;
+        // PR mı?
+        if (isTop && !priorTopPR) firstEver = true;
+        if (isTop && priorTopPR && isBetter(s, priorTopPR)) prType = 'top';
+        // backoff PR sadece o günün EN İYİ backoff'una atanır (aşağıda)
+        // delta hesabı (ağırlık referanslı)
+        let delta = null;
+        if (ref) {
+          if (s.weight > ref.weight) delta = { dir: 'up', kg: +(s.weight - ref.weight).toFixed(1), type: 'kg' };
+          else if (s.weight < ref.weight) delta = { dir: 'down', kg: +(ref.weight - s.weight).toFixed(1), type: 'kg' };
+          else if (s.reps > ref.reps) delta = { dir: 'up', reps: s.reps - ref.reps, type: 'reps' };
+          else if (s.reps < ref.reps) delta = { dir: 'down', reps: ref.reps - s.reps, type: 'reps' };
+          else delta = { dir: 'same' };
+        }
+        return {
+          weight: s.weight, reps: s.reps, isTop,
+          prType, firstEver,
+          prev: ref ? { weight: ref.weight, reps: ref.reps } : null,
+          delta
+        };
+      });
+
+      // Backoff PR işaretle (en iyi backoff, prior backoff PR'ı geçtiyse)
+      let backoffPRval = null;
+      if (todayBestBackoff && priorBackoffPR && isBetter(todayBestBackoff, priorBackoffPR)) {
+        backoffPRval = { weight: todayBestBackoff.weight, reps: todayBestBackoff.reps, prev: { weight: priorBackoffPR.weight, reps: priorBackoffPR.reps } };
+        // ilgili set kartına backoff işareti koy
+        const bIdx = setCards.findIndex((sc, i) => i > 0 && sc.weight === todayBestBackoff.weight && sc.reps === todayBestBackoff.reps);
+        if (bIdx >= 0) setCards[bIdx].prType = 'backoff';
+      }
+      let topPRval = null;
+      if (todayTop && priorTopPR && isBetter(todayTop, priorTopPR)) {
+        topPRval = { weight: todayTop.weight, reps: todayTop.reps, prev: { weight: priorTopPR.weight, reps: priorTopPR.reps } };
+      } else if (todayTop && !priorTopPR) {
+        topPRval = { weight: todayTop.weight, reps: todayTop.reps, prev: null, firstEver: true };
+      }
+
+      // Kas hacmi topla
+      const muscles = getExerciseMuscles(exName, data.customMuscleMap);
+      const exVol = exLogs.reduce((s, l) => s + l.weight * l.reps, 0);
+      if (muscles && muscles.length) {
+        muscles.forEach(m => { muscleVol[m] = (muscleVol[m] || 0) + exVol / muscles.length; });
+      }
+
+      exercises.push({ name: exName, sets: setCards, topPR: topPRval, backoffPR: backoffPRval });
+    });
+
+    // Kas dağılımı yüzdeye çevir (en büyük 4)
+    const totalMuscleVol = Object.values(muscleVol).reduce((a, b) => a + b, 0);
+    const muscleDist = Object.entries(muscleVol)
+      .map(([m, v]) => ({ muscle: m, pct: totalMuscleVol > 0 ? Math.round(v / totalMuscleVol * 100) : 0 }))
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 4)
+      .filter(x => x.pct > 0);
+
+    // Geçen aynı-tip antrenmana göre toplam hacim farkı
+    let volCompare = null;
+    if (primaryDayType) {
+      const priorSameType = {};
+      data.logs.filter(l => l.dayType === primaryDayType && l.timestamp < dayStart).forEach(l => {
+        const k = dateKey(l.timestamp);
+        priorSameType[k] = (priorSameType[k] || 0) + l.weight * l.reps;
+      });
+      const priorKeys = Object.keys(priorSameType).sort((a, b) => {
+        const pa = a.split('-').map(Number), pb = b.split('-').map(Number);
+        return new Date(pb[0], pb[1], pb[2]) - new Date(pa[0], pa[1], pa[2]);
+      });
+      if (priorKeys[0]) {
+        const prevVol = priorSameType[priorKeys[0]];
+        const diff = totalVolume - prevVol;
+        volCompare = { diff: +(diff / 1000).toFixed(1), dir: diff > 0 ? 'up' : diff < 0 ? 'down' : 'same' };
+      }
+    }
+
+    // Toplam PR sayısı
+    const prCount = exercises.reduce((n, ex) => n + (ex.topPR && !ex.topPR.firstEver ? 1 : 0) + (ex.backoffPR ? 1 : 0), 0);
+
+    entries.push({
+      dateKey: dk,
+      dateObj,
+      day: parts[2],
+      monthShort: months[parts[1]],
+      monthFull: monthsFull[parts[1]],
+      year: parts[0],
+      weekday: weekdays[dateObj.getDay()],
+      dayName, accent, dayType: primaryDayType,
+      timeRange, durationMin,
+      totalSets, totalReps, totalVolume: +(totalVolume / 1000).toFixed(1),
+      muscleDist, volCompare, prCount,
+      exercises,
+      ts: dayStart
+    });
+  });
+
+  // En yeni başta
+  entries.sort((a, b) => b.ts - a.ts);
+  return entries;
 }
 
 // Avatar harfi + rengi (isimden)
@@ -4591,6 +5018,7 @@ function WorkoutTab({
   const [dayDetailKey, setDayDetailKey] = useState(null);
   const [shareProgram, setShareProgram] = useState(null); // {dayType, dayName, exercises} — arkadaşa gönderme modalı
   const [showNotifs, setShowNotifs] = useState(false); // bildirim paneli açık mı
+  const [showJournal, setShowJournal] = useState(false); // günlük açık mı
   const [myPhoto, setMyPhoto] = useState(null); // kendi profil fotom (base64)
   const [notifs, setNotifs] = useState([]); // dürtme + alkış bildirimleri
   const [notifProgReqs, setNotifProgReqs] = useState([]); // program istekleri (bildirimde de göster)
@@ -5322,6 +5750,7 @@ function WorkoutTab({
     activeGym: activeGym,
     notifCount: notifs.filter(n => !n.read).length + notifProgReqs.length,
     onOpenNotifs: () => setShowNotifs(true),
+    onOpenJournal: () => setShowJournal(true),
     onOpenGymPicker: onOpenGymPicker
   }), view === 'day' && /*#__PURE__*/React.createElement(DayView, {
     dayType: currentDay,
@@ -5427,6 +5856,9 @@ function WorkoutTab({
     exercises: shareProgram.exercises,
     onClose: () => setShareProgram(null),
     onSent: () => setShareProgram(null)
+  }), showJournal && /*#__PURE__*/React.createElement(JournalModal, {
+    data: data,
+    onClose: () => setShowJournal(false)
   }), showNotifs && /*#__PURE__*/React.createElement(NotificationPanel, {
     me: { uid: authUser.uid, name: authUser.displayName },
     notifs: notifs,
@@ -5477,6 +5909,7 @@ function HomeView({
   activeGym,
   notifCount,
   onOpenNotifs,
+  onOpenJournal,
   onOpenGymPicker
 }) {
   const todayLogs = data.logs.filter(l => dateKey(l.timestamp) === dateKey(Date.now()));
@@ -5529,6 +5962,32 @@ function HomeView({
   })), /*#__PURE__*/React.createElement("div", {
     style: { display: 'flex', alignItems: 'center', gap: 8 }
   }, /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenJournal,
+    style: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      background: 'linear-gradient(135deg,rgba(255,183,77,0.14),rgba(230,126,0,0.04))',
+      border: '1px solid rgba(255,183,77,0.3)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: 19,
+    height: 19,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#FFB74D",
+    strokeWidth: 1.8,
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+  }))), /*#__PURE__*/React.createElement("button", {
     onClick: onOpenNotifs,
     style: {
       position: 'relative',
