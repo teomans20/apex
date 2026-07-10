@@ -917,7 +917,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.8.5'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1719,10 +1719,12 @@ function generateWeeklyImage(s, myUsername) {
     ctx.font = '800 ' + S(9) + "px Manrope,sans-serif";
     ctx.fillText('ANTRENMAN GÜNLERİN', PAD + S(14), y + S(13));
     const dayLabels = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-    const dw = (boxW - S(28)) / 7;
+    const dInset = S(16);
+    const dw = (boxW - dInset * 2) / 7;
+    const dsz = Math.min(S(26), dw - S(4)); // kutu sütun genişliğini aşmasın
     s.dayFlags.forEach((on, i) => {
-      const dx = PAD + S(14) + i * dw + dw / 2;
-      const dsz = S(26), dyy = y + S(22);
+      const dx = PAD + dInset + i * dw + dw / 2;
+      const dyy = y + S(22);
       ctx.fillStyle = on ? '#FF3D3D' : '#161616';
       rr(dx - dsz / 2, dyy, dsz, dsz, S(8)); ctx.fill();
       if (!on) { ctx.strokeStyle = '#242424'; ctx.lineWidth = S(1); rr(dx - dsz / 2, dyy, dsz, dsz, S(8)); ctx.stroke(); }
@@ -1782,15 +1784,24 @@ function generateWeeklyImage(s, myUsername) {
         rr(cx, barY, Math.max(segW - S(2), S(2)), barH, S(3)); ctx.fill();
         cx += segW;
       });
+      // Legend: tek satıra sığacak şekilde font otomatik küçült
+      const legItems = s.muscleDist.map(m => m.muscle + ' ' + m.pct + '%');
+      let legFont = 10, legGap = 14, legDot = 11;
+      const measureLeg = fs => {
+        ctx.font = '600 ' + S(fs) + "px Manrope,sans-serif";
+        return legItems.reduce((sum, t) => sum + S(legDot) + ctx.measureText(t).width + S(legGap), 0) - S(legGap);
+      };
+      while (measureLeg(legFont) > barW && legFont > 6.5) { legFont -= 0.5; if (legFont < 8) { legGap = 10; legDot = 9; } }
       let lx2 = barX; const legY = barY + barH + S(14);
-      ctx.font = '600 ' + S(10) + "px Manrope,sans-serif";
+      ctx.font = '600 ' + S(legFont) + "px Manrope,sans-serif";
       s.muscleDist.forEach((m, i) => {
         ctx.fillStyle = COLORS[i % COLORS.length];
         rr(lx2, legY - S(4), S(8), S(8), S(2)); ctx.fill();
         ctx.fillStyle = '#bbb'; ctx.textAlign = 'left';
         const txt = m.muscle + ' ' + m.pct + '%';
-        ctx.fillText(txt, lx2 + S(11), legY);
-        lx2 += S(11) + ctx.measureText(txt).width + S(14);
+        ctx.font = '600 ' + S(legFont) + "px Manrope,sans-serif";
+        ctx.fillText(txt, lx2 + S(legDot), legY);
+        lx2 += S(legDot) + ctx.measureText(txt).width + S(legGap);
       });
       y += mH + S(10);
     }
@@ -2619,8 +2630,8 @@ function NotificationPanel({
   onAcceptProgram,
   onDismissProgram
 }) {
-  const iconFor = t => t === 'poke' ? '👊' : t === 'clap' ? '👏' : '🔔';
-  const iconBg = t => t === 'poke' ? 'linear-gradient(135deg,rgba(255,167,38,0.2),rgba(255,167,38,0.05))' : t === 'clap' ? 'linear-gradient(135deg,rgba(76,175,80,0.2),rgba(76,175,80,0.05))' : 'linear-gradient(135deg,rgba(255,61,61,0.2),rgba(255,61,61,0.05))';
+  const iconFor = t => t === 'poke' ? '👊' : t === 'clap' ? '👏' : t === 'gym' ? '🏋️' : '🔔';
+  const iconBg = t => t === 'poke' ? 'linear-gradient(135deg,rgba(255,167,38,0.2),rgba(255,167,38,0.05))' : t === 'clap' ? 'linear-gradient(135deg,rgba(76,175,80,0.2),rgba(76,175,80,0.05))' : t === 'gym' ? 'linear-gradient(135deg,rgba(74,144,226,0.2),rgba(74,144,226,0.05))' : 'linear-gradient(135deg,rgba(255,61,61,0.2),rgba(255,61,61,0.05))';
   const total = notifs.length + progReqs.length;
   return /*#__PURE__*/React.createElement("div", {
     style: S.modalOverlay,
@@ -2677,7 +2688,7 @@ function NotificationPanel({
     style: { flex: 1, minWidth: 0 }
   }, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 13.5, lineHeight: 1.4 }
-  }, /*#__PURE__*/React.createElement("b", null, n.fromName), " ", n.type === 'clap' ? 'rekoruna tepki verdi' : 'seni dürttü', n.message && n.type === 'poke' ? ': "' + n.message + '"' : n.message && n.type === 'clap' ? ' · ' + n.message : ''), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", null, n.fromName), " ", n.type === 'clap' ? 'rekoruna tepki verdi' : n.type === 'gym' ? 'şu an antrenmanda 🏋️' : 'seni dürttü', n.message && n.type === 'poke' ? ': "' + n.message + '"' : n.message && n.type === 'clap' ? ' · ' + n.message : ''), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 11, color: '#666', marginTop: 3 }
   }, feedTimeAgo(n.createdAt))), /*#__PURE__*/React.createElement("button", {
     onClick: () => onDismissOne(n.id),
@@ -3482,7 +3493,32 @@ async function sendClap(fromUid, fromName, toUid, detail) {
     });
   } catch (e) {}
 }
-// Bildirimleri çek (dürtme + alkış)
+// Salona girdi: tüm arkadaşlara "şu an antrenmanda" bildirimi gönder (günde 1 kez)
+async function broadcastGymEntry(fromUid, fromName) {
+  if (!window.APEX_DB) return;
+  // Günde 1 kez: bugün zaten gönderdiysem tekrar gönderme
+  const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  try {
+    if (localStorage.getItem('apex-gym-notified') === todayKey) return;
+  } catch (e) {}
+  try {
+    const friends = await loadFriends(fromUid);
+    if (!friends || friends.length === 0) { localStorage.setItem('apex-gym-notified', todayKey); return; }
+    const id = 'gym_' + fromUid + '_' + todayKey.replace(/-/g, ''); // gün başına sabit id (aynı gün üzerine yazar, çoğaltmaz)
+    await Promise.all(friends.map(fr =>
+      window.APEX_DB.collection('users').doc(fr.uid).collection('notifications').doc(id).set({
+        type: 'gym',
+        fromUid: fromUid,
+        fromName: fromName || 'Arkadaşın',
+        message: 'şu an antrenmanda 🏋️',
+        createdAt: Date.now(),
+        read: false
+      }).catch(() => {})
+    ));
+    localStorage.setItem('apex-gym-notified', todayKey);
+  } catch (e) {}
+}
+// Bildirimleri çek (dürtme + alkış + salon)
 async function loadNotifications(uid) {
   if (!window.APEX_DB) return [];
   try {
@@ -6511,6 +6547,8 @@ function WorkoutTab({
     if (cloudReady && myUsername && activeGym && activeGym.shared !== false) {
       const dayCfg = dayConfig[currentDay];
       setLiveStatus(authUser.uid, true, (dayCfg && dayCfg.name) || currentDay);
+      // Tüm arkadaşlara "antrenmanda" bildirimi (günde 1 kez)
+      broadcastGymEntry(authUser.uid, authUser.displayName || myUsername);
     }
   };
   const endSession = () => {
