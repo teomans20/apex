@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.6.1'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.7.1'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -3552,11 +3552,13 @@ function FriendsTab({
     me: me,
     friends: friends,
     photoMap: photoMap,
-    friendsLoaded: !loading
+    friendsLoaded: !loading,
+    onOpenProfile: setProfileFriend
   }) : sub === 'leaderboard' ? /*#__PURE__*/React.createElement(LeaderboardView, {
     me: me,
     photoMap: photoMap,
-    friends: friends
+    friends: friends,
+    onOpenProfile: setProfileFriend
   }) : sub === 'add' ? /*#__PURE__*/React.createElement(AddFriendView, {
     me: me,
     friends: friends,
@@ -4062,7 +4064,8 @@ function FeedView({
   me,
   friends,
   friendsLoaded,
-  photoMap
+  photoMap,
+  onOpenProfile
 }) {
   const [items, setItems] = useState(null); // null = yükleniyor
   const [refreshing, setRefreshing] = useState(false);
@@ -4154,7 +4157,10 @@ function FeedView({
     myUid: me.uid,
     onReact: onReact,
     userMap: userMap,
-    photoMap: photoMap
+    photoMap: photoMap,
+    onOpenProfile: onOpenProfile,
+    me: me,
+    friends: friends
   })));
 }
 
@@ -4166,9 +4172,25 @@ function FeedCard({
   myUid,
   onReact,
   userMap,
-  photoMap
+  photoMap,
+  onOpenProfile,
+  me,
+  friends
 }) {
   const a = avatarFor(item.ownerName || item.ownerUsername);
+  const openProfile = () => {
+    if (!onOpenProfile || !item.ownerUid) return;
+    haptic(15);
+    // kendim mi, arkadaş mı — profil objesi oluştur
+    let target;
+    if (me && item.ownerUid === me.uid) {
+      target = { uid: me.uid, name: me.name || me.username, username: me.username };
+    } else {
+      const f = friends && friends.find(x => x.uid === item.ownerUid);
+      target = f || { uid: item.ownerUid, name: item.ownerName, username: item.ownerUsername };
+    }
+    onOpenProfile(target);
+  };
   const [picking, setPicking] = useState(false);
   const [emojiInput, setEmojiInput] = useState('');
   const [showWho, setShowWho] = useState(null); // hangi emojinin "kimler" listesi açık
@@ -4238,19 +4260,22 @@ function FeedCard({
   }, /*#__PURE__*/React.createElement("div", {
     style: S.feedHead
   }, (photoMap && photoMap[item.ownerUid]) ? /*#__PURE__*/React.createElement("div", {
+    onClick: openProfile,
     style: {
       width: 38,
       height: 38,
       borderRadius: '50%',
       overflow: 'hidden',
       flexShrink: 0,
-      background: '#141414'
+      background: '#141414',
+      cursor: 'pointer'
     }
   }, /*#__PURE__*/React.createElement("img", {
     src: photoMap[item.ownerUid],
     alt: '',
     style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' }
   })) : /*#__PURE__*/React.createElement("div", {
+    onClick: openProfile,
     style: {
       width: 38,
       height: 38,
@@ -4262,14 +4287,16 @@ function FeedCard({
       fontWeight: 800,
       fontSize: 15,
       fontFamily: "'Big Shoulders Display',sans-serif",
-      flexShrink: 0
+      flexShrink: 0,
+      cursor: 'pointer'
     }
   }, a.letter), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1
     }
   }, /*#__PURE__*/React.createElement("div", {
-    style: S.feedName
+    style: { ...S.feedName, cursor: 'pointer' },
+    onClick: openProfile
   }, item.ownerName || item.ownerUsername), /*#__PURE__*/React.createElement("div", {
     style: S.feedTime
   }, feedTimeAgo(item.at))), item.gymName && /*#__PURE__*/React.createElement("span", {
@@ -4477,6 +4504,30 @@ function computePublicStats(data, gymName) {
   // Top PR'ları ağırlığa göre sırala, ilk 5
   topPRs.sort((a, b) => b.weight - a.weight);
 
+  // EN ÇOK ÇALIŞILAN KAS GRUBU (tüm hacmi kaslara dağıt)
+  const muscleVol = {};
+  logs.forEach(l => {
+    const muscles = getExerciseMuscles(l.exerciseName, data.customMuscleMap);
+    if (muscles && typeof muscles === 'object') {
+      const weights = Object.entries(muscles);
+      const totalW = weights.reduce((s, [, w]) => s + w, 0);
+      if (totalW > 0) {
+        const vol = (l.weight || 0) * (l.reps || 0);
+        weights.forEach(([m, w]) => { muscleVol[m] = (muscleVol[m] || 0) + vol * (w / totalW); });
+      }
+    }
+  });
+  const totalMuscleVol = Object.values(muscleVol).reduce((a, b) => a + b, 0);
+  let topMuscle = null;
+  if (totalMuscleVol > 0) {
+    const sorted = Object.entries(muscleVol).sort((a, b) => b[1] - a[1]);
+    const [code, vol] = sorted[0];
+    topMuscle = {
+      name: (MUSCLES[code] && MUSCLES[code].tr) || code,
+      pct: Math.round(vol / totalMuscleVol * 100)
+    };
+  }
+
   // Gün serisi (streak)
   let streak = 0;
   let cursor = new Date();
@@ -4497,6 +4548,7 @@ function computePublicStats(data, gymName) {
     weeklyWorkouts,
     weeklyPRs,
     topPRs: topPRs.slice(0, 5),
+    topMuscle: topMuscle,
     gymName: gymName || ''
   };
 }
@@ -4567,7 +4619,8 @@ async function loadLeaderboard(myUid, myInfo, friends) {
 function LeaderboardView({
   me,
   friends,
-  photoMap
+  photoMap,
+  onOpenProfile
 }) {
   const [board, setBoard] = useState(null);
   const [metric, setMetric] = useState('gain'); // gain | pr | workout
@@ -4646,9 +4699,18 @@ function LeaderboardView({
     }
   }, "Henüz veri yok 🌱", /*#__PURE__*/React.createElement("br", null), "Arkadaşların antrenman yaptıkça dolacak") : sorted.map((u, i) => /*#__PURE__*/React.createElement("div", {
     key: u.uid,
+    onClick: () => {
+      if (!onOpenProfile) return;
+      haptic(15);
+      const target = u.isMe
+        ? { uid: me.uid, name: me.name || me.username, username: me.username }
+        : (friends.find(x => x.uid === u.uid) || { uid: u.uid, name: u.name, username: u.username });
+      onOpenProfile(target);
+    },
     style: {
       ...S.lbRow,
-      ...(u.isMe ? S.lbRowMe : {})
+      ...(u.isMe ? S.lbRowMe : {}),
+      cursor: 'pointer'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4788,7 +4850,28 @@ function FriendProfileView({
     style: S.pfStatV
   }, stats.streak || 0), /*#__PURE__*/React.createElement("div", {
     style: S.pfStatL
-  }, "GÜN SERİSİ"))), stats.topPRs && stats.topPRs.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, "GÜN SERİSİ"))), stats.topMuscle && stats.topMuscle.name && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      background: 'linear-gradient(135deg,rgba(255,61,61,0.1),rgba(198,40,40,0.03))',
+      border: '1px solid rgba(255,61,61,0.25)',
+      borderRadius: 14,
+      padding: '13px 16px',
+      margin: '4px 0 14px'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 26, flexShrink: 0 }
+  }, "💪"), /*#__PURE__*/React.createElement("div", {
+    style: { flex: 1 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 10, color: '#888', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 800, marginBottom: 2 }
+  }, "En Çok Çalıştığı Kas"), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 17, fontWeight: 800 }
+  }, stats.topMuscle.name)), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 20, fontWeight: 900, color: '#FF6B6B', fontFamily: "'Big Shoulders Display',sans-serif" }
+  }, stats.topMuscle.pct, "%")), stats.topPRs && stats.topPRs.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.pfSection
   }, "EN İYİ REKORLARI"), stats.topPRs.map((pr, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
