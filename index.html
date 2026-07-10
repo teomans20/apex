@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.5.3'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.6'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1739,6 +1739,10 @@ function generateStoryImage(entry) {
     if (entry.muscleDist && entry.muscleDist.length > 0) {
       const barX = PAD + S(13), barW = W - PAD * 2 - S(26);
       const COLORS = ['#FF3D3D', '#FFB74D', '#4A90E2', '#A78BFA', '#34D399', '#26a69a'];
+      // Story'de sadece ilk 4 kas, kendi içinde %100'e normalize
+      const top4 = entry.muscleDist.slice(0, 4);
+      const sum4 = top4.reduce((s, m) => s + m.pct, 0);
+      const mDist = sum4 > 0 ? top4.map(m => ({ muscle: m.muscle, pct: Math.round(m.pct / sum4 * 100) })) : top4;
       const legRight = PAD + (W - PAD * 2) - S(13); // kutu iç sağ kenar
       const availW = legRight - barX; // legend için kullanılabilir genişlik
       // tek satır: sığması için font boyutunu otomatik küçült
@@ -1748,9 +1752,9 @@ function generateStoryImage(entry) {
       const measureTotal = (fs, gap) => {
         ctx.font = '600 ' + fs + "px Manrope, sans-serif";
         let total = 0;
-        entry.muscleDist.forEach((m, i) => {
+        mDist.forEach((m, i) => {
           total += dotBase + ctx.measureText(m.muscle + ' ' + m.pct + '%').width;
-          if (i < entry.muscleDist.length - 1) total += gap;
+          if (i < mDist.length - 1) total += gap;
         });
         return total;
       };
@@ -1774,7 +1778,7 @@ function generateStoryImage(entry) {
       // bar
       const barY = y + S(22), barH = S(9);
       let cx = barX;
-      entry.muscleDist.forEach((m, i) => {
+      mDist.forEach((m, i) => {
         const segW = barW * (m.pct / 100);
         ctx.fillStyle = COLORS[i % COLORS.length];
         rr(cx, barY, Math.max(segW - S(2), S(2)), barH, S(3)); ctx.fill();
@@ -1784,7 +1788,7 @@ function generateStoryImage(entry) {
       const legY = barY + barH + S(13);
       const dotSz = Math.max(S(5), legFont * 0.7);
       let lx = barX;
-      entry.muscleDist.forEach((m, i) => {
+      mDist.forEach((m, i) => {
         ctx.fillStyle = COLORS[i % COLORS.length];
         rr(lx, legY - dotSz / 2 - S(1), dotSz, dotSz, S(2)); ctx.fill();
         ctx.fillStyle = '#aaa';
@@ -3295,7 +3299,7 @@ function buildJournalEntries(data) {
     const muscleDist = Object.entries(muscleVol)
       .map(([m, v]) => ({ muscle: (MUSCLES[m] && MUSCLES[m].tr) || m, pct: totalMuscleVol > 0 ? Math.round(v / totalMuscleVol * 100) : 0 }))
       .sort((a, b) => b.pct - a.pct)
-      .slice(0, 4)
+      .slice(0, 6)
       .filter(x => x.pct > 0);
 
     // Geçen aynı-tip antrenmana göre toplam hacim farkı
@@ -3420,6 +3424,9 @@ function FriendsTab({
   const [friendStatuses, setFriendStatuses] = useState({}); // uid -> {training, dayName, lastWorkout}
   const [photoMap, setPhotoMap] = useState({}); // uid -> profil fotosu (base64)
   const [pokeTarget, setPokeTarget] = useState(null); // dürtülecek arkadaş
+  const [pokedMap, setPokedMap] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('apex-poked') || '{}'); } catch (e) { return {}; }
+  }); // { uid: dürtme zamanı(ms) } — cooldown için
   const [sent, setSent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState('');
@@ -3657,7 +3664,17 @@ function FriendsTab({
   })())), (() => {
     const st = friendStatuses[f.uid];
     const daysSince = st && st.lastWorkoutAt ? (Date.now() - st.lastWorkoutAt) / 86400000 : null;
+    const POKE_COOLDOWN = 20 * 3600000; // 20 saat
+    const pokedAt = pokedMap[f.uid] || 0;
+    const recentlyPoked = (Date.now() - pokedAt) < POKE_COOLDOWN;
     const canPoke = daysSince !== null && daysSince >= 2 && !(st && st.training);
+    if (canPoke && recentlyPoked) {
+      // yakın zamanda dürtüldü — pasif "Dürtüldü" göster
+      return /*#__PURE__*/React.createElement("button", {
+        disabled: true,
+        style: { padding: '8px 14px', borderRadius: 10, border: '1px solid #2a2a2a', fontSize: 13, fontWeight: 800, background: '#161616', color: '#666', flexShrink: 0, cursor: 'default' }
+      }, "✓ Dürtüldü");
+    }
     if (canPoke) {
       return /*#__PURE__*/React.createElement("button", {
         onClick: () => setPokeTarget(f),
@@ -3699,7 +3716,16 @@ function FriendsTab({
     friend: pokeTarget,
     myName: (authUser.displayName || 'Biri'),
     onClose: () => setPokeTarget(null),
-    onSent: () => setPokeTarget(null)
+    onSent: () => {
+      // cooldown için dürtme zamanını kaydet
+      const uid = pokeTarget && pokeTarget.uid;
+      if (uid) {
+        const next = { ...pokedMap, [uid]: Date.now() };
+        setPokedMap(next);
+        try { localStorage.setItem('apex-poked', JSON.stringify(next)); } catch (e) {}
+      }
+      setPokeTarget(null);
+    }
   })));
 }
 
