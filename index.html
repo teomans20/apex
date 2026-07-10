@@ -903,7 +903,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.6'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.6.1'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -1742,7 +1742,19 @@ function generateStoryImage(entry) {
       // Story'de sadece ilk 4 kas, kendi içinde %100'e normalize
       const top4 = entry.muscleDist.slice(0, 4);
       const sum4 = top4.reduce((s, m) => s + m.pct, 0);
-      const mDist = sum4 > 0 ? top4.map(m => ({ muscle: m.muscle, pct: Math.round(m.pct / sum4 * 100) })) : top4;
+      let mDist;
+      if (sum4 > 0) {
+        mDist = top4.map(m => ({ muscle: m.muscle, pct: Math.round(m.pct / sum4 * 100) }));
+        // yuvarlama farkını en büyük dilime ekle → toplam tam 100
+        const diff = 100 - mDist.reduce((s, m) => s + m.pct, 0);
+        if (diff !== 0 && mDist.length > 0) {
+          let maxI = 0;
+          mDist.forEach((m, i) => { if (m.pct > mDist[maxI].pct) maxI = i; });
+          mDist[maxI].pct += diff;
+        }
+      } else {
+        mDist = top4;
+      }
       const legRight = PAD + (W - PAD * 2) - S(13); // kutu iç sağ kenar
       const availW = legRight - barX; // legend için kullanılabilir genişlik
       // tek satır: sığması için font boyutunu otomatik küçült
