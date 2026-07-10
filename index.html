@@ -917,7 +917,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.8.2'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.8.3'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2496,11 +2496,11 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
   const box = { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 14 };
 
   return /*#__PURE__*/React.createElement("div", {
-    style: { ...S.modalOverlay, alignItems: 'flex-start', justifyContent: 'flex-start', overflowY: 'auto', padding: '0' },
+    style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, overflowY: 'auto', display: 'block' },
     onClick: onClose
   }, /*#__PURE__*/React.createElement("div", {
     onClick: e => e.stopPropagation(),
-    style: { width: '100%', boxSizing: 'border-box', minHeight: '100%', background: 'linear-gradient(165deg,#16060a,#000 55%)', padding: '18px 16px 40px', maxWidth: 480, margin: '0 auto' }
+    style: { boxSizing: 'border-box', minHeight: '100vh', width: '100%', maxWidth: 480, margin: '0 auto', background: 'linear-gradient(165deg,#16060a,#000 55%)', padding: '18px 16px 40px' }
   }, /*#__PURE__*/React.createElement("div", {
     style: { display: 'flex', flexDirection: 'column', gap: 11, width: '100%' }
   },
@@ -2528,7 +2528,7 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
         /*#__PURE__*/React.createElement("div", { key: i, style: { ...box, padding: '13px 10px', textAlign: 'center' } },
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', letterSpacing: 0.3, textTransform: 'uppercase', fontWeight: 800 } }, st.l),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 27, fontWeight: 900, lineHeight: 1, marginTop: 5, fontFamily: "'Big Shoulders Display',sans-serif", color: st.gold ? '#FFB74D' : '#fff' } }, st.v, st.u ? /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#888' } }, st.u) : null),
-          cmpBadge(st.c, st.sfx))),
+          cmpBadge(st.c, st.sfx)))),
     // kas dağılımı
     s.muscleDist && s.muscleDist.length > 0 && /*#__PURE__*/React.createElement("div", { style: { ...box, padding: '13px 15px' } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 800, marginBottom: 10 } }, 'Bu Hafta Kas Dağılımı'),
@@ -2568,7 +2568,7 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
         /*#__PURE__*/React.createElement("path", { d: 'M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8' }),
         /*#__PURE__*/React.createElement("polyline", { points: '16 6 12 2 8 6' }),
         /*#__PURE__*/React.createElement("line", { x1: 12, y1: 2, x2: 12, y2: 15 })),
-      'Paylaş'))))));
+      'Paylaş')))));
 }
 
 function PokeModal({
