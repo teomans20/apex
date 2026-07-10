@@ -917,7 +917,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.8.3'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.8.5'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2496,17 +2496,17 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
   const box = { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 14 };
 
   return /*#__PURE__*/React.createElement("div", {
-    style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, overflowY: 'auto', display: 'block' },
+    style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', display: 'block' },
     onClick: onClose
   }, /*#__PURE__*/React.createElement("div", {
     onClick: e => e.stopPropagation(),
-    style: { boxSizing: 'border-box', minHeight: '100vh', width: '100%', maxWidth: 480, margin: '0 auto', background: 'linear-gradient(165deg,#16060a,#000 55%)', padding: '18px 16px 40px' }
+    style: { boxSizing: 'border-box', minHeight: '100%', width: '100%', maxWidth: 480, margin: '0 auto', background: 'linear-gradient(165deg,#16060a,#000 55%)', padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 40px)' }
   }, /*#__PURE__*/React.createElement("div", {
     style: { display: 'flex', flexDirection: 'column', gap: 11, width: '100%' }
   },
     // header
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
-      /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { background: 'none', border: 'none', color: '#888', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' } }, '‹ Kapat'),
+      /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { background: '#141414', border: '1px solid #262626', borderRadius: 10, color: '#ccc', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: '8px 14px' } }, '‹ Kapat'),
       /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#888' } }, s.rangeText)),
     /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 32, lineHeight: 0.95 } }, 'HAFTALIK ÖZET'),
     // atasözü
@@ -2535,8 +2535,8 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', gap: 2, marginBottom: 10 } },
         s.muscleDist.map((m, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { width: m.pct + '%', background: COLORS[i % COLORS.length] } }))),
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: '7px 12px' } },
-        s.muscleDist.map((m, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#bbb' } },
-          /*#__PURE__*/React.createElement("span", { style: { width: 8, height: 8, borderRadius: 3, background: COLORS[i % COLORS.length] } }),
+        s.muscleDist.map((m, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#bbb', whiteSpace: 'nowrap' } },
+          /*#__PURE__*/React.createElement("span", { style: { width: 8, height: 8, borderRadius: 3, background: COLORS[i % COLORS.length], flexShrink: 0 } }),
           m.muscle + ' ' + m.pct + '%')))),
     // kas + streak
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 9 } },
@@ -3655,14 +3655,18 @@ function computeWeekSummary(data, mondayTs) {
       }
     }
   });
+  // Trapez'i Sırt (lat) ile birleştir — ikisi de sırt kası, ayrı sayılınca dağılım yanıltıcı oluyor
+  if (muscleVol.traps) { muscleVol.lats = (muscleVol.lats || 0) + muscleVol.traps; delete muscleVol.traps; }
+  // Birleşik grup için Türkçe ad
+  const muscleTr = code => code === 'lats' ? 'Sırt' : ((MUSCLES[code] && MUSCLES[code].tr) || code);
   const totalMuscleVol = Object.values(muscleVol).reduce((a, b) => a + b, 0);
   let muscleDist = [], topMuscle = null;
   if (totalMuscleVol > 0) {
     const sortedM = Object.entries(muscleVol).sort((a, b) => b[1] - a[1]);
-    topMuscle = (MUSCLES[sortedM[0][0]] && MUSCLES[sortedM[0][0]].tr) || sortedM[0][0];
+    topMuscle = muscleTr(sortedM[0][0]);
     const top4 = sortedM.slice(0, 4);
     const sum4 = top4.reduce((s, [, v]) => s + v, 0);
-    muscleDist = top4.map(([m, v]) => ({ muscle: (MUSCLES[m] && MUSCLES[m].tr) || m, pct: Math.round(v / sum4 * 100) }));
+    muscleDist = top4.map(([m, v]) => ({ muscle: muscleTr(m), pct: Math.round(v / sum4 * 100) }));
     const diff = 100 - muscleDist.reduce((s, m) => s + m.pct, 0);
     if (diff !== 0 && muscleDist.length > 0) {
       let maxI = 0; muscleDist.forEach((m, i) => { if (m.pct > muscleDist[maxI].pct) maxI = i; });
@@ -6026,14 +6030,31 @@ function WorkoutTab({
   const [weekSeen, setWeekSeen] = useState(() => localStorage.getItem('apex-week-seen') || '');
   // En son TAMAMLANMIŞ haftanın özeti (bu haftadan bir önceki Pzt-Paz).
   // Pazartesi girer girmez geçen hafta komple biter, özet hazır olur.
-  const weeklySummary = useMemo(() => {
+  // Banner için UCUZ kontrol: geçen hafta antrenman var mı? (tam özet hesaplama YOK)
+  // Tam hesap ancak kullanıcı açınca (setShowWeekly) yapılır — açılış hızı için kritik.
+  const lastWeekId = useMemo(() => {
     const thisMon = weekMondayStart(Date.now());
-    const lastMon = thisMon - 7 * 86400000; // geçen haftanın Pazartesi'si
+    const lastMon = thisMon - 7 * 86400000;
+    const lastEnd = thisMon;
+    // sadece geçen hafta aralığında EN AZ BİR log var mı? (erken çık)
+    const logs = data.logs || [];
+    let has = false;
+    for (let i = 0; i < logs.length; i++) {
+      const t = logs[i].timestamp;
+      if (t >= lastMon && t < lastEnd) { has = true; break; }
+    }
+    return has ? 'w' + lastMon : null;
+  }, [(data.logs || []).length]);
+  const weeklyUnseen = lastWeekId && lastWeekId !== weekSeen;
+  // Tam özet: sadece modal açıkken hesapla (lazy)
+  const weeklySummary = useMemo(() => {
+    if (!showWeekly) return null;
+    const thisMon = weekMondayStart(Date.now());
+    const lastMon = thisMon - 7 * 86400000;
     const summ = computeWeekSummary(data, lastMon);
     if (summ) summ._weekId = 'w' + lastMon;
     return summ;
-  }, [(data.logs || []).length, (data.sessions || []).length]);
-  const weeklyUnseen = weeklySummary && weeklySummary._weekId !== weekSeen;
+  }, [showWeekly, (data.logs || []).length, (data.sessions || []).length]);
   const [notifs, setNotifs] = useState([]); // dürtme + alkış bildirimleri
   const [notifProgReqs, setNotifProgReqs] = useState([]); // program istekleri (bildirimde de göster)
   const [dayEditMode, setDayEditMode] = useState(false); // gün düzenleme modu (egzersize girip çıkınca korunur)
@@ -6787,7 +6808,12 @@ function WorkoutTab({
     },
     weeklyUnseen: weeklyUnseen,
     onOpenWeekly: () => setShowWeekly(true),
-    weeklySummaryRange: weeklySummary ? weeklySummary.rangeText : '',
+    weeklySummaryRange: (() => {
+      const thisMon = weekMondayStart(Date.now());
+      const lastMon = thisMon - 7 * 86400000;
+      const fmt = ts => { const d = new Date(ts); return d.getDate() + ' ' + ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'][d.getMonth()]; };
+      return (fmt(lastMon) + ' – ' + fmt(thisMon - 86400000)).toUpperCase();
+    })(),
     onOpenGymPicker: onOpenGymPicker
   }), view === 'day' && /*#__PURE__*/React.createElement(DayView, {
     dayType: currentDay,
@@ -6902,9 +6928,10 @@ function WorkoutTab({
     myUsername: myUsername,
     onClose: () => {
       // görüldü işaretle
-      if (weeklySummary._weekId) {
-        localStorage.setItem('apex-week-seen', weeklySummary._weekId);
-        setWeekSeen(weeklySummary._weekId);
+      const wid = (weeklySummary && weeklySummary._weekId) || lastWeekId;
+      if (wid) {
+        localStorage.setItem('apex-week-seen', wid);
+        setWeekSeen(wid);
       }
       setShowWeekly(false);
     }
