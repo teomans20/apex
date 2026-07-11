@@ -132,6 +132,8 @@
   /* Kart giriş animasyonu (liste elemanları) */
   @keyframes apexCardIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   .apex-card-anim { animation: apexCardIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  /* Skeleton yükleme parıltısı */
+  @keyframes apexShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   @keyframes apexSlide { 0% { transform: translateX(-130%); } 100% { transform: translateX(330%); } }
   #root { min-height: 100vh; }
   /* Telefon yatay tutulduğunda içeriği zorla dik göster (iOS PWA orientation lock desteklemediği için) */
@@ -943,7 +945,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.5'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.6'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -995,6 +997,43 @@ function saveTheme(id) {
 }
 // Açılışta uygula
 applyTheme(loadTheme());
+
+// ————— SVG İKON KÜTÜPHANESİ (premium görünüm, emoji yerine) —————
+const APEX_ICON_PATHS = {
+  dumbbell: 'M6 7v10M18 7v10M6 12h12M3 9v6M21 9v6',
+  clock: 'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z',
+  hourglass: 'M8 3h8M8 21h8M8 3v4l4 4 4-4V3M8 21v-4l4-4 4 4v4',
+  vibrate: 'M9 5h6a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 9v6M20 9v6',
+  export: 'M12 15V4M8 8l4-4 4 4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4',
+  import: 'M12 4v11M8 11l4 4 4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4',
+  logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
+  trophy: 'M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4M7 6H4a2 2 0 0 0 2 5M17 6h3a2 2 0 0 1-2 5',
+  chart: 'M4 20V10M10 20V4M16 20v-7M21 20H3',
+  flame: 'M12 3c1 4-2 5-2 8a4 4 0 0 0 8 0c0-2-1-3-1-3s3 1 3 5a8 8 0 1 1-16 0c0-5 5-7 8-10z'
+};
+const SK_BG = { background: 'linear-gradient(90deg,#161616 25%,#232323 50%,#161616 75%)', backgroundSize: '200% 100%', animation: 'apexShimmer 1.4s infinite' };
+function SkeletonFeed({ rows }) {
+  return /*#__PURE__*/React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 } },
+    Array.from({ length: rows || 3 }).map((_, i) => /*#__PURE__*/React.createElement('div', {
+      key: i,
+      style: { background: '#101010', border: '1px solid #1c1c1c', borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 12 }
+    },
+      /*#__PURE__*/React.createElement('div', { style: { ...SK_BG, width: 40, height: 40, borderRadius: '50%', flexShrink: 0 } }),
+      /*#__PURE__*/React.createElement('div', { style: { flex: 1 } },
+        /*#__PURE__*/React.createElement('div', { style: { ...SK_BG, height: 12, width: '58%', borderRadius: 6, marginBottom: 8 } }),
+        /*#__PURE__*/React.createElement('div', { style: { ...SK_BG, height: 9, width: '38%', borderRadius: 5 } })))));
+}
+function ApexIcon({ name, size, color, strokeWidth, style }) {
+  const d = APEX_ICON_PATHS[name];
+  if (!d) return null;
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size || 18, height: size || 18, viewBox: '0 0 24 24',
+    style: { flexShrink: 0, display: 'block', ...(style || {}) }
+  }, /*#__PURE__*/React.createElement("path", {
+    d: d, fill: 'none', stroke: color || 'var(--accent-light)',
+    strokeWidth: strokeWidth || 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+  }));
+}
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -4308,14 +4347,7 @@ function FriendsTab({
     style: { flex: 1, padding: '11px', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 10, color: '#999', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }
   }, "Sil"))))), /*#__PURE__*/React.createElement("div", {
     style: S.friendSection
-  }, "ARKADAŞLARIN (", friends.length, ")"), loading ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: 'center',
-      color: '#555',
-      marginTop: 30,
-      fontSize: 13
-    }
-  }, "Yükleniyor...") : friends.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, "ARKADAŞLARIN (", friends.length, ")"), loading ? /*#__PURE__*/React.createElement(SkeletonFeed, { rows: 3 }) : friends.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
       color: '#666',
@@ -5302,14 +5334,7 @@ function LeaderboardView({
     loadLeaderboard(me.uid, me, friends).then(setBoard);
   }, [friends.length]);
   if (board === null) {
-    return /*#__PURE__*/React.createElement("div", {
-      style: {
-        textAlign: 'center',
-        color: '#555',
-        marginTop: 30,
-        fontSize: 13
-      }
-    }, "Yükleniyor...");
+    return /*#__PURE__*/React.createElement(SkeletonFeed, { rows: 4 });
   }
 
   // Metriğe göre değer + sıralama
@@ -5483,14 +5508,7 @@ function FriendProfileView({
       fontSize: 12,
       color: '#777'
     }
-  }, "@", friend.username, stats && stats.gymName ? ` · 📍 ${stats.gymName}` : '')), stats === undefined ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: 'center',
-      color: '#555',
-      marginTop: 20,
-      fontSize: 13
-    }
-  }, "Yükleniyor...") : stats === null ? /*#__PURE__*/React.createElement("div", {
+  }, "@", friend.username, stats && stats.gymName ? ` · 📍 ${stats.gymName}` : '')), stats === undefined ? /*#__PURE__*/React.createElement(SkeletonFeed, { rows: 3 }) : stats === null ? /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
       color: '#666',
@@ -7418,7 +7436,7 @@ function HomeView({
         onClick: () => onSelectDay(suggest),
         style: { width: '100%', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, background: 'linear-gradient(135deg,' + ((cfg && cfg.accentSoft) || 'rgba(var(--accent-rgb),0.12)') + ',rgba(0,0,0,0.02))', border: '1px solid ' + ((cfg && cfg.accent) ? cfg.accent + '44' : 'rgba(var(--accent-rgb),0.28)'), borderRadius: 15, padding: '13px 15px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
       },
-        /*#__PURE__*/React.createElement("div", { style: { width: 42, height: 42, borderRadius: 12, background: (cfg && cfg.gradient) || 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 } }, '🏋️'),
+        /*#__PURE__*/React.createElement("div", { style: { width: 42, height: 42, borderRadius: 12, background: (cfg && cfg.gradient) || 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'dumbbell', size: 22, color: '#fff', strokeWidth: 2.2 })),
         /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: '#fff' } }, 'Sıradaki: ' + ((cfg && cfg.name) || suggest)),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 11.5, color: '#999', marginTop: 2 } }, daysAgo == null ? 'Henüz hiç yapılmadı — başla!' : 'Son: ' + daysAgo + ' gün önce')),
@@ -8922,14 +8940,14 @@ function MenuModal({
     timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: { background: '#0d0d0d', border: '1px solid #1c1c1c', borderRadius: 14, overflow: 'hidden', marginBottom: 12 } },
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 15px' } },
         /*#__PURE__*/React.createElement("div", null,
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600 } }, "⏱️ Zamanlayıcı"),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'clock', size: 16 }), "Zamanlayıcı"),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginTop: 1 } }, "Set sonrası otomatik başlat")),
         /*#__PURE__*/React.createElement("div", {
           onClick: () => onTimerSettingsChange({ ...timerSettings, enabled: !timerSettings.enabled }),
           style: { width: 44, height: 26, borderRadius: 13, background: timerSettings.enabled ? 'var(--accent)' : '#2a2a2a', position: 'relative', flexShrink: 0, cursor: 'pointer' }
         }, /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 3, left: timerSettings.enabled ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff' } }))),
       timerSettings.enabled && /*#__PURE__*/React.createElement("div", { style: { padding: '13px 15px', borderTop: '1px solid #161616' } },
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, marginBottom: 2 } }, "⏲️ Varsayılan Süre"),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'hourglass', size: 16 }), "Varsayılan Süre"),
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginBottom: 10 } }, "Yeni egzersizler için (saniye)"),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' } },
           [60, 90, 120, 180].map(sec => /*#__PURE__*/React.createElement("button", {
@@ -8945,7 +8963,7 @@ function MenuModal({
           }))),
       timerSettings.enabled && /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 15px', borderTop: '1px solid #161616' } },
         /*#__PURE__*/React.createElement("div", null,
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600 } }, "📳 Titreşim"),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'vibrate', size: 16 }), "Titreşim"),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginTop: 1 } }, "Süre bitince titret")),
         /*#__PURE__*/React.createElement("div", {
           onClick: () => onTimerSettingsChange({ ...timerSettings, vibrate: !timerSettings.vibrate }),
@@ -8954,17 +8972,17 @@ function MenuModal({
     timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: S.modalTitle }, "Veri"),
     /*#__PURE__*/React.createElement("button", {
     onClick: onExport,
-    style: S.menuItem
-  }, "📤 Yedek Dışa Aktar"), /*#__PURE__*/React.createElement("button", {
+    style: { ...S.menuItem, display: 'flex', alignItems: 'center', gap: 10 }
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'export' }), "Yedek Dışa Aktar"), /*#__PURE__*/React.createElement("button", {
     onClick: onImport,
-    style: S.menuItem
-  }, "📥 Yedek Yükle"), authUser && /*#__PURE__*/React.createElement("button", {
+    style: { ...S.menuItem, display: 'flex', alignItems: 'center', gap: 10 }
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'import' }), "Yedek Yükle"), authUser && /*#__PURE__*/React.createElement("button", {
     onClick: logout,
     style: {
       ...S.menuItem,
-      color: '#FF5252'
+      color: '#FF5252', display: 'flex', alignItems: 'center', gap: 10
     }
-  }, "🚪 Çıkış Yap"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'logout', color: '#FF5252' }), "Çıkış Yap"), /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     style: {
       ...S.modalCancel,
@@ -9691,7 +9709,7 @@ function ProgressTab({
       ...S.prRowIc,
       background: es.isStuck ? 'linear-gradient(135deg,#FFA726,#8B6914)' : 'linear-gradient(135deg,var(--accent),#8B1111)'
     }
-  }, es.isStuck ? '⏳' : '🏋️'), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: es.isStuck ? 'hourglass' : 'dumbbell', size: 17, color: '#fff', strokeWidth: 2.2 })), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       textAlign: 'left'
@@ -9863,7 +9881,7 @@ function ExerciseProgressDetail({
       ...S.exDetailIc,
       background: es.isStuck ? 'linear-gradient(135deg,#FFA726,#8B6914)' : 'linear-gradient(135deg,var(--accent),#8B1111)'
     }
-  }, es.isStuck ? '⏳' : '🏋️'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: es.isStuck ? 'hourglass' : 'dumbbell', size: 17, color: '#fff', strokeWidth: 2.2 })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: S.exDetailName
   }, es.name), /*#__PURE__*/React.createElement("div", {
     style: S.exDetailCur
