@@ -917,7 +917,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.1'; // PNG ikon (eski iOS uyumlu)
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -3756,10 +3756,14 @@ function buildJournalEntries(data) {
   const isBetter = (a, b) => a.weight > b.weight || a.weight === b.weight && a.reps > b.reps;
   const bestOf = sets => sets.reduce((best, s) => !best || isBetter(s, best) ? s : best, null);
 
+  // Devam eden (bitmemiş) seansı olan günler — günlükte GÖSTERME (antrenman bitince çıksın)
+  const activeDayKeys = new Set((data.sessions || []).filter(s => s.startTime && !s.endTime).map(s => dateKey(s.startTime)));
+
   // Logları güne + dayType'a göre grupla (bir günde birden fazla gün-tipi olabilir ama genelde tek)
   const dayGroups = {}; // key: dateKey -> { logs, dayTypes:Set }
   data.logs.forEach(l => {
     const k = dateKey(l.timestamp);
+    if (activeDayKeys.has(k)) return; // aktif seans günü: henüz tamamlanmadı, atla
     if (!dayGroups[k]) dayGroups[k] = { logs: [], dayTypes: new Set() };
     dayGroups[k].logs.push(l);
     if (l.dayType) dayGroups[k].dayTypes.add(l.dayType);
@@ -6826,10 +6830,13 @@ function WorkoutTab({
     journalUnseen: (() => {
       // journalSeenTs'den sonra kaydı olan benzersiz antrenman günü sayısı
       if (!data || !data.logs) return 0;
+      // Devam eden (bitmemiş) seans günlerini sayma — antrenman bitince rozet çıksın
+      const activeDayKeys = new Set((data.sessions || []).filter(s => s.startTime && !s.endTime).map(s => dateKey(s.startTime)));
       const seenDayKeys = new Set();
       const newDayKeys = new Set();
       data.logs.forEach(l => {
         const k = dateKey(l.timestamp);
+        if (activeDayKeys.has(k)) return; // aktif antrenman günü: henüz tamamlanmadı
         if (l.timestamp > journalSeenTs) newDayKeys.add(k);
         else seenDayKeys.add(k);
       });
