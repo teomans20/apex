@@ -945,7 +945,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.11'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.12'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -968,6 +968,24 @@ function loadTimerPerExercise() {
 }
 function saveTimerPerExercise(map) {
   try { localStorage.setItem(TIMER_PEREX_KEY, JSON.stringify(map)); } catch (e) {}
+}
+
+// ————— EGZERSİZ NOTLARI —————
+// localStorage: apex-exercise-notes = { "Bench Press": "sol omuz ağrıyor, dar tut", ... }
+const EX_NOTES_KEY = 'apex-exercise-notes';
+function loadExerciseNotes() {
+  try { const raw = localStorage.getItem(EX_NOTES_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+  return {};
+}
+function getExerciseNote(name) {
+  const notes = loadExerciseNotes();
+  return notes[name] || '';
+}
+function saveExerciseNote(name, text) {
+  const notes = loadExerciseNotes();
+  if (text && text.trim()) notes[name] = text.trim();
+  else delete notes[name];
+  try { localStorage.setItem(EX_NOTES_KEY, JSON.stringify(notes)); } catch (e) {}
 }
 
 // ————— TEMA SİSTEMİ —————
@@ -1013,7 +1031,9 @@ const APEX_ICON_PATHS = {
   muscle: 'M12.409 13.017A5 5 0 0 1 22 15c0 3.866-4 7-9 7-4.077 0-8.153-.82-10.371-2.462-.426-.316-.631-.832-.62-1.362C2.118 12.723 2.627 2 10 2a3 3 0 0 1 3 3 2 2 0 0 1-2 2c-1.105 0-1.64-.444-2-1 M15 14a5 5 0 0 0-7.584 2 M9.964 6.825C8.019 7.977 9.5 13 8 15',
   medal: 'M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4M7 6H4a2 2 0 0 0 2 5M17 6h3a2 2 0 0 1-2 5',
   star: 'M12 3l2.5 6 6.5.5-5 4.2 1.6 6.3L12 17l-5.6 3.3L8 14 3 9.8l6.5-.5z',
-  users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'
+  users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  note: 'M4 4h16v13l-4 4H4zM15 21v-4a1 1 0 0 1 1-1h4M8 9h8M8 13h5',
+  pencil: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'
 };
 const SK_BG = { background: 'linear-gradient(90deg,#161616 25%,#232323 50%,#161616 75%)', backgroundSize: '200% 100%', animation: 'apexShimmer 1.4s infinite' };
 function SkeletonFeed({ rows }) {
@@ -7050,6 +7070,7 @@ function WorkoutTab({
     onShareProgram: (dayType, dayName, exercises) => setShareProgram({ dayType, dayName, exercises }),
     logDate: logDate
   }), view === 'exercise' && /*#__PURE__*/React.createElement(ExerciseView, {
+    key: currentExercise,
     exerciseName: currentExercise,
     cfg: dayConfig[currentDay],
     history: getHistoryGrouped(currentExercise),
@@ -8387,6 +8408,9 @@ function ExerciseView({
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
   const weightRef = useRef(null);
+  const [note, setNote] = useState(() => getExerciseNote(exerciseName));
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
   const isBackdated = !!logDate;
   let backdatedLabel = '';
   if (isBackdated) {
@@ -8499,7 +8523,40 @@ function ExerciseView({
     style: S.prDualLabel
   }, "BACK-OFF REKOR"), /*#__PURE__*/React.createElement("span", {
     style: S.prDualValue
-  }, backoffPR ? `${backoffPR.weight}kg × ${backoffPR.reps}` : '—'))), !showingBackoff && targetTop ?
+  }, backoffPR ? `${backoffPR.weight}kg × ${backoffPR.reps}` : '—'))),
+    // ————— EGZERSİZ NOTU —————
+    !isBackdated && (editingNote ? /*#__PURE__*/React.createElement("div", {
+      style: { background: 'rgba(255,183,77,0.07)', border: '1px solid rgba(255,183,77,0.25)', borderRadius: 12, padding: 12, marginBottom: 12 }
+    },
+      /*#__PURE__*/React.createElement("textarea", {
+        value: noteDraft,
+        onChange: e => setNoteDraft(e.target.value),
+        autoFocus: true,
+        placeholder: 'Form notu, teknik ipucu, ağrı... (sana özel)',
+        style: { width: '100%', minHeight: 64, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 9, padding: 10, color: '#fff', fontSize: 13, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.5 }
+      }),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginTop: 9 } },
+        /*#__PURE__*/React.createElement("button", {
+          onClick: () => { saveExerciseNote(exerciseName, noteDraft); setNote(noteDraft.trim()); setEditingNote(false); haptic(15); },
+          style: { flex: 1, background: 'linear-gradient(135deg,#FFB74D,#F57C00)', border: 'none', borderRadius: 9, padding: '10px', color: '#1a1a1a', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }
+        }, 'Kaydet'),
+        /*#__PURE__*/React.createElement("button", {
+          onClick: () => setEditingNote(false),
+          style: { background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 9, padding: '10px 16px', color: '#999', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }
+        }, 'İptal'))) :
+      note ? /*#__PURE__*/React.createElement("div", {
+        onClick: () => { setNoteDraft(note); setEditingNote(true); },
+        style: { background: 'rgba(255,183,77,0.07)', border: '1px solid rgba(255,183,77,0.2)', borderLeft: '3px solid #FFB74D', borderRadius: 9, padding: '11px 13px', marginBottom: 12, display: 'flex', gap: 9, alignItems: 'flex-start', cursor: 'pointer' }
+      },
+        /*#__PURE__*/React.createElement(ApexIcon, { name: 'note', size: 15, color: '#FFB74D', strokeWidth: 2, style: { marginTop: 1, flexShrink: 0 } }),
+        /*#__PURE__*/React.createElement("span", { style: { fontSize: 12.5, color: '#e8d5a8', lineHeight: 1.5, fontStyle: 'italic', flex: 1 } }, note),
+        /*#__PURE__*/React.createElement(ApexIcon, { name: 'pencil', size: 13, color: '#8a7a4a', strokeWidth: 2, style: { flexShrink: 0, marginTop: 2 } })) :
+      /*#__PURE__*/React.createElement("button", {
+        onClick: () => { setNoteDraft(''); setEditingNote(true); },
+        style: { width: '100%', background: 'none', border: '1px dashed #2a2a2a', borderRadius: 9, padding: '10px', marginBottom: 12, color: '#666', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }
+      },
+        /*#__PURE__*/React.createElement(ApexIcon, { name: 'note', size: 14, color: '#666', strokeWidth: 2 }), 'Not ekle')),
+    !showingBackoff && targetTop ?
   /*#__PURE__*/
   // Phase 1: no sets yet → focus on TOP
   React.createElement("div", {
