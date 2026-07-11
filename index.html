@@ -106,6 +106,14 @@
   .spin { animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes apexPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: 0.75; } }
+  /* ————— TEMA DEĞİŞKENLERİ (varsayılan: APEX kırmızı) ————— */
+  :root {
+    --accent: #FF3D3D;
+    --accent-dark: #c62828;
+    --accent-deep: #8b1a1a;
+    --accent-light: #FF6B6B;
+    --accent-rgb: 255,61,61;
+  }
 
   /* ————— FAZ 1: NATIVE HİS ————— */
   /* Modal animasyonları: overlay fade + içerik slide-up */
@@ -935,7 +943,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.3'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.4'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -959,6 +967,34 @@ function loadTimerPerExercise() {
 function saveTimerPerExercise(map) {
   try { localStorage.setItem(TIMER_PEREX_KEY, JSON.stringify(map)); } catch (e) {}
 }
+
+// ————— TEMA SİSTEMİ —————
+const APEX_THEMES = {
+  apex:     { name: 'APEX',     emoji: '🔥', accent: '#FF3D3D', dark: '#c62828', deep: '#8b1a1a', light: '#FF6B6B', rgb: '255,61,61' },
+  okyanus:  { name: 'Okyanus',  emoji: '🌊', accent: '#2196F3', dark: '#1565c0', deep: '#0d3a70', light: '#64B5F6', rgb: '33,150,243' },
+  gece:     { name: 'Gece',     emoji: '🌌', accent: '#A78BFA', dark: '#7c3aed', deep: '#4c1d95', light: '#C4B5FD', rgb: '167,139,250' },
+  sampiyon: { name: 'Şampiyon', emoji: '👑', accent: '#FFB74D', dark: '#F57C00', deep: '#8a4b00', light: '#FFCC80', rgb: '255,183,77' },
+  orman:    { name: 'Orman',    emoji: '🌲', accent: '#4CAF50', dark: '#2e7d32', deep: '#1b4d1e', light: '#81C784', rgb: '76,175,80' }
+};
+const THEME_KEY = 'apex-theme';
+function applyTheme(id) {
+  const t = APEX_THEMES[id] || APEX_THEMES.apex;
+  const r = document.documentElement.style;
+  r.setProperty('--accent', t.accent);
+  r.setProperty('--accent-dark', t.dark);
+  r.setProperty('--accent-deep', t.deep);
+  r.setProperty('--accent-light', t.light);
+  r.setProperty('--accent-rgb', t.rgb);
+}
+function loadTheme() {
+  try { return localStorage.getItem(THEME_KEY) || 'apex'; } catch (e) { return 'apex'; }
+}
+function saveTheme(id) {
+  try { localStorage.setItem(THEME_KEY, id); } catch (e) {}
+  applyTheme(id);
+}
+// Açılışta uygula
+applyTheme(loadTheme());
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -2220,7 +2256,7 @@ function JournalDetailView({ entry, onBack }) {
     // kazanç/kayıp etiketi
     if (!delta) return null;
     if (delta.dir === 'same') return null;
-    const cls = delta.dir === 'down' ? { bg: 'rgba(255,61,61,0.15)', c: '#FF5252' } : (prType === 'backoff' ? { bg: 'rgba(74,144,226,0.15)', c: '#4A90E2' } : { bg: 'rgba(76,175,80,0.15)', c: '#4CAF50' });
+    const cls = delta.dir === 'down' ? { bg: 'rgba(var(--accent-rgb),0.15)', c: '#FF5252' } : (prType === 'backoff' ? { bg: 'rgba(74,144,226,0.15)', c: '#4A90E2' } : { bg: 'rgba(76,175,80,0.15)', c: '#4CAF50' });
     const sign = delta.dir === 'down' ? '−' : '+';
     const txt = delta.type === 'kg' ? sign + delta.kg + 'kg' : sign + delta.reps + ' tekrar';
     return /*#__PURE__*/React.createElement("span", {
@@ -2235,7 +2271,7 @@ function JournalDetailView({ entry, onBack }) {
     let borderColor = '#1a1a1a', bg = '#0c0c0c';
     if (isPRtop || s.firstEver) { borderColor = '#FFB74D'; bg = 'linear-gradient(180deg,rgba(255,183,77,0.08),transparent)'; }
     else if (isPRback) { borderColor = '#4A90E2'; bg = 'linear-gradient(180deg,rgba(74,144,226,0.08),transparent)'; }
-    else if (isDrop) { borderColor = 'rgba(255,61,61,0.3)'; }
+    else if (isDrop) { borderColor = 'rgba(var(--accent-rgb),0.3)'; }
     else if (s.isTop) { borderColor = 'rgba(255,183,77,0.35)'; }
 
     return /*#__PURE__*/React.createElement("div", {
@@ -2332,13 +2368,13 @@ function JournalDetailView({ entry, onBack }) {
       padding: '13px 20px',
       borderRadius: 30,
       border: 'none',
-      background: sharing ? '#333' : 'linear-gradient(135deg,#FF3D3D,#c62828)',
+      background: sharing ? '#333' : 'linear-gradient(135deg,var(--accent),var(--accent-dark))',
       color: '#fff',
       fontSize: 15,
       fontWeight: 800,
       fontFamily: 'inherit',
       cursor: sharing ? 'default' : 'pointer',
-      boxShadow: '0 6px 24px rgba(255,61,61,0.4)',
+      boxShadow: '0 6px 24px rgba(var(--accent-rgb),0.4)',
       zIndex: 200
     }
   }, sharing ? /*#__PURE__*/React.createElement("span", null, '⏳ Hazırlanıyor…') : /*#__PURE__*/React.createElement(React.Fragment, null,
@@ -2438,7 +2474,7 @@ function JournalModal({ data, myUsername, onClose }) {
       weekSummaries.map((w, i) => /*#__PURE__*/React.createElement("button", {
         key: w._weekId,
         onClick: () => { haptic(15); setWeekDetail(w); },
-        style: { flexShrink: 0, width: 150, textAlign: 'left', background: 'linear-gradient(160deg,#15080c,#0a0a0a)', border: '1px solid ' + (i === 0 ? 'rgba(255,61,61,0.3)' : '#1c1c1c'), borderRadius: 15, padding: '13px 14px', cursor: 'pointer', fontFamily: 'inherit' } },
+        style: { flexShrink: 0, width: 150, textAlign: 'left', background: 'linear-gradient(160deg,#15080c,#0a0a0a)', border: '1px solid ' + (i === 0 ? 'rgba(var(--accent-rgb),0.3)' : '#1c1c1c'), borderRadius: 15, padding: '13px 14px', cursor: 'pointer', fontFamily: 'inherit' } },
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#888', fontWeight: 700, marginBottom: 9 } }, w.rangeText),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 12, marginBottom: 9 } },
           /*#__PURE__*/React.createElement("div", null,
@@ -2449,7 +2485,7 @@ function JournalModal({ data, myUsername, onClose }) {
             /*#__PURE__*/React.createElement("div", { style: { fontSize: 8, color: '#777', letterSpacing: 0.4, marginTop: 2 } }, 'REKOR'))),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#999' } },
           /*#__PURE__*/React.createElement("span", null, '💪'), w.topMuscle || '-'),
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#FF6B6B', marginTop: 8, fontWeight: 700 } }, 'Detay ›'))))),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: 'var(--accent-light)', marginTop: 8, fontWeight: 700 } }, 'Detay ›'))))),
   // boş durum
   entries.length === 0 ? /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', padding: '50px 20px', color: '#555' } },
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 34, marginBottom: 10 } }, '📔'),
@@ -2497,7 +2533,7 @@ function JournalModal({ data, myUsername, onClose }) {
             m.muscle + ' ' + m.pct + '%')))),
       // karşılaştırma
       e.volCompare && e.volCompare.dir !== 'same' && /*#__PURE__*/React.createElement("div", {
-        style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: e.volCompare.dir === 'up' ? 'rgba(76,175,80,0.06)' : 'rgba(255,61,61,0.06)', border: '1px solid ' + (e.volCompare.dir === 'up' ? 'rgba(76,175,80,0.18)' : 'rgba(255,61,61,0.18)'), borderRadius: 11, padding: '10px 13px' }
+        style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: e.volCompare.dir === 'up' ? 'rgba(76,175,80,0.06)' : 'rgba(var(--accent-rgb),0.06)', border: '1px solid ' + (e.volCompare.dir === 'up' ? 'rgba(76,175,80,0.18)' : 'rgba(var(--accent-rgb),0.18)'), borderRadius: 11, padding: '10px 13px' }
       },
         /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#aaa' } }, 'Geçen ' + (e.dayName || '') + '\'a göre'),
         /*#__PURE__*/React.createElement("span", { style: { fontSize: 13, fontWeight: 800, color: e.volCompare.dir === 'up' ? '#4CAF50' : '#FF5252' } }, (e.volCompare.dir === 'up' ? '↑ +' : '↓ ') + e.volCompare.diff + 't')),
@@ -2510,12 +2546,12 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
   const [sharing, setSharing] = useState(false);
   const s = summary;
   const dayLabels = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-  const COLORS = ['#FF3D3D', '#FFB74D', '#4A90E2', '#A78BFA', '#34D399', '#26a69a'];
+  const COLORS = ['var(--accent)', '#FFB74D', '#4A90E2', '#A78BFA', '#34D399', '#26a69a'];
 
   const cmpBadge = (c, suffix) => {
     if (!c) return null;
     const cls = c.dir === 'up' ? { bg: 'rgba(76,175,80,0.15)', col: '#4CAF50', ar: '▲' }
-      : c.dir === 'down' ? { bg: 'rgba(255,61,61,0.12)', col: '#FF6B6B', ar: '▼' }
+      : c.dir === 'down' ? { bg: 'rgba(var(--accent-rgb),0.12)', col: 'var(--accent-light)', ar: '▼' }
       : { bg: 'rgba(150,150,150,0.12)', col: '#999', ar: '=' };
     const txt = c.dir === 'same' ? 'aynı' : c.ar + ' ' + (c.dir === 'up' ? '+' : '') + c.diff + (suffix || '');
     return /*#__PURE__*/React.createElement("span", {
@@ -2570,7 +2606,7 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 800, marginBottom: 10 } }, 'Antrenman Günlerin'),
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', gap: 5 } },
         s.dayFlags.map((on, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 } },
-          /*#__PURE__*/React.createElement("div", { style: { width: 28, height: 28, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: on ? 'linear-gradient(135deg,#FF3D3D,#8b1a1a)' : '#161616', border: on ? 'none' : '1px solid #242424', color: on ? '#fff' : '#444' } }, on ? '✓' : '·'),
+          /*#__PURE__*/React.createElement("div", { style: { width: 28, height: 28, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: on ? 'linear-gradient(135deg,var(--accent),var(--accent-deep))' : '#161616', border: on ? 'none' : '1px solid #242424', color: on ? '#fff' : '#444' } }, on ? '✓' : '·'),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', fontWeight: 700 } }, dayLabels[i]))))),
     // kıyas 3'lü
     /*#__PURE__*/React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 9 } },
@@ -2614,7 +2650,7 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
     // paylaş butonu
     /*#__PURE__*/React.createElement("button", {
       onClick: handleShare, disabled: sharing,
-      style: { marginTop: 4, padding: '14px', borderRadius: 14, border: 'none', background: sharing ? '#333' : 'linear-gradient(135deg,#FF3D3D,#c62828)', color: '#fff', fontSize: 15, fontWeight: 800, fontFamily: 'inherit', cursor: sharing ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
+      style: { marginTop: 4, padding: '14px', borderRadius: 14, border: 'none', background: sharing ? '#333' : 'linear-gradient(135deg,var(--accent),var(--accent-dark))', color: '#fff', fontSize: 15, fontWeight: 800, fontFamily: 'inherit', cursor: sharing ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
     }, sharing ? '⏳ Hazırlanıyor…' : /*#__PURE__*/React.createElement(React.Fragment, null,
       /*#__PURE__*/React.createElement("svg", { width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none', stroke: '#fff', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
         /*#__PURE__*/React.createElement("path", { d: 'M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8' }),
@@ -2672,7 +2708,7 @@ function NotificationPanel({
   onDismissProgram
 }) {
   const iconFor = t => t === 'poke' ? '👊' : t === 'clap' ? '👏' : t === 'gym' ? '🏋️' : '🔔';
-  const iconBg = t => t === 'poke' ? 'linear-gradient(135deg,rgba(255,167,38,0.2),rgba(255,167,38,0.05))' : t === 'clap' ? 'linear-gradient(135deg,rgba(76,175,80,0.2),rgba(76,175,80,0.05))' : t === 'gym' ? 'linear-gradient(135deg,rgba(74,144,226,0.2),rgba(74,144,226,0.05))' : 'linear-gradient(135deg,rgba(255,61,61,0.2),rgba(255,61,61,0.05))';
+  const iconBg = t => t === 'poke' ? 'linear-gradient(135deg,rgba(255,167,38,0.2),rgba(255,167,38,0.05))' : t === 'clap' ? 'linear-gradient(135deg,rgba(76,175,80,0.2),rgba(76,175,80,0.05))' : t === 'gym' ? 'linear-gradient(135deg,rgba(74,144,226,0.2),rgba(74,144,226,0.05))' : 'linear-gradient(135deg,rgba(var(--accent-rgb),0.2),rgba(var(--accent-rgb),0.05))';
   const total = notifs.length + progReqs.length;
   return /*#__PURE__*/React.createElement("div", {
     style: S.modalOverlay,
@@ -2685,7 +2721,7 @@ function NotificationPanel({
   }, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 15, fontWeight: 900, letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 8 }
   }, /*#__PURE__*/React.createElement("svg", {
-    width: 17, height: 17, viewBox: "0 0 24 24", fill: "none", stroke: "#FF3D3D", strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round"
+    width: 17, height: 17, viewBox: "0 0 24 24", fill: "none", stroke: "var(--accent)", strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round"
   }, /*#__PURE__*/React.createElement("path", { d: "M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" }), /*#__PURE__*/React.createElement("path", { d: "M13.73 21a2 2 0 0 1-3.46 0" })), "Bildirimler"), total > 0 ? /*#__PURE__*/React.createElement("span", {
     onClick: onClearAll,
     style: { fontSize: 12, color: '#666', fontWeight: 700, cursor: 'pointer' }
@@ -2720,9 +2756,9 @@ function NotificationPanel({
   // Dürtme + alkış bildirimleri
   notifs.map(n => /*#__PURE__*/React.createElement("div", {
     key: n.id,
-    style: { display: 'flex', alignItems: 'center', gap: 13, padding: '14px 18px', borderBottom: '1px solid #141414', position: 'relative', background: n.read ? 'transparent' : 'rgba(255,61,61,0.035)' }
+    style: { display: 'flex', alignItems: 'center', gap: 13, padding: '14px 18px', borderBottom: '1px solid #141414', position: 'relative', background: n.read ? 'transparent' : 'rgba(var(--accent-rgb),0.035)' }
   }, !n.read && /*#__PURE__*/React.createElement("div", {
-    style: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'linear-gradient(180deg,#FF3D3D,#c62828)' }
+    style: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'linear-gradient(180deg,var(--accent),var(--accent-dark))' }
   }), /*#__PURE__*/React.createElement("div", {
     style: { width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, background: iconBg(n.type) }
   }, iconFor(n.type)), /*#__PURE__*/React.createElement("div", {
@@ -3284,7 +3320,7 @@ function UsernameSetup({
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#FF3D3D',
+      color: 'var(--accent)',
       fontSize: 18,
       fontWeight: 800
     }
@@ -3320,7 +3356,7 @@ function UsernameSetup({
     disabled: busy,
     style: {
       width: '100%',
-      background: busy ? '#444' : 'linear-gradient(135deg,#FF3D3D,#8B1111)',
+      background: busy ? '#444' : 'linear-gradient(135deg,var(--accent),#8B1111)',
       color: '#fff',
       border: 'none',
       borderRadius: 12,
@@ -3836,7 +3872,7 @@ function buildJournalEntries(data) {
     const primaryDayType = grp.dayTypes.size > 0 ? [...grp.dayTypes][0] : (session && session.dayType) || null;
     const cfg = primaryDayType && dayConfigMap[primaryDayType] ? dayConfigMap[primaryDayType] : null;
     const dayName = cfg ? cfg.name : (primaryDayType || 'Antrenman');
-    const accent = cfg ? cfg.accent : '#FF3D3D';
+    const accent = cfg ? cfg.accent : 'var(--accent)';
 
     // Egzersizlere göre grupla
     const byExercise = {};
@@ -4048,7 +4084,7 @@ async function loadProfilePhoto(uid) {
 
 function avatarFor(name) {
   const letter = (name || '?').trim().charAt(0).toUpperCase() || '?';
-  const colors = ['linear-gradient(135deg,#FF3D3D,#8B1111)', 'linear-gradient(135deg,#4A90E2,#1E3A5F)', 'linear-gradient(135deg,#34D399,#064E3B)', 'linear-gradient(135deg,#A78BFA,#4C1D95)', 'linear-gradient(135deg,#FFA726,#8B6914)'];
+  const colors = ['linear-gradient(135deg,var(--accent),#8B1111)', 'linear-gradient(135deg,#4A90E2,#1E3A5F)', 'linear-gradient(135deg,#34D399,#064E3B)', 'linear-gradient(135deg,#A78BFA,#4C1D95)', 'linear-gradient(135deg,#FFA726,#8B6914)'];
   let h = 0;
   for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) % colors.length;
   return {
@@ -4498,7 +4534,7 @@ function AddFriendView({
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#FF3D3D',
+      color: 'var(--accent)',
       fontWeight: 800,
       fontSize: 15
     }
@@ -5013,7 +5049,7 @@ function FeedCard({
       alignItems: 'center',
       gap: 4,
       background: '#1a1a1a',
-      border: '1px solid #FF3D3D',
+      border: '1px solid var(--accent)',
       borderRadius: 22,
       padding: '4px 6px'
     }
@@ -5492,8 +5528,8 @@ function FriendProfileView({
       display: 'flex',
       alignItems: 'center',
       gap: 12,
-      background: 'linear-gradient(135deg,rgba(255,61,61,0.1),rgba(198,40,40,0.03))',
-      border: '1px solid rgba(255,61,61,0.25)',
+      background: 'linear-gradient(135deg,rgba(var(--accent-rgb),0.1),rgba(198,40,40,0.03))',
+      border: '1px solid rgba(var(--accent-rgb),0.25)',
       borderRadius: 14,
       padding: '13px 16px',
       margin: '4px 0 14px'
@@ -5507,7 +5543,7 @@ function FriendProfileView({
   }, "En Çok Çalıştığı Kas"), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 17, fontWeight: 800 }
   }, stats.topMuscle.name)), /*#__PURE__*/React.createElement("div", {
-    style: { fontSize: 20, fontWeight: 900, color: '#FF6B6B', fontFamily: "'Big Shoulders Display',sans-serif" }
+    style: { fontSize: 20, fontWeight: 900, color: 'var(--accent-light)', fontFamily: "'Big Shoulders Display',sans-serif" }
   }, stats.topMuscle.pct, "%")), stats.topPRs && stats.topPRs.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.pfSection
   }, "EN İYİ REKORLARI"), stats.topPRs.map((pr, i) => /*#__PURE__*/React.createElement("div", {
@@ -5566,7 +5602,7 @@ function LoadingScreen({
     style: {
       height: '100%',
       width: '40%',
-      background: 'linear-gradient(90deg,transparent,#FF3D3D,transparent)',
+      background: 'linear-gradient(90deg,transparent,var(--accent),transparent)',
       borderRadius: 4,
       animation: 'apexSlide 1.2s ease-in-out infinite'
     }
@@ -5811,7 +5847,7 @@ function GymPickerModal({
     style: S.gymItemName
   }, g.name), g.id === activeGymId && /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#FF3D3D',
+      color: 'var(--accent)',
       fontSize: 15,
       marginLeft: 'auto'
     }
@@ -5889,7 +5925,7 @@ function ApexLogo({
     gradientUnits: "userSpaceOnUse"
   }, /*#__PURE__*/React.createElement("stop", {
     offset: "0",
-    stopColor: "#FF6B6B"
+    stopColor: "var(--accent-light)"
   }), /*#__PURE__*/React.createElement("stop", {
     offset: "0.5",
     stopColor: "#FF2020"
@@ -6925,6 +6961,7 @@ function WorkoutTab({
     onUnhideDay: unhideDay,
     onSaveMuscleMap: saveMuscleMap,
     activeGym: activeGym,
+    userName: (authUser && authUser.displayName) || myUsername || '',
     notifCount: notifs.filter(n => !n.read).length + notifProgReqs.length,
     onOpenNotifs: () => setShowNotifs(true),
     journalUnseen: (() => {
@@ -7140,7 +7177,7 @@ function RestTimerBar({ timer, onExpand, onAdjust, onSkip }) {
   return /*#__PURE__*/React.createElement("div", {
     style: { position: 'fixed', bottom: 74, left: 0, right: 0, zIndex: 90, padding: '0 12px' }
   }, /*#__PURE__*/React.createElement("div", {
-    style: { maxWidth: 480, margin: '0 auto', background: 'linear-gradient(135deg,#1a0a0d,#0d0507)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 16, padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 13, boxShadow: '0 6px 24px rgba(0,0,0,0.5)' }
+    style: { maxWidth: 480, margin: '0 auto', background: 'linear-gradient(135deg,#1a0a0d,#0d0507)', border: '1px solid rgba(var(--accent-rgb),0.3)', borderRadius: 16, padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 13, boxShadow: '0 6px 24px rgba(0,0,0,0.5)' }
   },
     // halka + geri sayım
     /*#__PURE__*/React.createElement("div", {
@@ -7149,7 +7186,7 @@ function RestTimerBar({ timer, onExpand, onAdjust, onSkip }) {
     },
       /*#__PURE__*/React.createElement("svg", { width: 46, height: 46, viewBox: '0 0 46 46', style: { transform: 'rotate(-90deg)' } },
         /*#__PURE__*/React.createElement("circle", { cx: 23, cy: 23, r: R, fill: 'none', stroke: '#2a1215', strokeWidth: 3.5 }),
-        /*#__PURE__*/React.createElement("circle", { cx: 23, cy: 23, r: R, fill: 'none', stroke: '#FF3D3D', strokeWidth: 3.5, strokeLinecap: 'round', strokeDasharray: C, strokeDashoffset: C * (1 - pct) })),
+        /*#__PURE__*/React.createElement("circle", { cx: 23, cy: 23, r: R, fill: 'none', stroke: 'var(--accent)', strokeWidth: 3.5, strokeLinecap: 'round', strokeDasharray: C, strokeDashoffset: C * (1 - pct) })),
       /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif" } }, fmtRest(timer.remaining))),
     // bilgi
     /*#__PURE__*/React.createElement("div", { onClick: onExpand, style: { flex: 1, cursor: 'pointer', minWidth: 0 } },
@@ -7159,7 +7196,7 @@ function RestTimerBar({ timer, onExpand, onAdjust, onSkip }) {
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, flexShrink: 0 } },
       /*#__PURE__*/React.createElement("button", { onClick: () => onAdjust(-15), style: { background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 9, padding: '8px 9px', fontSize: 11, fontWeight: 800, color: '#ddd', cursor: 'pointer', fontFamily: 'inherit' } }, '−15'),
       /*#__PURE__*/React.createElement("button", { onClick: () => onAdjust(15), style: { background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 9, padding: '8px 9px', fontSize: 11, fontWeight: 800, color: '#ddd', cursor: 'pointer', fontFamily: 'inherit' } }, '+15'),
-      /*#__PURE__*/React.createElement("button", { onClick: onSkip, style: { background: 'rgba(255,61,61,0.15)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 9, padding: '8px 11px', fontSize: 11, fontWeight: 800, color: '#FF6B6B', cursor: 'pointer', fontFamily: 'inherit' } }, 'Atla'))));
+      /*#__PURE__*/React.createElement("button", { onClick: onSkip, style: { background: 'rgba(var(--accent-rgb),0.15)', border: '1px solid rgba(var(--accent-rgb),0.3)', borderRadius: 9, padding: '8px 11px', fontSize: 11, fontWeight: 800, color: 'var(--accent-light)', cursor: 'pointer', fontFamily: 'inherit' } }, 'Atla'))));
 }
 
 // ————— DİNLENME ZAMANLAYICISI: TAM EKRAN —————
@@ -7174,14 +7211,14 @@ function RestTimerFullscreen({ timer, onAdjust, onSkip, onCollapse }) {
     /*#__PURE__*/React.createElement("div", { style: { position: 'relative', width: 200, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
       /*#__PURE__*/React.createElement("svg", { width: 200, height: 200, viewBox: '0 0 200 200', style: { position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' } },
         /*#__PURE__*/React.createElement("circle", { cx: 100, cy: 100, r: R, fill: 'none', stroke: '#1a1a1a', strokeWidth: 8 }),
-        /*#__PURE__*/React.createElement("circle", { cx: 100, cy: 100, r: R, fill: 'none', stroke: '#FF3D3D', strokeWidth: 8, strokeLinecap: 'round', strokeDasharray: C, strokeDashoffset: C * (1 - pct) })),
+        /*#__PURE__*/React.createElement("circle", { cx: 100, cy: 100, r: R, fill: 'none', stroke: 'var(--accent)', strokeWidth: 8, strokeLinecap: 'round', strokeDasharray: C, strokeDashoffset: C * (1 - pct) })),
       /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center' } },
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 56, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1 } }, fmtRest(timer.remaining)),
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 4 } }, '/ ' + fmtRest(timer.total)))),
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 700, textAlign: 'center' } }, timer.exerciseName),
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 14 } },
       /*#__PURE__*/React.createElement("button", { onClick: () => onAdjust(-15), style: { width: 56, height: 56, borderRadius: '50%', background: '#141414', border: '1px solid #262626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#ddd', cursor: 'pointer', fontFamily: 'inherit' } }, '−15'),
-      /*#__PURE__*/React.createElement("button", { onClick: onSkip, style: { padding: '16px 40px', borderRadius: 16, background: 'linear-gradient(135deg,#FF3D3D,#c62828)', border: 'none', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' } }, 'Atla'),
+      /*#__PURE__*/React.createElement("button", { onClick: onSkip, style: { padding: '16px 40px', borderRadius: 16, background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', border: 'none', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' } }, 'Atla'),
       /*#__PURE__*/React.createElement("button", { onClick: () => onAdjust(15), style: { width: 56, height: 56, borderRadius: '50%', background: '#141414', border: '1px solid #262626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#ddd', cursor: 'pointer', fontFamily: 'inherit' } }, '+15')));
 }
 
@@ -7197,6 +7234,7 @@ function HomeView({
   onUnhideDay,
   onSaveMuscleMap,
   activeGym,
+  userName,
   notifCount,
   onOpenNotifs,
   journalUnseen,
@@ -7246,7 +7284,7 @@ function HomeView({
     style: S.gymSelectorName
   }, activeGym ? activeGym.name : 'Salonum'), /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#FF3D3D',
+      color: 'var(--accent)',
       fontSize: 11
     }
   }, "▾")), /*#__PURE__*/React.createElement("div", {
@@ -7290,7 +7328,7 @@ function HomeView({
       minWidth: 19,
       height: 19,
       padding: '0 5px',
-      background: 'linear-gradient(135deg,#FF3D3D,#c62828)',
+      background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))',
       borderRadius: 10,
       border: '2px solid #000',
       fontSize: 10.5,
@@ -7299,7 +7337,7 @@ function HomeView({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      boxShadow: '0 2px 8px rgba(255,61,61,0.5)',
+      boxShadow: '0 2px 8px rgba(var(--accent-rgb),0.5)',
       animation: 'apexPulse 1.6s infinite'
     }
   }, journalUnseen > 9 ? '9+' : journalUnseen)), /*#__PURE__*/React.createElement("button", {
@@ -7309,8 +7347,8 @@ function HomeView({
       width: 40,
       height: 40,
       borderRadius: 12,
-      background: notifCount > 0 ? 'linear-gradient(135deg,rgba(255,61,61,0.14),rgba(198,40,40,0.05))' : '#0f0f0f',
-      border: '1px solid ' + (notifCount > 0 ? 'rgba(255,61,61,0.4)' : '#1e1e1e'),
+      background: notifCount > 0 ? 'linear-gradient(135deg,rgba(var(--accent-rgb),0.14),rgba(198,40,40,0.05))' : '#0f0f0f',
+      border: '1px solid ' + (notifCount > 0 ? 'rgba(var(--accent-rgb),0.4)' : '#1e1e1e'),
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -7321,7 +7359,7 @@ function HomeView({
     height: 19,
     viewBox: "0 0 24 24",
     fill: "none",
-    stroke: notifCount > 0 ? '#FF6B6B' : '#bbb',
+    stroke: notifCount > 0 ? 'var(--accent-light)' : '#bbb',
     strokeWidth: 1.9,
     strokeLinecap: "round",
     strokeLinejoin: "round"
@@ -7337,7 +7375,7 @@ function HomeView({
       minWidth: 19,
       height: 19,
       padding: '0 5px',
-      background: 'linear-gradient(135deg,#FF3D3D,#c62828)',
+      background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))',
       borderRadius: 10,
       border: '2px solid #000',
       fontSize: 10.5,
@@ -7346,28 +7384,55 @@ function HomeView({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      boxShadow: '0 2px 8px rgba(255,61,61,0.5)',
+      boxShadow: '0 2px 8px rgba(var(--accent-rgb),0.5)',
       animation: 'apexPulse 1.6s infinite'
     }
   }, notifCount > 9 ? '9+' : notifCount)), /*#__PURE__*/React.createElement("button", {
     onClick: onMenu,
     style: S.menuBtn
-  }, "•••"))), /*#__PURE__*/React.createElement("div", {
-    style: S.date
-  }, new Date().toLocaleDateString('tr-TR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  })), weeklyUnseen && /*#__PURE__*/React.createElement("button", {
+  }, "•••"))), /*#__PURE__*/React.createElement("div", { style: { marginBottom: 4 } },
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 20, fontWeight: 800, lineHeight: 1.2 } },
+      (() => { const h = new Date().getHours(); const g = h < 6 ? 'İyi geceler' : h < 12 ? 'Günaydın' : h < 18 ? 'İyi günler' : 'İyi akşamlar'; return g + (userName ? ', ' + String(userName).split(' ')[0] : '') + ' 💪'; })()),
+    /*#__PURE__*/React.createElement("div", { style: { ...S.date, marginTop: 3, marginBottom: 12 } }, new Date().toLocaleDateString('tr-TR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    })),
+    // Bugünün önerisi: en uzun süredir çalışılmayan gün (sırası gelen)
+    (() => {
+      const dayIds = Object.keys(dayConfig || {});
+      if (dayIds.length === 0) return null;
+      const todayKey = dateKey(Date.now());
+      // bugün zaten antrenman yapıldıysa öneri kartı gösterme
+      const trainedToday = (data.logs || []).some(l => dateKey(l.timestamp) === todayKey);
+      if (trainedToday) return null;
+      let suggest = null, oldest = Infinity;
+      dayIds.forEach(id => {
+        const lastLog = (data.logs || []).filter(l => l.dayType === id).reduce((m, l) => Math.max(m, l.timestamp), 0);
+        if (lastLog < oldest) { oldest = lastLog; suggest = id; }
+      });
+      if (!suggest) return null;
+      const cfg = dayConfig[suggest];
+      const daysAgo = oldest === 0 ? null : Math.floor((Date.now() - oldest) / 86400000);
+      return /*#__PURE__*/React.createElement("button", {
+        onClick: () => onSelectDay(suggest),
+        style: { width: '100%', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, background: 'linear-gradient(135deg,' + ((cfg && cfg.accentSoft) || 'rgba(var(--accent-rgb),0.12)') + ',rgba(0,0,0,0.02))', border: '1px solid ' + ((cfg && cfg.accent) ? cfg.accent + '44' : 'rgba(var(--accent-rgb),0.28)'), borderRadius: 15, padding: '13px 15px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
+      },
+        /*#__PURE__*/React.createElement("div", { style: { width: 42, height: 42, borderRadius: 12, background: (cfg && cfg.gradient) || 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 } }, '🏋️'),
+        /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: '#fff' } }, 'Sıradaki: ' + ((cfg && cfg.name) || suggest)),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11.5, color: '#999', marginTop: 2 } }, daysAgo == null ? 'Henüz hiç yapılmadı — başla!' : 'Son: ' + daysAgo + ' gün önce')),
+        /*#__PURE__*/React.createElement("span", { style: { color: (cfg && cfg.accent) || 'var(--accent-light)', fontSize: 18, flexShrink: 0 } }, '›'));
+    })()), weeklyUnseen && /*#__PURE__*/React.createElement("button", {
     onClick: onOpenWeekly,
     style: {
       width: '100%', display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0 14px',
-      background: 'linear-gradient(135deg,rgba(255,61,61,0.13),rgba(167,139,250,0.06))',
-      border: '1px solid rgba(255,61,61,0.3)', borderRadius: 15, padding: '13px 15px',
+      background: 'linear-gradient(135deg,rgba(var(--accent-rgb),0.13),rgba(167,139,250,0.06))',
+      border: '1px solid rgba(var(--accent-rgb),0.3)', borderRadius: 15, padding: '13px 15px',
       cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    style: { width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(135deg,#FF3D3D,#8b1a1a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }
+    style: { width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }
   }, "📊"), /*#__PURE__*/React.createElement("div", {
     style: { flex: 1 }
   }, /*#__PURE__*/React.createElement("div", {
@@ -7375,7 +7440,7 @@ function HomeView({
   }, "Haftalık özetin hazır!"), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 12, color: '#999', marginTop: 2 }
   }, "Bu haftayı görmek için dokun · " + (weeklySummaryRange || ''))), /*#__PURE__*/React.createElement("span", {
-    style: { color: '#FF6B6B', fontSize: 18, flexShrink: 0 }
+    style: { color: 'var(--accent-light)', fontSize: 18, flexShrink: 0 }
   }, "›")), /*#__PURE__*/React.createElement("div", {
     style: S.statsRow
   }, /*#__PURE__*/React.createElement("div", {
@@ -7549,7 +7614,7 @@ function SixMonthStats({
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         ...S.barCount,
-        color: isSelected ? '#FF3D3D' : active ? '#FF3D3D' : '#888',
+        color: isSelected ? 'var(--accent)' : active ? 'var(--accent)' : '#888',
         fontWeight: active || isSelected ? 800 : 600
       }
     }, m.days), /*#__PURE__*/React.createElement("div", {
@@ -7558,13 +7623,13 @@ function SixMonthStats({
       style: {
         ...S.barFill,
         height: `${Math.max(heightPct, 4)}%`,
-        background: isSelected ? '#FF3D3D' : active ? '#FF3D3D' : '#5a1f1f',
+        background: isSelected ? 'var(--accent)' : active ? 'var(--accent)' : '#5a1f1f',
         opacity: isSelected || active ? 1 : 0.7
       }
     })), /*#__PURE__*/React.createElement("div", {
       style: {
         ...S.barLabel,
-        color: isSelected ? '#FF3D3D' : active ? '#fff' : '#888',
+        color: isSelected ? 'var(--accent)' : active ? '#fff' : '#888',
         fontWeight: active || isSelected ? 800 : 600
       }
     }, m.label));
@@ -7952,7 +8017,7 @@ function MuscleTagModal({
     });
   };
   const labelFor = v => v === 1 ? 'Birincil' : v === 0.5 ? 'İkincil' : '';
-  const colorFor = v => v === 1 ? '#FF3D3D' : v === 0.5 ? '#FFA726' : '#1f1f1f';
+  const colorFor = v => v === 1 ? 'var(--accent)' : v === 0.5 ? '#FFA726' : '#1f1f1f';
   return /*#__PURE__*/React.createElement("div", {
     style: S.modalOverlay,
     onClick: onClose
@@ -7999,7 +8064,7 @@ function MuscleTagModal({
     onClick: () => onSave(muscles),
     style: {
       ...S.modalConfirm,
-      background: Object.keys(muscles).length ? 'linear-gradient(135deg,#FF3D3D,#8B1111)' : '#2a2a2a',
+      background: Object.keys(muscles).length ? 'linear-gradient(135deg,var(--accent),#8B1111)' : '#2a2a2a',
       color: Object.keys(muscles).length ? '#fff' : '#666'
     }
   }, "KAYDET")), /*#__PURE__*/React.createElement("button", {
@@ -8745,6 +8810,30 @@ function AddExerciseModal({
     }
   }, "KAPAT"))));
 }
+// ————— TEMA SEÇİCİ —————
+function ThemePicker() {
+  const [sel, setSel] = useState(loadTheme);
+  const pick = (id) => { setSel(id); saveTheme(id); haptic(15); };
+  return /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }
+  }, Object.entries(APEX_THEMES).map(([id, t]) =>
+    /*#__PURE__*/React.createElement("button", {
+      key: id,
+      onClick: () => pick(id),
+      style: {
+        flex: '1 1 30%', minWidth: 96, borderRadius: 13, padding: '11px 10px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+        background: 'linear-gradient(160deg, rgba(' + t.rgb + ',0.13), #0a0a0a)',
+        border: '1.5px solid ' + (sel === id ? t.accent : '#222')
+      }
+    },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, fontWeight: 800, color: '#fff', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 4 } },
+        t.emoji + ' ' + t.name,
+        sel === id && /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: t.accent } }, '✓')),
+      /*#__PURE__*/React.createElement("div", { style: { height: 6, borderRadius: 3, background: 'linear-gradient(90deg,' + t.accent + ',' + t.dark + ')', marginBottom: 5 } }),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 3 } },
+        [t.accent, t.dark, t.light].map((c, i) => /*#__PURE__*/React.createElement("span", { key: i, style: { width: 13, height: 13, borderRadius: 4, background: c } }))))));
+}
+
 function MenuModal({
   onClose,
   onExport,
@@ -8802,7 +8891,7 @@ function MenuModal({
   }, /*#__PURE__*/React.createElement("div", {
     style: { position: 'relative', width: 84, height: 84, marginBottom: 6 }
   }, /*#__PURE__*/React.createElement("div", {
-    style: { width: 84, height: 84, borderRadius: '50%', border: '2.5px solid #FF3D3D', padding: 3, boxSizing: 'border-box' }
+    style: { width: 84, height: 84, borderRadius: '50%', border: '2.5px solid var(--accent)', padding: 3, boxSizing: 'border-box' }
   }, /*#__PURE__*/React.createElement(Avatar, {
     name: authUser.displayName || myUsername,
     photo: myPhoto,
@@ -8810,7 +8899,7 @@ function MenuModal({
   })), /*#__PURE__*/React.createElement("button", {
     onClick: pickPhoto,
     disabled: busy,
-    style: { position: 'absolute', bottom: -2, right: -2, width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#FF3D3D,#c62828)', border: '2.5px solid #0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, cursor: 'pointer', boxShadow: '0 2px 8px rgba(255,61,61,0.5)' }
+    style: { position: 'absolute', bottom: -2, right: -2, width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', border: '2.5px solid #0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, cursor: 'pointer', boxShadow: '0 2px 8px rgba(var(--accent-rgb),0.5)' }
   }, busy ? '…' : '📷')), myPhoto && /*#__PURE__*/React.createElement("button", {
     onClick: removePhoto,
     disabled: busy,
@@ -8818,14 +8907,17 @@ function MenuModal({
   }, "Fotoğrafı kaldır")), /*#__PURE__*/React.createElement("div", {
     style: S.menuUserName
   }, authUser.displayName || 'Kullanıcı', myUsername && /*#__PURE__*/React.createElement("span", {
-    style: { color: '#FF3D3D', fontSize: 13, fontWeight: 700, marginLeft: 8 }
+    style: { color: 'var(--accent)', fontSize: 13, fontWeight: 700, marginLeft: 8 }
   }, "@" + myUsername)), /*#__PURE__*/React.createElement("div", {
     style: S.menuUserEmail
   }, authUser.email), /*#__PURE__*/React.createElement("div", {
     style: S.menuUserSync
   }, "☁ Bulut senkronizasyonu açık")), /*#__PURE__*/React.createElement("div", {
     style: S.modalTitle
-  }, timerSettings && onTimerSettingsChange ? "Dinlenme Zamanlayıcısı" : "Veri"),
+  }, timerSettings && onTimerSettingsChange ? "Tema" : "Veri"),
+    // ————— TEMA SEÇİCİ —————
+    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement(ThemePicker, null),
+    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: S.modalTitle }, "Dinlenme Zamanlayıcısı"),
     // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
     timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: { background: '#0d0d0d', border: '1px solid #1c1c1c', borderRadius: 14, overflow: 'hidden', marginBottom: 12 } },
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 15px' } },
@@ -8834,7 +8926,7 @@ function MenuModal({
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginTop: 1 } }, "Set sonrası otomatik başlat")),
         /*#__PURE__*/React.createElement("div", {
           onClick: () => onTimerSettingsChange({ ...timerSettings, enabled: !timerSettings.enabled }),
-          style: { width: 44, height: 26, borderRadius: 13, background: timerSettings.enabled ? '#FF3D3D' : '#2a2a2a', position: 'relative', flexShrink: 0, cursor: 'pointer' }
+          style: { width: 44, height: 26, borderRadius: 13, background: timerSettings.enabled ? 'var(--accent)' : '#2a2a2a', position: 'relative', flexShrink: 0, cursor: 'pointer' }
         }, /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 3, left: timerSettings.enabled ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff' } }))),
       timerSettings.enabled && /*#__PURE__*/React.createElement("div", { style: { padding: '13px 15px', borderTop: '1px solid #161616' } },
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, marginBottom: 2 } }, "⏲️ Varsayılan Süre"),
@@ -8843,13 +8935,13 @@ function MenuModal({
           [60, 90, 120, 180].map(sec => /*#__PURE__*/React.createElement("button", {
             key: sec,
             onClick: () => { onTimerSettingsChange({ ...timerSettings, defaultSec: sec }); setCustomDur(''); },
-            style: { padding: '8px 14px', borderRadius: 9, border: '1px solid ' + (timerSettings.defaultSec === sec ? '#FF3D3D' : '#2a2a2a'), background: timerSettings.defaultSec === sec ? '#FF3D3D' : '#1a1a1a', color: timerSettings.defaultSec === sec ? '#fff' : '#aaa', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }
+            style: { padding: '8px 14px', borderRadius: 9, border: '1px solid ' + (timerSettings.defaultSec === sec ? 'var(--accent)' : '#2a2a2a'), background: timerSettings.defaultSec === sec ? 'var(--accent)' : '#1a1a1a', color: timerSettings.defaultSec === sec ? '#fff' : '#aaa', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }
           }, sec)),
           /*#__PURE__*/React.createElement("input", {
             type: 'number', inputMode: 'numeric', placeholder: 'Özel', value: customDur,
             onChange: e => setCustomDur(e.target.value),
             onBlur: () => { const v = parseInt(customDur); if (v && v > 0 && v <= 600) onTimerSettingsChange({ ...timerSettings, defaultSec: v }); },
-            style: { width: 70, padding: '8px 10px', borderRadius: 9, border: '1px solid ' + (![60, 90, 120, 180].includes(timerSettings.defaultSec) ? '#FF3D3D' : '#2a2a2a'), background: '#1a1a1a', color: '#fff', fontSize: 13, fontWeight: 800, fontFamily: 'inherit', textAlign: 'center', boxSizing: 'border-box' }
+            style: { width: 70, padding: '8px 10px', borderRadius: 9, border: '1px solid ' + (![60, 90, 120, 180].includes(timerSettings.defaultSec) ? 'var(--accent)' : '#2a2a2a'), background: '#1a1a1a', color: '#fff', fontSize: 13, fontWeight: 800, fontFamily: 'inherit', textAlign: 'center', boxSizing: 'border-box' }
           }))),
       timerSettings.enabled && /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 15px', borderTop: '1px solid #161616' } },
         /*#__PURE__*/React.createElement("div", null,
@@ -8857,7 +8949,7 @@ function MenuModal({
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginTop: 1 } }, "Süre bitince titret")),
         /*#__PURE__*/React.createElement("div", {
           onClick: () => onTimerSettingsChange({ ...timerSettings, vibrate: !timerSettings.vibrate }),
-          style: { width: 44, height: 26, borderRadius: 13, background: timerSettings.vibrate ? '#FF3D3D' : '#2a2a2a', position: 'relative', flexShrink: 0, cursor: 'pointer' }
+          style: { width: 44, height: 26, borderRadius: 13, background: timerSettings.vibrate ? 'var(--accent)' : '#2a2a2a', position: 'relative', flexShrink: 0, cursor: 'pointer' }
         }, /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 3, left: timerSettings.vibrate ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff' } })))),
     timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: S.modalTitle }, "Veri"),
     /*#__PURE__*/React.createElement("button", {
@@ -9454,14 +9546,14 @@ function ProgressTab({
     };
   }, [data.logs, data.customMuscleMap]);
   const muscleColorMap = {
-    chest: '#FF3D3D',
+    chest: 'var(--accent)',
     frontDelts: '#D4A547',
     sideDelts: '#D4A547',
     rearDelts: '#D4A547',
     biceps: '#A78BFA',
     triceps: '#A78BFA',
     forearms: '#A78BFA',
-    abs: '#FF3D3D',
+    abs: 'var(--accent)',
     lats: '#4A90E2',
     traps: '#4A90E2',
     lowerBack: '#4A90E2',
@@ -9495,7 +9587,7 @@ function ProgressTab({
     style: S.gymSelectorName
   }, activeGym ? activeGym.name : 'Salonum'), /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#FF3D3D',
+      color: 'var(--accent)',
       fontSize: 11
     }
   }, "▾")), /*#__PURE__*/React.createElement("div", {
@@ -9578,7 +9670,7 @@ function ProgressTab({
     style: {
       ...S.mpBar,
       width: `${m.recent / muscleProgress.maxRecent * 100}%`,
-      background: muscleColorMap[m.key] || '#FF3D3D'
+      background: muscleColorMap[m.key] || 'var(--accent)'
     }
   })), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9597,7 +9689,7 @@ function ProgressTab({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.prRowIc,
-      background: es.isStuck ? 'linear-gradient(135deg,#FFA726,#8B6914)' : 'linear-gradient(135deg,#FF3D3D,#8B1111)'
+      background: es.isStuck ? 'linear-gradient(135deg,#FFA726,#8B6914)' : 'linear-gradient(135deg,var(--accent),#8B1111)'
     }
   }, es.isStuck ? '⏳' : '🏋️'), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9769,7 +9861,7 @@ function ExerciseProgressDetail({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.exDetailIc,
-      background: es.isStuck ? 'linear-gradient(135deg,#FFA726,#8B6914)' : 'linear-gradient(135deg,#FF3D3D,#8B1111)'
+      background: es.isStuck ? 'linear-gradient(135deg,#FFA726,#8B6914)' : 'linear-gradient(135deg,var(--accent),#8B1111)'
     }
   }, es.isStuck ? '⏳' : '🏋️'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: S.exDetailName
@@ -9782,7 +9874,7 @@ function ExerciseProgressDetail({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.exStatV,
-      color: '#FF3D3D'
+      color: 'var(--accent)'
     }
   }, es.weight), /*#__PURE__*/React.createElement("div", {
     style: S.exStatL
@@ -9850,11 +9942,11 @@ function ExerciseProgressDetail({
     y2: "1"
   }, /*#__PURE__*/React.createElement("stop", {
     offset: "0",
-    stopColor: "#FF3D3D",
+    stopColor: "var(--accent)",
     stopOpacity: "0.35"
   }), /*#__PURE__*/React.createElement("stop", {
     offset: "1",
-    stopColor: "#FF3D3D",
+    stopColor: "var(--accent)",
     stopOpacity: "0"
   }))), yLabels.map((v, i) => {
     const y = padT + i / 2 * plotH;
@@ -9880,7 +9972,7 @@ function ExerciseProgressDetail({
   }), /*#__PURE__*/React.createElement("path", {
     d: linePath,
     fill: "none",
-    stroke: "#FF3D3D",
+    stroke: "var(--accent)",
     strokeWidth: "2.5",
     strokeLinecap: "round",
     strokeLinejoin: "round"
@@ -9889,8 +9981,8 @@ function ExerciseProgressDetail({
     cx: xFor(i),
     cy: yFor(p.weight),
     r: i === points.length - 1 ? 4 : 2.5,
-    fill: i === points.length - 1 ? '#fff' : '#FF3D3D',
-    stroke: i === points.length - 1 ? '#FF3D3D' : 'none',
+    fill: i === points.length - 1 ? '#fff' : 'var(--accent)',
+    stroke: i === points.length - 1 ? 'var(--accent)' : 'none',
     strokeWidth: "2",
     style: {
       pointerEvents: 'none'
@@ -9909,7 +10001,7 @@ function ExerciseProgressDetail({
     cy: yFor(active.weight),
     r: "6",
     fill: "#fff",
-    stroke: "#FF3D3D",
+    stroke: "var(--accent)",
     strokeWidth: "2.5"
   })), /*#__PURE__*/React.createElement("text", {
     x: padL,
@@ -10021,8 +10113,8 @@ const S = {
     marginBottom: 8
   },
   gymItemActive: {
-    borderColor: '#FF3D3D',
-    background: 'rgba(255,61,61,0.08)'
+    borderColor: 'var(--accent)',
+    background: 'rgba(var(--accent-rgb),0.08)'
   },
   gymItemMain: {
     display: 'flex',
@@ -10051,7 +10143,7 @@ const S = {
   gymEditInput: {
     flex: 1,
     background: '#1a1a1a',
-    border: '1px solid #FF3D3D',
+    border: '1px solid var(--accent)',
     borderRadius: 8,
     padding: '10px 12px',
     fontSize: 15,
@@ -10061,46 +10153,46 @@ const S = {
   },
   gymAddBtn: {
     width: '100%',
-    background: 'rgba(255,61,61,0.1)',
-    border: '1px dashed rgba(255,61,61,0.4)',
+    background: 'rgba(var(--accent-rgb),0.1)',
+    border: '1px dashed rgba(var(--accent-rgb),0.4)',
     borderRadius: 12,
     padding: 14,
-    color: '#FF3D3D',
+    color: 'var(--accent)',
     fontWeight: 700,
     fontSize: 14,
     cursor: 'pointer',
     marginTop: 4
   },
-  friendAddBtn: { background: 'linear-gradient(135deg,#FF3D3D,#8B1111)', color: '#fff', border: 'none', borderRadius: 20, padding: '8px 16px', fontSize: 13, fontWeight: 800, cursor: 'pointer' },
+  friendAddBtn: { background: 'linear-gradient(135deg,var(--accent),#8B1111)', color: '#fff', border: 'none', borderRadius: 20, padding: '8px 16px', fontSize: 13, fontWeight: 800, cursor: 'pointer' },
   friendSection: { fontSize: 11, fontWeight: 800, letterSpacing: 1, color: '#666', margin: '18px 0 10px' },
   friendRow: { display: 'flex', alignItems: 'center', gap: 11, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 14, padding: 12, marginBottom: 9 },
   friendName: { fontSize: 13, fontWeight: 700, color: '#fff' },
   friendUser: { fontSize: 11, color: '#777', marginTop: 1 },
-  btnAccept: { background: '#FF3D3D', color: '#fff', border: 'none', borderRadius: 9, padding: '8px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', flexShrink: 0 },
+  btnAccept: { background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 9, padding: '8px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', flexShrink: 0 },
   btnReject: { background: '#1a1a1a', color: '#888', border: 'none', borderRadius: 9, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, marginLeft: 6 },
-  friendSearchGo: { background: '#FF3D3D', color: '#fff', border: 'none', borderRadius: 11, padding: '0 18px', fontWeight: 800, fontSize: 14, cursor: 'pointer' },
+  friendSearchGo: { background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 11, padding: '0 18px', fontWeight: 800, fontSize: 14, cursor: 'pointer' },
   feedSeg: { display: 'flex', gap: 2, background: '#141414', borderRadius: 10, padding: 3, marginBottom: 16 },
   feedSegBtn: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: 800, padding: '9px 4px', borderRadius: 8, color: '#777', letterSpacing: 0.5, background: 'transparent', border: 'none', cursor: 'pointer' },
-  feedSegBtnOn: { background: '#FF3D3D', color: '#fff' },
+  feedSegBtnOn: { background: 'var(--accent)', color: '#fff' },
   feedCard: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 16, padding: 14, marginBottom: 11 },
   feedHead: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 },
   feedName: { fontSize: 13, fontWeight: 700 },
   feedTime: { fontSize: 10, color: '#666' },
   feedGymChip: { fontSize: 10, color: '#777', background: '#161616', borderRadius: 6, padding: '2px 7px', marginLeft: 'auto', whiteSpace: 'nowrap' },
   feedBody: { fontSize: 13, lineHeight: 1.45, color: '#e8e8e8' },
-  feedPr: { background: 'linear-gradient(135deg, rgba(255,61,61,0.14), #0f0f0f)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 12, padding: 12, marginTop: 6 },
+  feedPr: { background: 'linear-gradient(135deg, rgba(var(--accent-rgb),0.14), #0f0f0f)', border: '1px solid rgba(var(--accent-rgb),0.3)', borderRadius: 12, padding: 12, marginTop: 6 },
   feedPlato: { background: 'linear-gradient(135deg, rgba(255,167,38,0.16), #0f0f0f)', border: '1px solid rgba(255,167,38,0.4)', borderRadius: 12, padding: 12, marginTop: 6 },
   feedExLabel: { fontSize: 12, color: '#aaa' },
   feedBigVal: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 30, lineHeight: 1, marginTop: 3 },
   feedUnit: { fontSize: 15 },
-  feedTag: { display: 'inline-block', background: '#FF3D3D', color: '#fff', fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 10, marginTop: 8, letterSpacing: 0.5 },
+  feedTag: { display: 'inline-block', background: 'var(--accent)', color: '#fff', fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 10, marginTop: 8, letterSpacing: 0.5 },
   feedReactRow: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 11, paddingTop: 10, borderTop: '1px solid #1a1a1a' },
   reactBtn: { background: '#161616', border: '1px solid #242424', borderRadius: 20, padding: '5px 11px', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 },
-  reactBtnActive: { background: 'rgba(255,61,61,0.15)', borderColor: '#FF3D3D' },
+  reactBtnActive: { background: 'rgba(var(--accent-rgb),0.15)', borderColor: 'var(--accent)' },
   reactCount: { fontSize: 11, color: '#999', fontWeight: 700 },
   whoPopup: { display: 'flex', alignItems: 'center', gap: 8, background: '#1a1a1a', border: '1px solid #333', borderRadius: 10, padding: '8px 12px', marginBottom: 10, marginTop: 4 },
   lbRow: { display: 'flex', alignItems: 'center', gap: 12, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '11px 13px', marginBottom: 8 },
-  lbRowMe: { borderColor: '#FF3D3D', background: 'rgba(255,61,61,0.07)' },
+  lbRowMe: { borderColor: 'var(--accent)', background: 'rgba(var(--accent-rgb),0.07)' },
   lbRank: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 20, width: 26, textAlign: 'center', flexShrink: 0 },
   lbName: { fontSize: 13, fontWeight: 700 },
   lbSub: { fontSize: 10, color: '#777' },
@@ -10126,7 +10218,7 @@ const S = {
     fontWeight: 900,
     fontSize: 46,
     lineHeight: 1,
-    background: 'linear-gradient(135deg,#FF6B6B,#FF2020)',
+    background: 'linear-gradient(135deg,var(--accent-light),#FF2020)',
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     WebkitTextFillColor: 'transparent'
@@ -10138,7 +10230,7 @@ const S = {
   },
   progHeroDelta: {
     fontSize: 13,
-    color: '#FF3D3D',
+    color: 'var(--accent)',
     fontWeight: 700,
     marginTop: 8
   },
@@ -10180,7 +10272,7 @@ const S = {
     left: '50%',
     transform: 'translateX(-50%)',
     background: '#1a1a1a',
-    border: '1px solid #FF3D3D',
+    border: '1px solid var(--accent)',
     borderRadius: 10,
     padding: '6px 14px',
     display: 'flex',
@@ -10245,15 +10337,15 @@ const S = {
     whiteSpace: 'nowrap'
   },
   winnerBanner: {
-    background: 'linear-gradient(135deg, rgba(255,61,61,0.12), #0f0f0f)',
-    border: '1px solid rgba(255,61,61,0.3)',
+    background: 'linear-gradient(135deg, rgba(var(--accent-rgb),0.12), #0f0f0f)',
+    border: '1px solid rgba(var(--accent-rgb),0.3)',
     borderRadius: 14,
     padding: '14px 16px',
     marginBottom: 14
   },
   winnerLbl: {
     fontSize: 10,
-    color: '#FF3D3D',
+    color: 'var(--accent)',
     fontWeight: 800,
     letterSpacing: 1
   },
@@ -10408,7 +10500,7 @@ const S = {
     cursor: 'pointer'
   },
   periodBtnActive: {
-    background: '#FF3D3D',
+    background: 'var(--accent)',
     color: '#fff'
   },
   screen: {
@@ -11039,7 +11131,7 @@ const S = {
   },
   authSubmit: {
     width: '100%',
-    background: 'linear-gradient(135deg,#FF3D3D,#8B1111)',
+    background: 'linear-gradient(135deg,var(--accent),#8B1111)',
     border: 'none',
     color: '#fff',
     fontFamily: "'Big Shoulders Display',sans-serif",
@@ -12135,7 +12227,7 @@ const S = {
     cursor: 'pointer'
   },
   heatmapMetricBtnActive: {
-    background: '#FF3D3D',
+    background: 'var(--accent)',
     color: '#fff'
   },
   bodyViewToggle: {
@@ -12157,7 +12249,7 @@ const S = {
   },
   bodyViewBtnActive: {
     background: '#222',
-    borderColor: '#FF3D3D',
+    borderColor: 'var(--accent)',
     color: '#fff'
   },
   bodyContainer: {
@@ -12299,7 +12391,7 @@ const S = {
   },
   unknownTagPlus: {
     fontSize: 11,
-    color: '#FF3D3D',
+    color: 'var(--accent)',
     fontWeight: 700
   },
   muscleExpand: {
@@ -12335,7 +12427,7 @@ const S = {
     cursor: 'pointer'
   },
   expandPeriodBtnActive: {
-    background: '#FF3D3D',
+    background: 'var(--accent)',
     color: '#fff'
   },
   muscleExpandTotals: {
@@ -12385,7 +12477,7 @@ const S = {
     cursor: 'pointer'
   },
   expandExEdit: {
-    color: '#FF3D3D',
+    color: 'var(--accent)',
     marginLeft: 6,
     fontSize: 12
   },
