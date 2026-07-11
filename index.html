@@ -945,7 +945,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.12'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.13'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -970,21 +970,23 @@ function saveTimerPerExercise(map) {
   try { localStorage.setItem(TIMER_PEREX_KEY, JSON.stringify(map)); } catch (e) {}
 }
 
-// ————— EGZERSİZ NOTLARI —————
-// localStorage: apex-exercise-notes = { "Bench Press": "sol omuz ağrıyor, dar tut", ... }
+// ————— EGZERSİZ NOTLARI (o güne + egzersize özel) —————
+// localStorage: apex-exercise-notes = { "2026-07-11|Bench Press": "not...", ... }
 const EX_NOTES_KEY = 'apex-exercise-notes';
 function loadExerciseNotes() {
   try { const raw = localStorage.getItem(EX_NOTES_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
   return {};
 }
-function getExerciseNote(name) {
+function noteKey(dayKey, name) { return dayKey + '|' + name; }
+function getExerciseNote(dayKey, name) {
   const notes = loadExerciseNotes();
-  return notes[name] || '';
+  return notes[noteKey(dayKey, name)] || '';
 }
-function saveExerciseNote(name, text) {
+function saveExerciseNote(dayKey, name, text) {
   const notes = loadExerciseNotes();
-  if (text && text.trim()) notes[name] = text.trim();
-  else delete notes[name];
+  const k = noteKey(dayKey, name);
+  if (text && text.trim()) notes[k] = text.trim();
+  else delete notes[k];
   try { localStorage.setItem(EX_NOTES_KEY, JSON.stringify(notes)); } catch (e) {}
 }
 
@@ -1033,7 +1035,8 @@ const APEX_ICON_PATHS = {
   star: 'M12 3l2.5 6 6.5.5-5 4.2 1.6 6.3L12 17l-5.6 3.3L8 14 3 9.8l6.5-.5z',
   users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   note: 'M4 4h16v13l-4 4H4zM15 21v-4a1 1 0 0 1 1-1h4M8 9h8M8 13h5',
-  pencil: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'
+  pencil: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
+  trash: 'M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6'
 };
 const SK_BG = { background: 'linear-gradient(90deg,#161616 25%,#232323 50%,#161616 75%)', backgroundSize: '200% 100%', animation: 'apexShimmer 1.4s infinite' };
 function SkeletonFeed({ rows }) {
@@ -8408,7 +8411,8 @@ function ExerciseView({
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
   const weightRef = useRef(null);
-  const [note, setNote] = useState(() => getExerciseNote(exerciseName));
+  const noteDayKey = logDate || dateKey(Date.now());
+  const [note, setNote] = useState(() => getExerciseNote(noteDayKey, exerciseName));
   const [editingNote, setEditingNote] = useState(false);
   const [noteDraft, setNoteDraft] = useState('');
   const isBackdated = !!logDate;
@@ -8524,38 +8528,43 @@ function ExerciseView({
   }, "BACK-OFF REKOR"), /*#__PURE__*/React.createElement("span", {
     style: S.prDualValue
   }, backoffPR ? `${backoffPR.weight}kg × ${backoffPR.reps}` : '—'))),
-    // ————— EGZERSİZ NOTU —————
-    !isBackdated && (editingNote ? /*#__PURE__*/React.createElement("div", {
-      style: { background: 'rgba(255,183,77,0.07)', border: '1px solid rgba(255,183,77,0.25)', borderRadius: 12, padding: 12, marginBottom: 12 }
+    // ————— GÜNÜN NOTU (o güne + egzersize özel) —————
+    (editingNote ? /*#__PURE__*/React.createElement("div", {
+      style: { background: 'rgba(74,144,226,0.07)', border: '1px solid rgba(74,144,226,0.28)', borderRadius: 12, padding: 12, marginBottom: 12 }
     },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#4A90E2', fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 7 } }, isBackdated ? ('Notu · ' + backdatedLabel) : 'Bugünün Notu'),
       /*#__PURE__*/React.createElement("textarea", {
         value: noteDraft,
         onChange: e => setNoteDraft(e.target.value),
         autoFocus: true,
-        placeholder: 'Form notu, teknik ipucu, ağrı... (sana özel)',
+        placeholder: 'Bu antrenmana özel not: nasıl hissettin, ne denedin...',
         style: { width: '100%', minHeight: 64, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 9, padding: 10, color: '#fff', fontSize: 13, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.5 }
       }),
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginTop: 9 } },
         /*#__PURE__*/React.createElement("button", {
-          onClick: () => { saveExerciseNote(exerciseName, noteDraft); setNote(noteDraft.trim()); setEditingNote(false); haptic(15); },
-          style: { flex: 1, background: 'linear-gradient(135deg,#FFB74D,#F57C00)', border: 'none', borderRadius: 9, padding: '10px', color: '#1a1a1a', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }
+          onClick: () => { saveExerciseNote(noteDayKey, exerciseName, noteDraft); setNote(noteDraft.trim()); setEditingNote(false); haptic(15); },
+          style: { flex: 1, background: 'linear-gradient(135deg,#4A90E2,#1565c0)', border: 'none', borderRadius: 9, padding: '10px', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }
         }, 'Kaydet'),
         /*#__PURE__*/React.createElement("button", {
           onClick: () => setEditingNote(false),
           style: { background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 9, padding: '10px 16px', color: '#999', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }
         }, 'İptal'))) :
       note ? /*#__PURE__*/React.createElement("div", {
-        onClick: () => { setNoteDraft(note); setEditingNote(true); },
-        style: { background: 'rgba(255,183,77,0.07)', border: '1px solid rgba(255,183,77,0.2)', borderLeft: '3px solid #FFB74D', borderRadius: 9, padding: '11px 13px', marginBottom: 12, display: 'flex', gap: 9, alignItems: 'flex-start', cursor: 'pointer' }
+        style: { background: 'rgba(74,144,226,0.07)', border: '1px solid rgba(74,144,226,0.22)', borderLeft: '3px solid #4A90E2', borderRadius: 9, padding: '11px 13px', marginBottom: 12, display: 'flex', gap: 9, alignItems: 'flex-start' }
       },
-        /*#__PURE__*/React.createElement(ApexIcon, { name: 'note', size: 15, color: '#FFB74D', strokeWidth: 2, style: { marginTop: 1, flexShrink: 0 } }),
-        /*#__PURE__*/React.createElement("span", { style: { fontSize: 12.5, color: '#e8d5a8', lineHeight: 1.5, fontStyle: 'italic', flex: 1 } }, note),
-        /*#__PURE__*/React.createElement(ApexIcon, { name: 'pencil', size: 13, color: '#8a7a4a', strokeWidth: 2, style: { flexShrink: 0, marginTop: 2 } })) :
+        /*#__PURE__*/React.createElement(ApexIcon, { name: 'note', size: 15, color: '#4A90E2', strokeWidth: 2, style: { marginTop: 1, flexShrink: 0 } }),
+        /*#__PURE__*/React.createElement("div", { onClick: () => { setNoteDraft(note); setEditingNote(true); }, style: { flex: 1, cursor: 'pointer' } },
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#4A90E2', fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 3 } }, isBackdated ? backdatedLabel : 'Bugünün Notu'),
+          /*#__PURE__*/React.createElement("span", { style: { fontSize: 12.5, color: '#bfd4ee', lineHeight: 1.5, flex: 1 } }, note)),
+        /*#__PURE__*/React.createElement("button", {
+          onClick: () => { if (confirm('Bu notu silmek istiyor musun?')) { saveExerciseNote(noteDayKey, exerciseName, ''); setNote(''); haptic(15); } },
+          style: { background: 'none', border: 'none', color: '#FF5252', cursor: 'pointer', padding: 2, flexShrink: 0, display: 'flex', fontFamily: 'inherit' }
+        }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'trash', size: 15, color: '#FF5252', strokeWidth: 2 }))) :
       /*#__PURE__*/React.createElement("button", {
         onClick: () => { setNoteDraft(''); setEditingNote(true); },
-        style: { width: '100%', background: 'none', border: '1px dashed #2a2a2a', borderRadius: 9, padding: '10px', marginBottom: 12, color: '#666', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }
+        style: { width: '100%', background: 'none', border: '1px dashed rgba(74,144,226,0.35)', borderRadius: 9, padding: '10px', marginBottom: 12, color: '#4A90E2', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }
       },
-        /*#__PURE__*/React.createElement(ApexIcon, { name: 'note', size: 14, color: '#666', strokeWidth: 2 }), 'Not ekle')),
+        /*#__PURE__*/React.createElement(ApexIcon, { name: 'note', size: 14, color: '#4A90E2', strokeWidth: 2 }), isBackdated ? 'Bu güne not ekle' : 'Bugüne not ekle')),
     !showingBackoff && targetTop ?
   /*#__PURE__*/
   // Phase 1: no sets yet → focus on TOP
