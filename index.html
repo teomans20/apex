@@ -943,7 +943,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.4'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.5'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -7390,10 +7390,10 @@ function HomeView({
   }, notifCount > 9 ? '9+' : notifCount)), /*#__PURE__*/React.createElement("button", {
     onClick: onMenu,
     style: S.menuBtn
-  }, "•••"))), /*#__PURE__*/React.createElement("div", { style: { marginBottom: 4 } },
-    /*#__PURE__*/React.createElement("div", { style: { fontSize: 20, fontWeight: 800, lineHeight: 1.2 } },
+  }, "•••"))), /*#__PURE__*/React.createElement("div", { style: { margin: '10px 0 6px', padding: '0 4px' } },
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 20, fontWeight: 800, lineHeight: 1.25 } },
       (() => { const h = new Date().getHours(); const g = h < 6 ? 'İyi geceler' : h < 12 ? 'Günaydın' : h < 18 ? 'İyi günler' : 'İyi akşamlar'; return g + (userName ? ', ' + String(userName).split(' ')[0] : '') + ' 💪'; })()),
-    /*#__PURE__*/React.createElement("div", { style: { ...S.date, marginTop: 3, marginBottom: 12 } }, new Date().toLocaleDateString('tr-TR', {
+    /*#__PURE__*/React.createElement("div", { style: { ...S.date, marginTop: 6, marginBottom: 16 } }, new Date().toLocaleDateString('tr-TR', {
       weekday: 'long',
       day: 'numeric',
       month: 'long'
@@ -10994,6 +10994,8 @@ const S = {
     paddingTop: '5vh',
     zIndex: 100,
     overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    overscrollBehavior: 'contain',
     animation: 'apexFadeIn 0.18s ease-out'
   },
   modalCard: {
@@ -11004,7 +11006,7 @@ const S = {
     padding: 20,
     marginTop: 'auto',
     marginBottom: 'auto',
-    animation: 'apexSlideUp 0.26s cubic-bezier(0.16, 1, 0.3, 1)'
+    animation: 'apexFadeIn 0.2s ease-out'
   },
   modal: {
     background: '#141414',
@@ -11015,7 +11017,8 @@ const S = {
     maxWidth: 360,
     maxHeight: '90vh',
     overflowY: 'auto',
-    animation: 'apexSlideUp 0.26s cubic-bezier(0.16, 1, 0.3, 1)'
+    WebkitOverflowScrolling: 'touch',
+    animation: 'apexFadeIn 0.2s ease-out'
   },
   modalTitle: {
     fontFamily: "'Big Shoulders Display',sans-serif",
