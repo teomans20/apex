@@ -945,7 +945,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.6'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.9'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -1009,7 +1009,10 @@ const APEX_ICON_PATHS = {
   logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
   trophy: 'M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4M7 6H4a2 2 0 0 0 2 5M17 6h3a2 2 0 0 1-2 5',
   chart: 'M4 20V10M10 20V4M16 20v-7M21 20H3',
-  flame: 'M12 3c1 4-2 5-2 8a4 4 0 0 0 8 0c0-2-1-3-1-3s3 1 3 5a8 8 0 1 1-16 0c0-5 5-7 8-10z'
+  flame: 'M12 3c1 4-2 5-2 8a4 4 0 0 0 8 0c0-2-1-3-1-3s3 1 3 5a8 8 0 1 1-16 0c0-5 5-7 8-10z',
+  muscle: 'M12.409 13.017A5 5 0 0 1 22 15c0 3.866-4 7-9 7-4.077 0-8.153-.82-10.371-2.462-.426-.316-.631-.832-.62-1.362C2.118 12.723 2.627 2 10 2a3 3 0 0 1 3 3 2 2 0 0 1-2 2c-1.105 0-1.64-.444-2-1 M15 14a5 5 0 0 0-7.584 2 M9.964 6.825C8.019 7.977 9.5 13 8 15',
+  medal: 'M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4M7 6H4a2 2 0 0 0 2 5M17 6h3a2 2 0 0 1-2 5',
+  star: 'M12 3l2.5 6 6.5.5-5 4.2 1.6 6.3L12 17l-5.6 3.3L8 14 3 9.8l6.5-.5z'
 };
 const SK_BG = { background: 'linear-gradient(90deg,#161616 25%,#232323 50%,#161616 75%)', backgroundSize: '200% 100%', animation: 'apexShimmer 1.4s infinite' };
 function SkeletonFeed({ rows }) {
@@ -2320,7 +2323,7 @@ function JournalDetailView({ entry, onBack }) {
     /*#__PURE__*/React.createElement("span", {
       style: { position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', fontSize: 8, fontWeight: 800, padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap', background: s.isTop ? 'linear-gradient(135deg,#FFB74D,#F57C00)' : '#1e1e1e', color: s.isTop ? '#1a1a1a' : '#888' }
     }, s.isTop ? 'TOP' : 'SET ' + (idx + 1)),
-    (isPRtop || s.firstEver) && /*#__PURE__*/React.createElement("span", { style: { position: 'absolute', top: 7, right: 7, fontSize: 11 } }, '🏆'),
+    (isPRtop || s.firstEver) && /*#__PURE__*/React.createElement("span", { style: { position: 'absolute', top: 6, right: 6 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'medal', size: 14, color: '#FFB74D' })),
     isPRback && /*#__PURE__*/React.createElement("span", { style: { position: 'absolute', top: 7, right: 7, fontSize: 11 } }, '⭐'),
     /*#__PURE__*/React.createElement("div", {
       style: { fontSize: 20, fontWeight: 800, marginTop: 6, fontFamily: "'Big Shoulders Display',sans-serif" }
@@ -2523,7 +2526,7 @@ function JournalModal({ data, myUsername, onClose }) {
             /*#__PURE__*/React.createElement("div", { style: { fontSize: 20, fontWeight: 900, lineHeight: 1, color: '#FFB74D', fontFamily: "'Big Shoulders Display',sans-serif" } }, w.prCount),
             /*#__PURE__*/React.createElement("div", { style: { fontSize: 8, color: '#777', letterSpacing: 0.4, marginTop: 2 } }, 'REKOR'))),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#999' } },
-          /*#__PURE__*/React.createElement("span", null, '💪'), w.topMuscle || '-'),
+          /*#__PURE__*/React.createElement(ApexIcon, { name: 'muscle', size: 15, strokeWidth: 2.5, color: 'var(--accent-light)', style: { display: 'inline-block', verticalAlign: '-2px', marginRight: 5 } }), w.topMuscle || '-'),
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: 'var(--accent-light)', marginTop: 8, fontWeight: 700 } }, 'Detay ›'))))),
   // boş durum
   entries.length === 0 ? /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', padding: '50px 20px', color: '#555' } },
@@ -2668,7 +2671,7 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
     // kas + streak
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 9 } },
       /*#__PURE__*/React.createElement("div", { style: { ...box, flex: 1, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 9 } },
-        /*#__PURE__*/React.createElement("span", { style: { fontSize: 19 } }, '💪'),
+        /*#__PURE__*/React.createElement(ApexIcon, { name: 'muscle', size: 20, strokeWidth: 2.5, color: 'var(--accent-light)' }),
         /*#__PURE__*/React.createElement("div", null,
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 800 } }, 'En Çok Çalışılan'),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, marginTop: 1 } }, s.topMuscle || '-'))),
@@ -2679,7 +2682,7 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, marginTop: 1, color: '#FFB74D' } }, s.maxStreak + ' gün')))),
     // en iyi rekor
     s.bestPR && /*#__PURE__*/React.createElement("div", { style: { background: 'linear-gradient(135deg,rgba(255,183,77,0.12),rgba(230,126,0,0.02))', border: '1px solid rgba(255,183,77,0.28)', borderRadius: 14, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12 } },
-      /*#__PURE__*/React.createElement("span", { style: { fontSize: 23 } }, '🏆'),
+      /*#__PURE__*/React.createElement(ApexIcon, { name: 'medal', size: 22, color: '#FFB74D' }),
       /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#FFB74D', textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 800 } }, 'Haftanın En İyi Rekoru'),
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 800, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.bestPR.name + ' · ' + s.bestPR.weight + 'kg×' + s.bestPR.reps)),
