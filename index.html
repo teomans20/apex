@@ -945,7 +945,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.9'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.10'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -1009,7 +1009,7 @@ const APEX_ICON_PATHS = {
   logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
   trophy: 'M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4M7 6H4a2 2 0 0 0 2 5M17 6h3a2 2 0 0 1-2 5',
   chart: 'M4 20V10M10 20V4M16 20v-7M21 20H3',
-  flame: 'M12 3c1 4-2 5-2 8a4 4 0 0 0 8 0c0-2-1-3-1-3s3 1 3 5a8 8 0 1 1-16 0c0-5 5-7 8-10z',
+  flame: 'M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4',
   muscle: 'M12.409 13.017A5 5 0 0 1 22 15c0 3.866-4 7-9 7-4.077 0-8.153-.82-10.371-2.462-.426-.316-.631-.832-.62-1.362C2.118 12.723 2.627 2 10 2a3 3 0 0 1 3 3 2 2 0 0 1-2 2c-1.105 0-1.64-.444-2-1 M15 14a5 5 0 0 0-7.584 2 M9.964 6.825C8.019 7.977 9.5 13 8 15',
   medal: 'M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4M7 6H4a2 2 0 0 0 2 5M17 6h3a2 2 0 0 1-2 5',
   star: 'M12 3l2.5 6 6.5.5-5 4.2 1.6 6.3L12 17l-5.6 3.3L8 14 3 9.8l6.5-.5z'
@@ -2510,7 +2510,7 @@ function JournalModal({ data, myUsername, onClose }) {
   // HAFTA ÖZETLERİ (yatay kaydırmalı kartlar)
   weekSummaries.length > 0 && /*#__PURE__*/React.createElement("div", { style: { marginBottom: 22 } },
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 11 } },
-      /*#__PURE__*/React.createElement("span", { style: { fontSize: 15 } }, '📊'),
+      /*#__PURE__*/React.createElement(ApexIcon, { name: 'chart', size: 16, color: 'var(--accent-light)' }),
       /*#__PURE__*/React.createElement("span", { style: { fontSize: 13, fontWeight: 800, letterSpacing: 0.3 } }, 'Hafta Özetleri')),
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' } },
       weekSummaries.map((w, i) => /*#__PURE__*/React.createElement("button", {
@@ -2676,7 +2676,7 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 800 } }, 'En Çok Çalışılan'),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, marginTop: 1 } }, s.topMuscle || '-'))),
       /*#__PURE__*/React.createElement("div", { style: { ...box, flex: 1, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 9 } },
-        /*#__PURE__*/React.createElement("span", { style: { fontSize: 19 } }, '🔥'),
+        /*#__PURE__*/React.createElement(ApexIcon, { name: 'flame', size: 20, strokeWidth: 2.4, color: 'var(--accent-light)' }),
         /*#__PURE__*/React.createElement("div", null,
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 800 } }, 'Gün Serisi'),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, marginTop: 1, color: '#FFB74D' } }, s.maxStreak + ' gün')))),
@@ -7413,7 +7413,7 @@ function HomeView({
     style: S.menuBtn
   }, "•••"))), /*#__PURE__*/React.createElement("div", { style: { margin: '10px 0 6px', padding: '0 4px' } },
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 20, fontWeight: 800, lineHeight: 1.25 } },
-      (() => { const h = new Date().getHours(); const g = h < 6 ? 'İyi geceler' : h < 12 ? 'Günaydın' : h < 18 ? 'İyi günler' : 'İyi akşamlar'; return g + (userName ? ', ' + String(userName).split(' ')[0] : '') + ' 💪'; })()),
+      (() => { const h = new Date().getHours(); const g = h < 6 ? 'İyi geceler' : h < 12 ? 'Günaydın' : h < 18 ? 'İyi günler' : 'İyi akşamlar'; return g + (userName ? ', ' + String(userName).split(' ')[0] : ''); })(), /*#__PURE__*/React.createElement(ApexIcon, { name: 'muscle', size: 19, strokeWidth: 2.5, color: 'var(--accent-light)', style: { display: 'inline-block', verticalAlign: '-3px', marginLeft: 7 } })),
     /*#__PURE__*/React.createElement("div", { style: { ...S.date, marginTop: 6, marginBottom: 16 } }, new Date().toLocaleDateString('tr-TR', {
       weekday: 'long',
       day: 'numeric',
@@ -7453,8 +7453,8 @@ function HomeView({
       cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    style: { width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }
-  }, "📊"), /*#__PURE__*/React.createElement("div", {
+    style: { width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'chart', size: 21, color: '#fff', strokeWidth: 2.2 })), /*#__PURE__*/React.createElement("div", {
     style: { flex: 1 }
   }, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 14, fontWeight: 800, color: '#fff' }
@@ -9671,8 +9671,8 @@ function ProgressTab({
   }, es.weeksSince, " hafta")))), muscleProgress.list.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, topMuscle && /*#__PURE__*/React.createElement("div", {
     style: S.winnerBanner
   }, /*#__PURE__*/React.createElement("div", {
-    style: S.winnerLbl
-  }, "🔥 BU DÖNEM EN ÇOK GELİŞEN"), /*#__PURE__*/React.createElement("div", {
+    style: { ...S.winnerLbl, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'flame', size: 14, strokeWidth: 2.4, color: 'var(--accent-light)' }), "BU DÖNEM EN ÇOK GELİŞEN"), /*#__PURE__*/React.createElement("div", {
     style: S.winnerName
   }, topMuscle.tr), /*#__PURE__*/React.createElement("div", {
     style: S.winnerDelta
