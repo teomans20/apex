@@ -917,7 +917,30 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.1'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.2'; // PNG ikon (eski iOS uyumlu)
+
+// ————— DİNLENME ZAMANLAYICISI AYARLARI —————
+// localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
+// localStorage: apex-timer-per-exercise = { "Bench Press": 180, "Curl": 60, ... }
+const TIMER_SETTINGS_KEY = 'apex-timer-settings';
+const TIMER_PEREX_KEY = 'apex-timer-per-exercise';
+function loadTimerSettings() {
+  try {
+    const raw = localStorage.getItem(TIMER_SETTINGS_KEY);
+    if (raw) { const s = JSON.parse(raw); return { enabled: s.enabled !== false, defaultSec: s.defaultSec || 90, vibrate: s.vibrate !== false }; }
+  } catch (e) {}
+  return { enabled: true, defaultSec: 90, vibrate: true };
+}
+function saveTimerSettings(s) {
+  try { localStorage.setItem(TIMER_SETTINGS_KEY, JSON.stringify(s)); } catch (e) {}
+}
+function loadTimerPerExercise() {
+  try { const raw = localStorage.getItem(TIMER_PEREX_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+  return {};
+}
+function saveTimerPerExercise(map) {
+  try { localStorage.setItem(TIMER_PEREX_KEY, JSON.stringify(map)); } catch (e) {}
+}
 
 const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -6050,6 +6073,11 @@ function WorkoutTab({
   });
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  // Dinlenme zamanlayıcısı
+  const [timerSettings, setTimerSettings] = useState(loadTimerSettings);
+  const [restTimer, setRestTimer] = useState(null); // { total, remaining, exerciseName } | null
+  const [timerFullscreen, setTimerFullscreen] = useState(false);
+  const restIntervalRef = useRef(null);
   const [prCelebration, setPrCelebration] = useState(null);
   const [toast, setToast] = useState(null);
   const [dayDetailKey, setDayDetailKey] = useState(null);
@@ -6381,6 +6409,57 @@ function WorkoutTab({
     } = getCategorizedSets(exerciseName);
     return backoffSets.length ? bestOfSets(backoffSets) : null;
   };
+  // ————— DİNLENME ZAMANLAYICISI MANTIĞI —————
+  // Bir egzersiz için süreyi belirle: egzersiz-bazlı kayıt varsa onu, yoksa varsayılanı kullan
+  const getRestSeconds = (exerciseName) => {
+    const perEx = loadTimerPerExercise();
+    if (perEx[exerciseName] != null) return perEx[exerciseName];
+    return timerSettings.defaultSec;
+  };
+  // Timer'ı başlat (set girilince çağrılır)
+  const startRestTimer = (exerciseName) => {
+    if (!timerSettings.enabled) return;
+    const sec = getRestSeconds(exerciseName);
+    if (!sec || sec <= 0) return; // bu egzersiz için kapalı
+    setRestTimer({ total: sec, remaining: sec, exerciseName });
+  };
+  const adjustRestTimer = (delta) => {
+    setRestTimer(t => {
+      if (!t) return t;
+      const nr = Math.max(0, t.remaining + delta);
+      const newTotal = Math.max(t.total, nr);
+      // Bu egzersiz için yeni süreyi hatırla (bir dahaki sete aynı süre gelsin)
+      if (t.exerciseName) {
+        const perEx = loadTimerPerExercise();
+        perEx[t.exerciseName] = newTotal;
+        saveTimerPerExercise(perEx);
+      }
+      return { ...t, remaining: nr, total: newTotal };
+    });
+  };
+  const stopRestTimer = () => {
+    setRestTimer(null);
+    setTimerFullscreen(false);
+  };
+  // Geri sayım
+  useEffect(() => {
+    if (!restTimer) { if (restIntervalRef.current) { clearInterval(restIntervalRef.current); restIntervalRef.current = null; } return; }
+    if (restIntervalRef.current) clearInterval(restIntervalRef.current);
+    restIntervalRef.current = setInterval(() => {
+      setRestTimer(t => {
+        if (!t) return null;
+        if (t.remaining <= 1) {
+          // Bitti — titret + kapat
+          if (timerSettings.vibrate && navigator.vibrate) { try { navigator.vibrate([200, 100, 200]); } catch (e) {} }
+          setTimerFullscreen(false);
+          return null;
+        }
+        return { ...t, remaining: t.remaining - 1 };
+      });
+    }, 1000);
+    return () => { if (restIntervalRef.current) { clearInterval(restIntervalRef.current); restIntervalRef.current = null; } };
+  }, [restTimer && restTimer.exerciseName, restTimer && restTimer.total]);
+
   const addLog = (exerciseName, weight, reps) => {
     const w = parseFloat(weight),
       r = parseInt(reps);
@@ -6456,6 +6535,8 @@ function WorkoutTab({
         }
       }
     }
+    // Dinlenme zamanlayıcısını başlat (sadece canlı antrenmanda, geçmiş tarih girişinde değil)
+    if (!logDate) startRestTimer(exerciseName);
   };
   const deleteLog = id => {
     saveData({
@@ -6915,6 +6996,8 @@ function WorkoutTab({
     authUser: authUser,
     myUsername: myUsername,
     myPhoto: myPhoto,
+    timerSettings: timerSettings,
+    onTimerSettingsChange: (s) => { setTimerSettings(s); saveTimerSettings(s); },
     onPhotoChange: async dataUrl => {
       setMyPhoto(dataUrl || null);
       await saveProfilePhoto(authUser.uid, dataUrl);
@@ -7014,8 +7097,75 @@ function WorkoutTab({
       await dismissProgramRequest(authUser.uid, id);
       setNotifProgReqs(prev => prev.filter(p => p.id !== id));
     }
+  }), restTimer && !timerFullscreen && /*#__PURE__*/React.createElement(RestTimerBar, {
+    timer: restTimer,
+    onExpand: () => setTimerFullscreen(true),
+    onAdjust: adjustRestTimer,
+    onSkip: stopRestTimer
+  }), restTimer && timerFullscreen && /*#__PURE__*/React.createElement(RestTimerFullscreen, {
+    timer: restTimer,
+    onAdjust: adjustRestTimer,
+    onSkip: stopRestTimer,
+    onCollapse: () => setTimerFullscreen(false)
   }));
 }
+
+// ————— DİNLENME ZAMANLAYICISI: ALT ÇUBUK —————
+function fmtRest(sec) {
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+function RestTimerBar({ timer, onExpand, onAdjust, onSkip }) {
+  const pct = timer.total > 0 ? (timer.remaining / timer.total) : 0;
+  const R = 20, C = 2 * Math.PI * R;
+  return /*#__PURE__*/React.createElement("div", {
+    style: { position: 'fixed', bottom: 74, left: 0, right: 0, zIndex: 90, padding: '0 12px' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { maxWidth: 480, margin: '0 auto', background: 'linear-gradient(135deg,#1a0a0d,#0d0507)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 16, padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 13, boxShadow: '0 6px 24px rgba(0,0,0,0.5)' }
+  },
+    // halka + geri sayım
+    /*#__PURE__*/React.createElement("div", {
+      onClick: onExpand,
+      style: { position: 'relative', width: 46, height: 46, flexShrink: 0, cursor: 'pointer' }
+    },
+      /*#__PURE__*/React.createElement("svg", { width: 46, height: 46, viewBox: '0 0 46 46', style: { transform: 'rotate(-90deg)' } },
+        /*#__PURE__*/React.createElement("circle", { cx: 23, cy: 23, r: R, fill: 'none', stroke: '#2a1215', strokeWidth: 3.5 }),
+        /*#__PURE__*/React.createElement("circle", { cx: 23, cy: 23, r: R, fill: 'none', stroke: '#FF3D3D', strokeWidth: 3.5, strokeLinecap: 'round', strokeDasharray: C, strokeDashoffset: C * (1 - pct) })),
+      /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif" } }, fmtRest(timer.remaining))),
+    // bilgi
+    /*#__PURE__*/React.createElement("div", { onClick: onExpand, style: { flex: 1, cursor: 'pointer', minWidth: 0 } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 800 } }, 'Dinlenme'),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, timer.exerciseName)),
+    // butonlar
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, flexShrink: 0 } },
+      /*#__PURE__*/React.createElement("button", { onClick: () => onAdjust(-15), style: { background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 9, padding: '8px 9px', fontSize: 11, fontWeight: 800, color: '#ddd', cursor: 'pointer', fontFamily: 'inherit' } }, '−15'),
+      /*#__PURE__*/React.createElement("button", { onClick: () => onAdjust(15), style: { background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 9, padding: '8px 9px', fontSize: 11, fontWeight: 800, color: '#ddd', cursor: 'pointer', fontFamily: 'inherit' } }, '+15'),
+      /*#__PURE__*/React.createElement("button", { onClick: onSkip, style: { background: 'rgba(255,61,61,0.15)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 9, padding: '8px 11px', fontSize: 11, fontWeight: 800, color: '#FF6B6B', cursor: 'pointer', fontFamily: 'inherit' } }, 'Atla'))));
+}
+
+// ————— DİNLENME ZAMANLAYICISI: TAM EKRAN —————
+function RestTimerFullscreen({ timer, onAdjust, onSkip, onCollapse }) {
+  const pct = timer.total > 0 ? (timer.remaining / timer.total) : 0;
+  const R = 92, C = 2 * Math.PI * R;
+  return /*#__PURE__*/React.createElement("div", {
+    style: { position: 'fixed', inset: 0, zIndex: 200, background: 'radial-gradient(circle at 50% 40%,#1a0508,#000 70%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 26, padding: 24 }
+  },
+    /*#__PURE__*/React.createElement("button", { onClick: onCollapse, style: { position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', right: 20, background: '#141414', border: '1px solid #262626', borderRadius: 10, color: '#ccc', fontSize: 20, cursor: 'pointer', width: 40, height: 40, fontFamily: 'inherit' } }, '×'),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 800 } }, 'Dinlenme'),
+    /*#__PURE__*/React.createElement("div", { style: { position: 'relative', width: 200, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+      /*#__PURE__*/React.createElement("svg", { width: 200, height: 200, viewBox: '0 0 200 200', style: { position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' } },
+        /*#__PURE__*/React.createElement("circle", { cx: 100, cy: 100, r: R, fill: 'none', stroke: '#1a1a1a', strokeWidth: 8 }),
+        /*#__PURE__*/React.createElement("circle", { cx: 100, cy: 100, r: R, fill: 'none', stroke: '#FF3D3D', strokeWidth: 8, strokeLinecap: 'round', strokeDasharray: C, strokeDashoffset: C * (1 - pct) })),
+      /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center' } },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 56, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1 } }, fmtRest(timer.remaining)),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 4 } }, '/ ' + fmtRest(timer.total)))),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 700, textAlign: 'center' } }, timer.exerciseName),
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 14 } },
+      /*#__PURE__*/React.createElement("button", { onClick: () => onAdjust(-15), style: { width: 56, height: 56, borderRadius: '50%', background: '#141414', border: '1px solid #262626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#ddd', cursor: 'pointer', fontFamily: 'inherit' } }, '−15'),
+      /*#__PURE__*/React.createElement("button", { onClick: onSkip, style: { padding: '16px 40px', borderRadius: 16, background: 'linear-gradient(135deg,#FF3D3D,#c62828)', border: 'none', color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' } }, 'Atla'),
+      /*#__PURE__*/React.createElement("button", { onClick: () => onAdjust(15), style: { width: 56, height: 56, borderRadius: '50%', background: '#141414', border: '1px solid #262626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#ddd', cursor: 'pointer', fontFamily: 'inherit' } }, '+15')));
+}
+
 function HomeView({
   onSelectDay,
   data,
@@ -8583,10 +8733,13 @@ function MenuModal({
   authUser,
   myUsername,
   myPhoto,
+  timerSettings,
+  onTimerSettingsChange,
   onPhotoChange
 }) {
   const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
+  const [customDur, setCustomDur] = useState('');
   const logout = async () => {
     if (window.APEX_AUTH) {
       try {
@@ -8653,7 +8806,42 @@ function MenuModal({
     style: S.menuUserSync
   }, "☁ Bulut senkronizasyonu açık")), /*#__PURE__*/React.createElement("div", {
     style: S.modalTitle
-  }, "Veri"), /*#__PURE__*/React.createElement("button", {
+  }, timerSettings && onTimerSettingsChange ? "Dinlenme Zamanlayıcısı" : "Veri"),
+    // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
+    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: { background: '#0d0d0d', border: '1px solid #1c1c1c', borderRadius: 14, overflow: 'hidden', marginBottom: 12 } },
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 15px' } },
+        /*#__PURE__*/React.createElement("div", null,
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600 } }, "⏱️ Zamanlayıcı"),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginTop: 1 } }, "Set sonrası otomatik başlat")),
+        /*#__PURE__*/React.createElement("div", {
+          onClick: () => onTimerSettingsChange({ ...timerSettings, enabled: !timerSettings.enabled }),
+          style: { width: 44, height: 26, borderRadius: 13, background: timerSettings.enabled ? '#FF3D3D' : '#2a2a2a', position: 'relative', flexShrink: 0, cursor: 'pointer' }
+        }, /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 3, left: timerSettings.enabled ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff' } }))),
+      timerSettings.enabled && /*#__PURE__*/React.createElement("div", { style: { padding: '13px 15px', borderTop: '1px solid #161616' } },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, marginBottom: 2 } }, "⏲️ Varsayılan Süre"),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginBottom: 10 } }, "Yeni egzersizler için (saniye)"),
+        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' } },
+          [60, 90, 120, 180].map(sec => /*#__PURE__*/React.createElement("button", {
+            key: sec,
+            onClick: () => { onTimerSettingsChange({ ...timerSettings, defaultSec: sec }); setCustomDur(''); },
+            style: { padding: '8px 14px', borderRadius: 9, border: '1px solid ' + (timerSettings.defaultSec === sec ? '#FF3D3D' : '#2a2a2a'), background: timerSettings.defaultSec === sec ? '#FF3D3D' : '#1a1a1a', color: timerSettings.defaultSec === sec ? '#fff' : '#aaa', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }
+          }, sec)),
+          /*#__PURE__*/React.createElement("input", {
+            type: 'number', inputMode: 'numeric', placeholder: 'Özel', value: customDur,
+            onChange: e => setCustomDur(e.target.value),
+            onBlur: () => { const v = parseInt(customDur); if (v && v > 0 && v <= 600) onTimerSettingsChange({ ...timerSettings, defaultSec: v }); },
+            style: { width: 70, padding: '8px 10px', borderRadius: 9, border: '1px solid ' + (![60, 90, 120, 180].includes(timerSettings.defaultSec) ? '#FF3D3D' : '#2a2a2a'), background: '#1a1a1a', color: '#fff', fontSize: 13, fontWeight: 800, fontFamily: 'inherit', textAlign: 'center', boxSizing: 'border-box' }
+          }))),
+      timerSettings.enabled && /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 15px', borderTop: '1px solid #161616' } },
+        /*#__PURE__*/React.createElement("div", null,
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600 } }, "📳 Titreşim"),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginTop: 1 } }, "Süre bitince titret")),
+        /*#__PURE__*/React.createElement("div", {
+          onClick: () => onTimerSettingsChange({ ...timerSettings, vibrate: !timerSettings.vibrate }),
+          style: { width: 44, height: 26, borderRadius: 13, background: timerSettings.vibrate ? '#FF3D3D' : '#2a2a2a', position: 'relative', flexShrink: 0, cursor: 'pointer' }
+        }, /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 3, left: timerSettings.vibrate ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff' } })))),
+    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: S.modalTitle }, "Veri"),
+    /*#__PURE__*/React.createElement("button", {
     onClick: onExport,
     style: S.menuItem
   }, "📤 Yedek Dışa Aktar"), /*#__PURE__*/React.createElement("button", {
