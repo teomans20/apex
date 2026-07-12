@@ -51,7 +51,7 @@
     }
   } else {
     // Firebase yüklenemedi (internet yok) → offline modda devam
-    console.warn('Firebase yüklenemedi - offline modda çalışılıyor');
+    console.warn('Firebase could not load - working offline');
     window.APEX_FIREBASE_OK = false;
   }
 </script>
@@ -584,14 +584,17 @@ const buildDayConfigMap = (customDays, hiddenDays, dayOverrides) => {
   const hidden = hiddenDays || [];
   const ov = dayOverrides || {};
   const map = {};
-  // Yerleşik günler — gizlenmemiş olanlar (varsa override uygula)
+  // Yerleşik günler — gizlenmemiş olanlar (varsa override uygula, yoksa dile göre çevir)
   Object.keys(BUILTIN_DAYS).forEach(k => {
     if (!hidden.includes(k)) {
       const base = BUILTIN_DAYS[k];
       if (ov[k]) {
         map[k] = buildDayConfig(ov[k].name || base.name, ov[k].subtitle != null ? ov[k].subtitle : base.subtitle, ov[k].accent || base.accent, ov[k].dark || base.accent);
       } else {
-        map[k] = base;
+        // dile göre isim/alt başlık (override yoksa)
+        const trName = (typeof t === 'function') ? t('day_' + k) : base.name;
+        const trSub = (typeof t === 'function') ? t('day_' + k + '_sub') : base.subtitle;
+        map[k] = { ...base, name: trName, subtitle: trSub };
       }
     }
   });
@@ -1109,7 +1112,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.26'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.28'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1167,7 +1170,24 @@ const I18N = {
     // Dil
     language: 'Dil', lang_tr: 'Türkçe', lang_en: 'İngilizce',
     // Notlar
-    note_today: 'Bugünün Notu', note_add: 'Bugüne not ekle', note_add_day: 'Bu güne not ekle', note_placeholder: 'Bu antrenmana özel not: nasıl hissettin, ne denedin...', note_delete_confirm: 'Bu notu silmek istiyor musun?'
+    note_today: 'Bugünün Notu', note_add: 'Bugüne not ekle', note_add_day: 'Bu güne not ekle', note_placeholder: 'Bu antrenmana özel not: nasıl hissettin, ne denedin...', note_delete_confirm: 'Bu notu silmek istiyor musun?',
+    // İlerleme sekmesi
+    prog_empty: 'Antrenman kaydettikçe ilerlemen burada görünecek 💪', prog_no_data: 'Henüz veri yok.', prog_not_enough: 'Bu dönemde yeterli veri yok.', prog_log_more: 'Daha fazla antrenman kaydet 💪',
+    prog_biggest_jump: 'En büyük sıçrama: ', prog_most_improved: 'BU DÖNEM EN ÇOK GELİŞEN', prog_record_this_month: 'Bu ay kırılan rekor', prog_day_streak: 'GÜN SERİSİ',
+    prog_muscle_dev: 'KAS GRUBU · BAŞLANGICA GÖRE GELİŞİM', prog_record_dev: 'REKOR GELİŞİMİ · dokun, detayı gör', prog_stuck: '⏳ TAKILDIĞIN HAREKETLER',
+    prog_strength_gain: ' güç/hacim artışı', prog_weeks_ago: ' hafta önce', prog_set_count_hint: '(önceki rekorunu geçtiğin set sayısı)',
+    prog_chart_hint: 'Grafiğe dokun, o günkü değeri gör · gerçek seans ağırlıkları', prog_current_top: 'Güncel TOP rekor: ', prog_est_1rm: 'TAHMİNİ 1RM', prog_today: 'bugün',
+    prog_plateau: ' haftadır yeni rekor yok. Deload (ağırlığı %10 düşürüp tekrar çıkmak) veya rep aralığını değiştirmek platoyu kırabilir.',
+    // Kas grupları
+    muscle_chest: 'Göğüs', muscle_frontDelts: 'Ön Omuz', muscle_sideDelts: 'Yan Omuz', muscle_rearDelts: 'Arka Omuz', muscle_biceps: 'Biceps', muscle_triceps: 'Triceps', muscle_forearms: 'Önkol', muscle_abs: 'Karın', muscle_lats: 'Sırt (Lat)', muscle_traps: 'Trapez', muscle_lowerBack: 'Bel', muscle_quads: 'Quadriceps', muscle_hamstrings: 'Hamstring', muscle_glutes: 'Kalça', muscle_calves: 'Baldır',
+    // Tarih/zaman
+    date_min_ago: '{n} dk önce', date_hr_ago: '{n} saat önce', date_days_ago: '{n} gün önce', date_yesterday: 'dün', date_yesterday_cap: 'Dün', date_today_cap: 'Bugün',
+    next_label: 'Sıradaki: {name}', last_label: 'Son: {n} gün önce', never_done: 'Henüz hiç yapılmadı — başla!', today_chart: 'bugün',
+    // Ekran başlıkları / çeşitli
+    calendar: 'TAKVİM', last_6_months: 'SON 6 AY', tap_month_detail: 'Detay için bir aya dokun', muscle_map: 'KAS HARİTASI · SON 7 GÜN', front: 'ÖN', back: 'ARKA', set_label: 'SET', volume_label: 'HACİM', my_gym: 'Salonum', friends_need_online: 'Arkadaşlar için internet', friends_need_online2: 've giriş gerekli 🌐', firebase_offline: 'Firebase yüklenemedi - offline modda çalışılıyor',
+    // Yerleşik gün isimleri + alt başlıkları
+    day_push: 'İTİŞ', day_pull: 'ÇEKİŞ', day_upper: 'ÜST', day_leg: 'BACAK',
+    day_push_sub: 'Göğüs · Omuz · Triceps', day_pull_sub: 'Sırt · Biceps', day_upper_sub: 'Tüm üst vücut', day_leg_sub: 'Bacak · Kalça · Baldır'
   },
   en: {
     tab_workout: 'WORKOUT', tab_progress: 'PROGRESS', tab_friends: 'FRIENDS',
@@ -1186,7 +1206,19 @@ const I18N = {
     cat_gogus: 'Chest', cat_sirt: 'Back', cat_omuz: 'Shoulder', cat_kol: 'Arm', cat_bacak: 'Leg', cat_karin: 'Abs',
     rest: 'Rest', rest_skip: 'Skip',
     language: 'Language', lang_tr: 'Turkish', lang_en: 'English',
-    note_today: "Today's Note", note_add: 'Add note for today', note_add_day: 'Add note for this day', note_placeholder: 'Note for this workout: how you felt, what you tried...', note_delete_confirm: 'Delete this note?'
+    note_today: "Today's Note", note_add: 'Add note for today', note_add_day: 'Add note for this day', note_placeholder: 'Note for this workout: how you felt, what you tried...', note_delete_confirm: 'Delete this note?',
+    prog_empty: 'Your progress will appear here as you log workouts 💪', prog_no_data: 'No data yet.', prog_not_enough: 'Not enough data for this period.', prog_log_more: 'Log more workouts 💪',
+    prog_biggest_jump: 'Biggest jump: ', prog_most_improved: 'MOST IMPROVED THIS PERIOD', prog_record_this_month: 'Records this month', prog_day_streak: 'DAY STREAK',
+    prog_muscle_dev: 'MUSCLE GROUP · GROWTH SINCE START', prog_record_dev: 'RECORD PROGRESS · tap for details', prog_stuck: '⏳ STUCK EXERCISES',
+    prog_strength_gain: ' strength/volume gain', prog_weeks_ago: ' weeks ago', prog_set_count_hint: '(sets where you beat your previous record)',
+    prog_chart_hint: "Tap the chart to see that day's value · real session weights", prog_current_top: 'Current TOP record: ', prog_est_1rm: 'ESTIMATED 1RM', prog_today: 'today',
+    prog_plateau: ' weeks without a new record. A deload (drop weight 10% and build back up) or changing the rep range can break the plateau.',
+    muscle_chest: 'Chest', muscle_frontDelts: 'Front Delts', muscle_sideDelts: 'Side Delts', muscle_rearDelts: 'Rear Delts', muscle_biceps: 'Biceps', muscle_triceps: 'Triceps', muscle_forearms: 'Forearms', muscle_abs: 'Abs', muscle_lats: 'Lats', muscle_traps: 'Traps', muscle_lowerBack: 'Lower Back', muscle_quads: 'Quads', muscle_hamstrings: 'Hamstrings', muscle_glutes: 'Glutes', muscle_calves: 'Calves',
+    date_min_ago: '{n} min ago', date_hr_ago: '{n} hr ago', date_days_ago: '{n} days ago', date_yesterday: 'yesterday', date_yesterday_cap: 'Yesterday', date_today_cap: 'Today',
+    next_label: 'Next up: {name}', last_label: 'Last: {n} days ago', never_done: 'Never done yet — start!', today_chart: 'today',
+    calendar: 'CALENDAR', last_6_months: 'LAST 6 MONTHS', tap_month_detail: 'Tap a month for details', muscle_map: 'MUSCLE MAP · LAST 7 DAYS', front: 'FRONT', back: 'BACK', set_label: 'SETS', volume_label: 'VOLUME', my_gym: 'My Gym', friends_need_online: 'Friends need internet', friends_need_online2: 'and sign-in 🌐', firebase_offline: 'Firebase could not load - working offline',
+    day_push: 'PUSH', day_pull: 'PULL', day_upper: 'UPPER', day_leg: 'LEGS',
+    day_push_sub: 'Chest · Shoulders · Triceps', day_pull_sub: 'Back · Biceps', day_upper_sub: 'Full upper body', day_leg_sub: 'Legs · Glutes · Calves'
   }
 };
 
@@ -1377,9 +1409,34 @@ function ApexIcon({ name, size, color, strokeWidth, style }) {
   }));
 }
 
-const TR_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'];
-const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-const TR_MONTHS_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+const _CAL = {
+  tr: {
+    days: ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pa'],
+    months: ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'],
+    monthsShort: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
+    daysLong: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
+  },
+  en: {
+    days: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
+    months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    monthsShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    daysLong: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  }
+};
+// Dile göre otomatik dizi döndüren proxy'ler — mevcut TR_MONTHS[i] kullanımları çalışmaya devam eder
+const _calProxy = (field) => new Proxy([], {
+  get(target, prop) {
+    const arr = (_CAL[CURRENT_LANG] || _CAL.tr)[field];
+    if (prop === 'length') return arr.length;
+    if (prop === Symbol.iterator) return arr[Symbol.iterator].bind(arr);
+    if (typeof prop === 'string' && /^\d+$/.test(prop)) return arr[+prop];
+    const v = arr[prop];
+    return typeof v === 'function' ? v.bind(arr) : v;
+  }
+});
+const TR_DAYS = _calProxy('days');
+const TR_MONTHS = _calProxy('months');
+const TR_MONTHS_SHORT = _calProxy('monthsShort');
 const Icon = {
   Chevron: () => /*#__PURE__*/React.createElement("span", {
     style: {
@@ -1953,7 +2010,7 @@ function ProgressChart({
     style: S.chartHeader
   }, /*#__PURE__*/React.createElement("span", {
     style: S.chartTitle
-  }, "İLERLEME"), /*#__PURE__*/React.createElement("span", {
+  }, t("tab_progress")), /*#__PURE__*/React.createElement("span", {
     style: S.chartRange
   }, minW, "–", maxW, "kg · ", data.length, " antrenman")), /*#__PURE__*/React.createElement("svg", {
     viewBox: `0 0 ${W} ${H}`,
@@ -2176,7 +2233,7 @@ function generateWeeklyImage(s, myUsername) {
     ctx.fillStyle = '#888'; ctx.textAlign = 'left';
     ctx.font = '800 ' + S(9) + "px Manrope,sans-serif";
     ctx.fillText('ANTRENMAN GÜNLERİN', PAD + S(14), y + S(13));
-    const dayLabels = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+    const dayLabels = (_CAL[CURRENT_LANG] || _CAL.tr).daysLong;
     const dInset = S(16);
     const dw = (boxW - dInset * 2) / 7;
     const dsz = Math.min(S(26), dw - S(4)); // kutu sütun genişliğini aşmasın
@@ -2926,7 +2983,7 @@ function JournalModal({ data, myUsername, onClose }) {
 function WeeklySummaryModal({ summary, myUsername, onClose }) {
   const [sharing, setSharing] = useState(false);
   const s = summary;
-  const dayLabels = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+  const dayLabels = (_CAL[CURRENT_LANG] || _CAL.tr).daysLong;
   const COLORS = ['var(--accent)', '#FFB74D', '#4A90E2', '#A78BFA', '#34D399', '#26a69a'];
 
   const cmpBadge = (c, suffix) => {
@@ -3441,13 +3498,13 @@ function DayDetailModal({
       style: S.dayStatVal
     }, w.logs.length), /*#__PURE__*/React.createElement("div", {
       style: S.dayStatLbl
-    }, "SET")), /*#__PURE__*/React.createElement("div", {
+    }, t('set_label'))), /*#__PURE__*/React.createElement("div", {
       style: S.dayStatBox
     }, /*#__PURE__*/React.createElement("div", {
       style: S.dayStatVal
     }, (volume / 1000).toFixed(1), "t"), /*#__PURE__*/React.createElement("div", {
       style: S.dayStatLbl
-    }, "HACİM"))), (dayStats.topPRs.length > 0 || dayStats.backoffPRs.length > 0 || dayStats.targetsTotal > 0) && /*#__PURE__*/React.createElement("div", {
+    }, t('volume_label')))), (dayStats.topPRs.length > 0 || dayStats.backoffPRs.length > 0 || dayStats.targetsTotal > 0) && /*#__PURE__*/React.createElement("div", {
       style: S.dayDetailHighlights
     }, dayStats.topPRs.length > 0 && /*#__PURE__*/React.createElement("div", {
       style: {
@@ -4152,7 +4209,7 @@ function computeWeekSummary(data, mondayTs) {
   // Trapez'i Sırt (lat) ile birleştir — ikisi de sırt kası, ayrı sayılınca dağılım yanıltıcı oluyor
   if (muscleVol.traps) { muscleVol.lats = (muscleVol.lats || 0) + muscleVol.traps; delete muscleVol.traps; }
   // Birleşik grup için Türkçe ad
-  const muscleTr = code => code === 'lats' ? 'Sırt' : ((MUSCLES[code] && MUSCLES[code].tr) || code);
+  const muscleTr = code => code === 'lats' ? t('muscle_lats') : (MUSCLES[code] ? t('muscle_'+code) : code);
   const totalMuscleVol = Object.values(muscleVol).reduce((a, b) => a + b, 0);
   let muscleDist = [], topMuscle = null;
   if (totalMuscleVol > 0) {
@@ -4363,7 +4420,7 @@ function buildJournalEntries(data) {
     // Kas dağılımı yüzdeye çevir (en büyük 4)
     const totalMuscleVol = Object.values(muscleVol).reduce((a, b) => a + b, 0);
     const muscleDist = Object.entries(muscleVol)
-      .map(([m, v]) => ({ muscle: (MUSCLES[m] && MUSCLES[m].tr) || m, pct: totalMuscleVol > 0 ? Math.round(v / totalMuscleVol * 100) : 0 }))
+      .map(([m, v]) => ({ muscle: MUSCLES[m] ? t('muscle_'+m) : m, pct: totalMuscleVol > 0 ? Math.round(v / totalMuscleVol * 100) : 0 }))
       .sort((a, b) => b.pct - a.pct)
       .slice(0, 6)
       .filter(x => x.pct > 0);
@@ -4569,7 +4626,7 @@ function FriendsTab({
         fontSize: 14,
         lineHeight: 1.6
       }
-    }, "Arkadaşlar için internet", /*#__PURE__*/React.createElement("br", null), "ve giriş gerekli 🌐"));
+    }, t('friends_need_online'), /*#__PURE__*/React.createElement("br", null), t('friends_need_online2')));
   }
 
   // Bir arkadaşın profili açıksa onu göster
@@ -5076,13 +5133,13 @@ function feedTimeAgo(ts) {
   const diff = Date.now() - ts;
   const min = Math.floor(diff / 60000);
   if (min < 1) return 'az önce';
-  if (min < 60) return min + ' dk önce';
+  if (min < 60) return t('date_min_ago',{n:min});
   const hr = Math.floor(min / 60);
-  if (hr < 24) return hr + ' saat önce';
+  if (hr < 24) return t('date_hr_ago',{n:hr});
   const day = Math.floor(hr / 24);
-  if (day === 1) return 'dün';
-  if (day < 7) return day + ' gün önce';
-  return new Date(ts).toLocaleDateString('tr-TR', {
+  if (day === 1) return t('date_yesterday');
+  if (day < 7) return t('date_days_ago',{n:day});
+  return new Date(ts).toLocaleDateString((CURRENT_LANG === 'en' ? 'en-US' : 'tr-TR'), {
     day: 'numeric',
     month: 'short'
   });
@@ -5570,7 +5627,7 @@ function computePublicStats(data, gymName) {
     const sorted = Object.entries(muscleVol).sort((a, b) => b[1] - a[1]);
     const [code, vol] = sorted[0];
     topMuscle = {
-      name: (MUSCLES[code] && MUSCLES[code].tr) || code,
+      name: MUSCLES[code] ? t('muscle_'+code) : code,
       pct: Math.round(vol / totalMuscleVol * 100)
     };
   }
@@ -5883,7 +5940,7 @@ function FriendProfileView({
     style: S.pfStatV
   }, stats.streak || 0), /*#__PURE__*/React.createElement("div", {
     style: S.pfStatL
-  }, "GÜN SERİSİ"))), stats.topMuscle && stats.topMuscle.name && /*#__PURE__*/React.createElement("div", {
+  }, t('prog_day_streak')))), stats.topMuscle && stats.topMuscle.name && /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       alignItems: 'center',
@@ -7718,7 +7775,7 @@ function HomeView({
     }
   }, "📍"), /*#__PURE__*/React.createElement("span", {
     style: S.gymSelectorName
-  }, activeGym ? activeGym.name : 'Salonum'), /*#__PURE__*/React.createElement("span", {
+  }, activeGym ? activeGym.name : t('my_gym')), /*#__PURE__*/React.createElement("span", {
     style: {
       color: 'var(--accent)',
       fontSize: 11
@@ -7829,7 +7886,7 @@ function HomeView({
   }, "•••"))), /*#__PURE__*/React.createElement("div", { style: { margin: '10px 0 6px', padding: '0 4px' } },
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 20, fontWeight: 800, lineHeight: 1.25 } },
       (() => { const h = new Date().getHours(); const g = h < 6 ? t('greeting_night') : h < 12 ? t('greeting_morning') : h < 18 ? t('greeting_afternoon') : t('greeting_evening'); return g + (userName ? ', ' + String(userName).split(' ')[0] : ''); })(), /*#__PURE__*/React.createElement(ApexIcon, { name: 'muscle', size: 19, strokeWidth: 2.5, color: 'var(--accent-light)', style: { display: 'inline-block', verticalAlign: '-3px', marginLeft: 7 } })),
-    /*#__PURE__*/React.createElement("div", { style: { ...S.date, marginTop: 6, marginBottom: 16 } }, new Date().toLocaleDateString('tr-TR', {
+    /*#__PURE__*/React.createElement("div", { style: { ...S.date, marginTop: 6, marginBottom: 16 } }, new Date().toLocaleDateString((CURRENT_LANG === 'en' ? 'en-US' : 'tr-TR'), {
       weekday: 'long',
       day: 'numeric',
       month: 'long'
@@ -7856,8 +7913,8 @@ function HomeView({
       },
         /*#__PURE__*/React.createElement("div", { style: { width: 42, height: 42, borderRadius: 12, background: (cfg && cfg.gradient) || 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'dumbbell', size: 22, color: '#fff', strokeWidth: 2.2 })),
         /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: '#fff' } }, 'Sıradaki: ' + ((cfg && cfg.name) || suggest)),
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11.5, color: '#999', marginTop: 2 } }, daysAgo == null ? 'Henüz hiç yapılmadı — başla!' : 'Son: ' + daysAgo + ' gün önce')),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: '#fff' } }, t('next_label',{name:((cfg && cfg.name) || suggest)})),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11.5, color: '#999', marginTop: 2 } }, daysAgo == null ? t('never_done') : t('last_label',{n:daysAgo}))),
         /*#__PURE__*/React.createElement("span", { style: { color: (cfg && cfg.accent) || 'var(--accent-light)', fontSize: 18, flexShrink: 0 } }, '›'));
     })()), weeklyUnseen && /*#__PURE__*/React.createElement("button", {
     onClick: onOpenWeekly,
@@ -7975,7 +8032,7 @@ function HomeView({
       ...S.sectionLabel,
       marginTop: 28
     }
-  }, "TAKVİM"), /*#__PURE__*/React.createElement(MonthlyCalendar, {
+  }, t('calendar')), /*#__PURE__*/React.createElement(MonthlyCalendar, {
     logs: data.logs,
     sessions: data.sessions,
     dayConfig: dayConfig,
@@ -8052,7 +8109,7 @@ function SixMonthStats({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: S.sectionLabel
-  }, "SON 6 AY"), /*#__PURE__*/React.createElement("div", {
+  }, t('last_6_months')), /*#__PURE__*/React.createElement("div", {
     style: S.statsCard
   }, /*#__PURE__*/React.createElement("div", {
     style: S.barChartRow
@@ -8106,7 +8163,7 @@ function SixMonthStats({
     style: S.statsDetailLbl
   }, "TOPLAM SÜRE")))) : /*#__PURE__*/React.createElement("div", {
     style: S.statsHint
-  }, "Detay için bir aya dokun")));
+  }, t('tap_month_detail'))));
 }
 function MuscleHeatmap({
   logs,
@@ -8260,7 +8317,7 @@ function MuscleHeatmap({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: S.sectionLabel
-  }, "KAS HARİTASI · SON 7 GÜN"), /*#__PURE__*/React.createElement("div", {
+  }, t('muscle_map')), /*#__PURE__*/React.createElement("div", {
     style: S.heatmapMetricToggle
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setMetric('sets'),
@@ -8268,13 +8325,13 @@ function MuscleHeatmap({
       ...S.heatmapMetricBtn,
       ...(metric === 'sets' ? S.heatmapMetricBtnActive : {})
     }
-  }, "SET"), /*#__PURE__*/React.createElement("button", {
+  }, t('set_label')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setMetric('volume'),
     style: {
       ...S.heatmapMetricBtn,
       ...(metric === 'volume' ? S.heatmapMetricBtnActive : {})
     }
-  }, "HACİM"))), /*#__PURE__*/React.createElement("div", {
+  }, t('volume_label')))), /*#__PURE__*/React.createElement("div", {
     style: S.statsCard
   }, /*#__PURE__*/React.createElement("div", {
     style: S.bodyViewToggle
@@ -8284,13 +8341,13 @@ function MuscleHeatmap({
       ...S.bodyViewBtn,
       ...(view === 'front' ? S.bodyViewBtnActive : {})
     }
-  }, "ÖN"), /*#__PURE__*/React.createElement("button", {
+  }, t('front')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setView('back'),
     style: {
       ...S.bodyViewBtn,
       ...(view === 'back' ? S.bodyViewBtnActive : {})
     }
-  }, "ARKA")), /*#__PURE__*/React.createElement("div", {
+  }, t('back'))), /*#__PURE__*/React.createElement("div", {
     style: S.bodyContainer
   }, view === 'front' ? /*#__PURE__*/React.createElement(BodyFront, {
     muscleColor: muscleColor,
@@ -8327,7 +8384,7 @@ function MuscleHeatmap({
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: S.muscleBreakName
-    }, isOpen ? '▼ ' : '', m.tr), /*#__PURE__*/React.createElement("div", {
+    }, isOpen ? '▼ ' : '', t('muscle_'+m.key)), /*#__PURE__*/React.createElement("div", {
       style: S.muscleBreakBarTrack
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -8373,11 +8430,11 @@ function MuscleHeatmap({
       style: S.expandTotalVal
     }, muscleDetail.totalSets.toFixed(1)), /*#__PURE__*/React.createElement("span", {
       style: S.expandTotalLbl
-    }, "SET")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    }, t('set_label'))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
       style: S.expandTotalVal
     }, (muscleDetail.totalVol / 1000).toFixed(1), "t"), /*#__PURE__*/React.createElement("span", {
       style: S.expandTotalLbl
-    }, "HACİM")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    }, t('volume_label'))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
       style: S.expandTotalVal
     }, muscleDetail.days.length), /*#__PURE__*/React.createElement("span", {
       style: S.expandTotalLbl
@@ -8499,7 +8556,7 @@ function MuscleTagModal({
         color: v ? '#fff' : '#888',
         background: v ? `${colorFor(v)}22` : '#0f0f0f'
       }
-    }, m.tr, v && /*#__PURE__*/React.createElement("span", {
+    }, t('muscle_'+key), v && /*#__PURE__*/React.createElement("span", {
       style: {
         ...S.tagChipBadge,
         color: colorFor(v)
@@ -8888,10 +8945,10 @@ function ExerciseView({
     const d = new Date(ts),
       today = new Date();
     const diff = Math.floor((today - d) / 86400000);
-    if (diff === 0) return 'Bugün';
-    if (diff === 1) return 'Dün';
-    if (diff < 7) return `${diff} gün önce`;
-    return d.toLocaleDateString('tr-TR', {
+    if (diff === 0) return t('date_today_cap');
+    if (diff === 1) return t('date_yesterday_cap');
+    if (diff < 7) return t('date_days_ago',{n:diff});
+    return d.toLocaleDateString((CURRENT_LANG === 'en' ? 'en-US' : 'tr-TR'), {
       day: 'numeric',
       month: 'long'
     });
@@ -9841,7 +9898,7 @@ function SessionSummaryModal({
     style: S.summaryStatValue
   }, summary.setCount), /*#__PURE__*/React.createElement("div", {
     style: S.summaryStatLabel
-  }, "SET")), /*#__PURE__*/React.createElement("div", {
+  }, t('set_label'))), /*#__PURE__*/React.createElement("div", {
     style: S.summaryStatBox
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9971,7 +10028,7 @@ function estimate1RM(weight, reps) {
 }
 // ————— VÜCUT ÖLÇÜLERİ BÖLÜMÜ (İLERLEME içinde) —————
 function fmtMeasDate(d) {
-  try { return new Date(d).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }); } catch (e) { return d; }
+  try { return new Date(d).toLocaleDateString((CURRENT_LANG === 'en' ? 'en-US' : 'tr-TR'), { day: 'numeric', month: 'short' }); } catch (e) { return d; }
 }
 function MeasurementsSection() {
   const [all, setAll] = useState(loadMeasurements);
@@ -10412,7 +10469,7 @@ function ProgressTab({
       const pct = (!isNew && firstAvg > 0) ? Math.round((lastAvg - firstAvg) / firstAvg * 100) : 0;
       return {
         key: m,
-        tr: MUSCLES[m].tr,
+        tr: t('muscle_'+m),
         recent,
         pct,
         isNew,
@@ -10465,14 +10522,14 @@ function ProgressTab({
     }
   }, "📍"), /*#__PURE__*/React.createElement("span", {
     style: S.gymSelectorName
-  }, activeGym ? activeGym.name : 'Salonum'), /*#__PURE__*/React.createElement("span", {
+  }, activeGym ? activeGym.name : t('my_gym')), /*#__PURE__*/React.createElement("span", {
     style: {
       color: 'var(--accent)',
       fontSize: 11
     }
   }, "▾")), /*#__PURE__*/React.createElement("div", {
     style: S.topBarTitle
-  }, "İLERLEME"), /*#__PURE__*/React.createElement("div", {
+  }, t("tab_progress")), /*#__PURE__*/React.createElement("div", {
     style: {
       width: 40
     }
@@ -10484,17 +10541,17 @@ function ProgressTab({
       fontSize: 14,
       lineHeight: 1.6
     }
-  }, "Henüz veri yok.", /*#__PURE__*/React.createElement("br", null), "Antrenman kaydettikçe ilerlemen burada görünecek 💪") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, t('prog_no_data'), /*#__PURE__*/React.createElement("br", null), t('prog_empty')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.progHero
   }, /*#__PURE__*/React.createElement("div", {
     style: S.progHeroBig
   }, monthStats.prCount), /*#__PURE__*/React.createElement("div", {
     style: S.progHeroLbl
-  }, "Bu ay kırılan rekor"), /*#__PURE__*/React.createElement("div", {
+  }, t('prog_record_this_month')), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 11, color: '#666', marginTop: 2 }
-  }, "(önceki rekorunu geçtiğin set sayısı)"), monthStats.biggestJump && /*#__PURE__*/React.createElement("div", {
+  }, t('prog_set_count_hint')), monthStats.biggestJump && /*#__PURE__*/React.createElement("div", {
     style: { ...S.progHeroDelta, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'flame', size: 15, strokeWidth: 2.4, color: 'var(--accent)' }), "En büyük sıçrama: " + monthStats.biggestJump.name + " +" + monthStats.biggestJump.delta + "kg")), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'flame', size: 15, strokeWidth: 2.4, color: 'var(--accent)' }), t('prog_biggest_jump') + monthStats.biggestJump.name + " +" + monthStats.biggestJump.delta + "kg")), /*#__PURE__*/React.createElement("div", {
     style: S.progStatGrid
   }, /*#__PURE__*/React.createElement("div", {
     style: S.progStatBox
@@ -10508,11 +10565,11 @@ function ProgressTab({
     style: S.progStatV
   }, trainingStats.streak), /*#__PURE__*/React.createElement("div", {
     style: S.progStatL
-  }, "GÜN SERİSİ"))), stuckExercises.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, t('prog_day_streak')))), stuckExercises.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: S.plateauBox
   }, /*#__PURE__*/React.createElement("div", {
     style: S.plateauTitle
-  }, "⏳ TAKILDIĞIN HAREKETLER"), stuckExercises.map((es, i) => /*#__PURE__*/React.createElement("button", {
+  }, t('prog_stuck')), stuckExercises.map((es, i) => /*#__PURE__*/React.createElement("button", {
     key: i,
     onClick: () => setDetailExercise(es.name),
     style: S.plateauRow
@@ -10525,19 +10582,19 @@ function ProgressTab({
     style: S.plateauName
   }, es.name), /*#__PURE__*/React.createElement("div", {
     style: S.plateauSub
-  }, es.weight, "kg · son rekor ", es.weeksSince, " hafta önce")), /*#__PURE__*/React.createElement("div", {
+  }, es.weight, "kg · son rekor ", es.weeksSince, t('prog_weeks_ago'))), /*#__PURE__*/React.createElement("div", {
     style: S.plateauBadge
   }, es.weeksSince, " hafta")))), muscleProgress.list.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, topMuscle && /*#__PURE__*/React.createElement("div", {
     style: S.winnerBanner
   }, /*#__PURE__*/React.createElement("div", {
     style: { ...S.winnerLbl, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'flame', size: 14, strokeWidth: 2.4, color: 'var(--accent-light)' }), "BU DÖNEM EN ÇOK GELİŞEN"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'flame', size: 14, strokeWidth: 2.4, color: 'var(--accent-light)' }), t('prog_most_improved')), /*#__PURE__*/React.createElement("div", {
     style: S.winnerName
   }, topMuscle.tr), /*#__PURE__*/React.createElement("div", {
     style: S.winnerDelta
-  }, "▲ %", topMuscle.pct, " güç/hacim artışı")), /*#__PURE__*/React.createElement("div", {
+  }, "▲ %", topMuscle.pct, t('prog_strength_gain'))), /*#__PURE__*/React.createElement("div", {
     style: S.sectionLabel
-  }, "KAS GRUBU · BAŞLANGICA GÖRE GELİŞİM"), /*#__PURE__*/React.createElement("div", {
+  }, t('prog_muscle_dev')), /*#__PURE__*/React.createElement("div", {
     style: S.progCard
   }, muscleProgress.list.slice(0, 8).map((m, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
@@ -10559,7 +10616,7 @@ function ProgressTab({
     }
   }, m.isNew ? 'YENİ' : m.pct > 0 ? `▲ %${m.pct}` : m.pct < 0 ? `▼ %${Math.abs(m.pct)}` : '▬ 0%'))))), /*#__PURE__*/React.createElement("div", {
     style: S.sectionLabel
-  }, "REKOR GELİŞİMİ · dokun, detayı gör"), improvingExercises.map((es, i) => /*#__PURE__*/React.createElement("button", {
+  }, t('prog_record_dev')), improvingExercises.map((es, i) => /*#__PURE__*/React.createElement("button", {
     key: i,
     onClick: () => setDetailExercise(es.name),
     style: {
@@ -10663,7 +10720,7 @@ function ExerciseProgressDetail({
   const yLabels = [maxW, (maxW + minW) / 2, minW].map(v => Math.round(v * 10) / 10);
 
   // X ekseni etiketleri (baş, orta, son)
-  const fmtDate = ts => new Date(ts).toLocaleDateString('tr-TR', {
+  const fmtDate = ts => new Date(ts).toLocaleDateString((CURRENT_LANG === 'en' ? 'en-US' : 'tr-TR'), {
     day: 'numeric',
     month: 'short'
   });
@@ -10747,7 +10804,7 @@ function ExerciseProgressDetail({
     style: S.exDetailName
   }, es.name), /*#__PURE__*/React.createElement("div", {
     style: S.exDetailCur
-  }, "Güncel TOP rekor: ", es.weight, "kg × ", es.reps))), /*#__PURE__*/React.createElement("div", {
+  }, t('prog_current_top'), es.weight, "kg × ", es.reps))), /*#__PURE__*/React.createElement("div", {
     style: S.exBigStats
   }, /*#__PURE__*/React.createElement("div", {
     style: S.exStat
@@ -10773,7 +10830,7 @@ function ExerciseProgressDetail({
     style: S.exStatV
   }, "~", es.oneRM), /*#__PURE__*/React.createElement("div", {
     style: S.exStatL
-  }, "TAHMİNİ 1RM"))), /*#__PURE__*/React.createElement("div", {
+  }, t('prog_est_1rm')))), /*#__PURE__*/React.createElement("div", {
     style: S.periodToggle
   }, ['1H', '1A', '3A', '6A', '1Y', 'TÜM'].map(p => /*#__PURE__*/React.createElement("button", {
     key: p,
@@ -10901,7 +10958,7 @@ function ExerciseProgressDetail({
     fill: "#666",
     fontSize: "9",
     textAnchor: "end"
-  }, "bugün"), /*#__PURE__*/React.createElement("rect", {
+  }, t('today_chart')), /*#__PURE__*/React.createElement("rect", {
     x: "0",
     y: "0",
     width: W,
@@ -10914,14 +10971,14 @@ function ExerciseProgressDetail({
       padding: '30px 0',
       fontSize: 13
     }
-  }, "Bu dönemde yeterli veri yok.", /*#__PURE__*/React.createElement("br", null), "Daha fazla antrenman kaydet 💪"), /*#__PURE__*/React.createElement("div", {
+  }, t('prog_not_enough'), /*#__PURE__*/React.createElement("br", null), t('prog_log_more')), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
       fontSize: 10,
       color: '#555',
       marginTop: 6
     }
-  }, "Grafiğe dokun, o günkü değeri gör · gerçek seans ağırlıkları")), es.isStuck && /*#__PURE__*/React.createElement("div", {
+  }, t('prog_chart_hint'))), es.isStuck && /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.plateauBox,
       marginTop: 14
@@ -10934,7 +10991,7 @@ function ExerciseProgressDetail({
       color: '#ccc',
       lineHeight: 1.5
     }
-  }, es.weight, "kg'da ", es.weeksSince, " haftadır yeni rekor yok. Deload (ağırlığı %10 düşürüp tekrar çıkmak) veya rep aralığını değiştirmek platoyu kırabilir.")));
+  }, es.weight, "kg'da ", es.weeksSince, t('prog_plateau'))));
 }
 
 // ═══════════════════════════════════════════
