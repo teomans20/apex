@@ -580,12 +580,20 @@ const buildDayConfig = (name, subtitle, accent, dark) => {
 };
 
 // Merge built-in days with user's custom days into a single config map
-const buildDayConfigMap = (customDays, hiddenDays) => {
+const buildDayConfigMap = (customDays, hiddenDays, dayOverrides) => {
   const hidden = hiddenDays || [];
+  const ov = dayOverrides || {};
   const map = {};
-  // Yerleşik günler — gizlenmemiş olanlar
+  // Yerleşik günler — gizlenmemiş olanlar (varsa override uygula)
   Object.keys(BUILTIN_DAYS).forEach(k => {
-    if (!hidden.includes(k)) map[k] = BUILTIN_DAYS[k];
+    if (!hidden.includes(k)) {
+      const base = BUILTIN_DAYS[k];
+      if (ov[k]) {
+        map[k] = buildDayConfig(ov[k].name || base.name, ov[k].subtitle != null ? ov[k].subtitle : base.subtitle, ov[k].accent || base.accent, ov[k].dark || base.accent);
+      } else {
+        map[k] = base;
+      }
+    }
   });
   (customDays || []).forEach(cd => {
     if (!hidden.includes(cd.id)) map[cd.id] = buildDayConfig(cd.name, cd.subtitle, cd.accent, cd.dark);
@@ -1101,7 +1109,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.19'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.22'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -4140,7 +4148,7 @@ function buildJournalEntries(data) {
     if (l.dayType) dayGroups[k].dayTypes.add(l.dayType);
   });
 
-  const dayConfigMap = buildDayConfigMap(data.customDays || [], data.hiddenDays || []);
+  const dayConfigMap = buildDayConfigMap(data.customDays || [], data.hiddenDays || [], data.dayOverrides || {});
   const weekdays = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
   const months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
   const monthsFull = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -5896,6 +5904,44 @@ function App() {
   const [resetSignals, setResetSignals] = useState({ workout: 0, progress: 0, friends: 0 });
   // Arkadaştan kabul edilen program → WorkoutTab'a iletilir, o kendi verisine yeni gün olarak ekler
   const [pendingProgram, setPendingProgram] = useState(null);
+  // ————— DİNLENME ZAMANLAYICISI (App seviyesinde — sekme değişince kaybolmaz) —————
+  const [restTimer, setRestTimer] = useState(null); // { total, remaining, exerciseName } | null
+  const [timerFullscreen, setTimerFullscreen] = useState(false);
+  const restIntervalRef = useRef(null);
+  const startRestTimer = (exerciseName, seconds) => {
+    const settings = loadTimerSettings();
+    if (!settings.enabled) return;
+    const dur = seconds || loadTimerPerExercise()[exerciseName] || settings.defaultSec || 90;
+    setRestTimer({ total: dur, remaining: dur, exerciseName, vibrate: settings.vibrate });
+    setTimerFullscreen(false);
+  };
+  const adjustRestTimer = (delta) => {
+    setRestTimer(prev => {
+      if (!prev) return prev;
+      const nt = Math.max(15, prev.total + delta);
+      const nr = Math.max(1, prev.remaining + delta);
+      // per-exercise süreyi güncelle
+      try { const m = loadTimerPerExercise(); m[prev.exerciseName] = nt; saveTimerPerExercise(m); } catch (e) {}
+      return { ...prev, total: nt, remaining: nr };
+    });
+  };
+  const stopRestTimer = () => { setRestTimer(null); setTimerFullscreen(false); };
+  useEffect(() => {
+    if (!restTimer) { if (restIntervalRef.current) { clearInterval(restIntervalRef.current); restIntervalRef.current = null; } return; }
+    if (restIntervalRef.current) clearInterval(restIntervalRef.current);
+    restIntervalRef.current = setInterval(() => {
+      setRestTimer(prev => {
+        if (!prev) return null;
+        if (prev.remaining <= 1) {
+          if (prev.vibrate && navigator.vibrate) navigator.vibrate([200, 100, 200]);
+          if (restIntervalRef.current) { clearInterval(restIntervalRef.current); restIntervalRef.current = null; }
+          return null;
+        }
+        return { ...prev, remaining: prev.remaining - 1 };
+      });
+    }, 1000);
+    return () => { if (restIntervalRef.current) { clearInterval(restIntervalRef.current); restIntervalRef.current = null; } };
+  }, [restTimer && restTimer.exerciseName, restTimer && restTimer.total]);
   const handleTabPress = target => {
     if (target === tab) {
       // Zaten bu sekmedeyiz → reset sinyali gönder (köke dön + yukarı kaydır)
@@ -6033,7 +6079,8 @@ function App() {
     resetSignal: resetSignals.workout,
     pendingProgram: pendingProgram,
     onConsumePendingProgram: () => setPendingProgram(null),
-    onOpenGymPicker: () => setShowGymPicker(true)
+    onOpenGymPicker: () => setShowGymPicker(true),
+    onStartRestTimer: startRestTimer
   }), tab === 'progress' && /*#__PURE__*/React.createElement(ProgressTab, {
     key: activeGymId,
     authUser: authUser,
@@ -6051,6 +6098,16 @@ function App() {
   })), /*#__PURE__*/React.createElement(BottomTabs, {
     tab: tab,
     onChange: handleTabPress
+  }), restTimer && !timerFullscreen && /*#__PURE__*/React.createElement(RestTimerBar, {
+    timer: restTimer,
+    onExpand: () => setTimerFullscreen(true),
+    onAdjust: adjustRestTimer,
+    onSkip: stopRestTimer
+  }), restTimer && timerFullscreen && /*#__PURE__*/React.createElement(RestTimerFullscreen, {
+    timer: restTimer,
+    onAdjust: adjustRestTimer,
+    onSkip: stopRestTimer,
+    onCollapse: () => setTimerFullscreen(false)
   }), showGymPicker && /*#__PURE__*/React.createElement(GymPickerModal, {
     gyms: gyms,
     activeGymId: activeGymId,
@@ -6387,7 +6444,8 @@ function WorkoutTab({
   resetSignal,
   pendingProgram,
   onConsumePendingProgram,
-  onOpenGymPicker
+  onOpenGymPicker,
+  onStartRestTimer
 }) {
   const [view, setView] = useState('home');
   const [currentDay, setCurrentDay] = useState(null);
@@ -6397,15 +6455,13 @@ function WorkoutTab({
     logs: [],
     sessions: [],
     customDays: [],
-    hiddenDays: []
+    hiddenDays: [],
+    dayOverrides: {}
   });
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  // Dinlenme zamanlayıcısı
+  // Dinlenme zamanlayıcısı ayarları (timer state artık App seviyesinde)
   const [timerSettings, setTimerSettings] = useState(loadTimerSettings);
-  const [restTimer, setRestTimer] = useState(null); // { total, remaining, exerciseName } | null
-  const [timerFullscreen, setTimerFullscreen] = useState(false);
-  const restIntervalRef = useRef(null);
   const [prCelebration, setPrCelebration] = useState(null);
   const [toast, setToast] = useState(null);
   const [showPrograms, setShowPrograms] = useState(false);
@@ -6508,7 +6564,8 @@ function WorkoutTab({
           sessions: parsed.sessions || [],
           customDays: parsed.customDays || [],
           customMuscleMap: parsed.customMuscleMap || {},
-          hiddenDays: parsed.hiddenDays || []
+          hiddenDays: parsed.hiddenDays || [],
+          dayOverrides: parsed.dayOverrides || {}
         };
         setData(localData);
       } else {
@@ -6519,7 +6576,8 @@ function WorkoutTab({
           sessions: [],
           customDays: [],
           customMuscleMap: {},
-          hiddenDays: []
+          hiddenDays: [],
+    dayOverrides: {}
         });
       }
     } catch (e) {}
@@ -6539,7 +6597,8 @@ function WorkoutTab({
             sessions: cloud.sessions || [],
             customDays: cloud.customDays || [],
             customMuscleMap: cloud.customMuscleMap || {},
-            hiddenDays: cloud.hiddenDays || []
+            hiddenDays: cloud.hiddenDays || [],
+            dayOverrides: cloud.dayOverrides || {}
           };
           setData(merged);
           try {
@@ -6556,7 +6615,7 @@ function WorkoutTab({
   }, [cloudReady, authUser, gymId]);
 
   // Build the merged day config (built-in + custom) — used everywhere
-  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays, data.hiddenDays), [data.customDays, data.hiddenDays]);
+  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays, data.hiddenDays, data.dayOverrides), [data.customDays, data.hiddenDays, data.dayOverrides]);
   const saveData = newData => {
     setData(newData);
     // Her zaman localStorage'a yaz (offline yedek)
@@ -6694,6 +6753,48 @@ function WorkoutTab({
     setEditDayId(null);
   };
 
+  // Herhangi bir günü düzenle (yerleşik → override; özel → doğrudan)
+  const updateDay = (id, name, subtitle, paletteId) => {
+    const isBuiltin = !!BUILTIN_DAYS[id];
+    if (isBuiltin) {
+      const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId);
+      const ov = { ...(data.dayOverrides || {}) };
+      ov[id] = {
+        name: name.trim(),
+        subtitle: (subtitle || '').trim(),
+        ...(palette ? { accent: palette.accent, dark: palette.dark, paletteId: palette.id } : {})
+      };
+      saveData({ ...data, dayOverrides: ov });
+      setEditDayId(null);
+    } else {
+      updateCustomDay(id, name, subtitle, paletteId);
+    }
+  };
+  // Herhangi bir günü sil (yerleşik veya özel) — kayıtlar dahil
+  const deleteDay = id => {
+    const isBuiltin = !!BUILTIN_DAYS[id];
+    if (isBuiltin) {
+      // Yerleşik: kayıtları sil + gizle + override temizle
+      const newLogs = data.logs.filter(l => l.dayType !== id);
+      const newSessions = data.sessions.filter(s => s.dayType !== id);
+      const ov = { ...(data.dayOverrides || {}) };
+      delete ov[id];
+      const newExercises = { ...data.exercises };
+      delete newExercises[id];
+      saveData({
+        ...data,
+        logs: newLogs,
+        sessions: newSessions,
+        dayOverrides: ov,
+        exercises: newExercises,
+        hiddenDays: [...(data.hiddenDays || []), id]
+      });
+      setEditDayId(null);
+    } else {
+      deleteCustomDay(id);
+    }
+  };
+
   // Yerleşik bir günü gizle (Push/Pull/Upper/Leg) — veri silinmez, sadece ana ekrandan kalkar
   const hideDay = id => {
     const hidden = data.hiddenDays || [];
@@ -6770,49 +6871,7 @@ function WorkoutTab({
     if (perEx[exerciseName] != null) return perEx[exerciseName];
     return timerSettings.defaultSec;
   };
-  // Timer'ı başlat (set girilince çağrılır)
-  const startRestTimer = (exerciseName) => {
-    if (!timerSettings.enabled) return;
-    const sec = getRestSeconds(exerciseName);
-    if (!sec || sec <= 0) return; // bu egzersiz için kapalı
-    setRestTimer({ total: sec, remaining: sec, exerciseName });
-  };
-  const adjustRestTimer = (delta) => {
-    setRestTimer(t => {
-      if (!t) return t;
-      const nr = Math.max(0, t.remaining + delta);
-      const newTotal = Math.max(t.total, nr);
-      // Bu egzersiz için yeni süreyi hatırla (bir dahaki sete aynı süre gelsin)
-      if (t.exerciseName) {
-        const perEx = loadTimerPerExercise();
-        perEx[t.exerciseName] = newTotal;
-        saveTimerPerExercise(perEx);
-      }
-      return { ...t, remaining: nr, total: newTotal };
-    });
-  };
-  const stopRestTimer = () => {
-    setRestTimer(null);
-    setTimerFullscreen(false);
-  };
-  // Geri sayım
-  useEffect(() => {
-    if (!restTimer) { if (restIntervalRef.current) { clearInterval(restIntervalRef.current); restIntervalRef.current = null; } return; }
-    if (restIntervalRef.current) clearInterval(restIntervalRef.current);
-    restIntervalRef.current = setInterval(() => {
-      setRestTimer(t => {
-        if (!t) return null;
-        if (t.remaining <= 1) {
-          // Bitti — titret + kapat
-          if (timerSettings.vibrate && navigator.vibrate) { try { navigator.vibrate([200, 100, 200]); } catch (e) {} }
-          setTimerFullscreen(false);
-          return null;
-        }
-        return { ...t, remaining: t.remaining - 1 };
-      });
-    }, 1000);
-    return () => { if (restIntervalRef.current) { clearInterval(restIntervalRef.current); restIntervalRef.current = null; } };
-  }, [restTimer && restTimer.exerciseName, restTimer && restTimer.total]);
+  // (timer başlat/ayarla/durdur artık App seviyesinde — onStartRestTimer prop'u kullanılır)
 
   const addLog = (exerciseName, weight, reps) => {
     const w = parseFloat(weight),
@@ -6890,7 +6949,7 @@ function WorkoutTab({
       }
     }
     // Dinlenme zamanlayıcısını başlat (sadece canlı antrenmanda, geçmiş tarih girişinde değil)
-    if (!logDate) startRestTimer(exerciseName);
+    if (!logDate) onStartRestTimer(exerciseName);
   };
   const deleteLog = id => {
     saveData({
@@ -7365,11 +7424,11 @@ function WorkoutTab({
     existingExercises: data.exercises,
     dayConfig: dayConfig
   }), editDayId && /*#__PURE__*/React.createElement(DayEditorModal, {
-    editingDay: data.customDays.find(d => d.id === editDayId),
+    editingDay: (data.customDays || []).find(d => d.id === editDayId) || { id: editDayId, name: dayConfig[editDayId] && dayConfig[editDayId].name || editDayId, subtitle: dayConfig[editDayId] && dayConfig[editDayId].subtitle || '', paletteId: (data.dayOverrides || {})[editDayId] && (data.dayOverrides || {})[editDayId].paletteId, builtin: !(data.customDays || []).some(d => d.id === editDayId) },
     onClose: () => setEditDayId(null),
-    onSave: (name, sub, pal) => updateCustomDay(editDayId, name, sub, pal),
+    onSave: (name, sub, pal) => updateDay(editDayId, name, sub, pal),
     onDelete: () => {
-      if (confirm('Bu günü ve tüm kayıtlarını silmek istiyor musun?')) deleteCustomDay(editDayId);
+      if (confirm('Bu günü ve TÜM kayıtlarını (geçmiş antrenmanlar dahil) kalıcı olarak silmek istiyor musun?\n\nBu işlem geri alınamaz!')) deleteDay(editDayId);
     }
   }), prCelebration && /*#__PURE__*/React.createElement(PRCelebration, {
     ...prCelebration,
@@ -7454,16 +7513,6 @@ function WorkoutTab({
       await dismissProgramRequest(authUser.uid, id);
       setNotifProgReqs(prev => prev.filter(p => p.id !== id));
     }
-  }), restTimer && !timerFullscreen && /*#__PURE__*/React.createElement(RestTimerBar, {
-    timer: restTimer,
-    onExpand: () => setTimerFullscreen(true),
-    onAdjust: adjustRestTimer,
-    onSkip: stopRestTimer
-  }), restTimer && timerFullscreen && /*#__PURE__*/React.createElement(RestTimerFullscreen, {
-    timer: restTimer,
-    onAdjust: adjustRestTimer,
-    onSkip: stopRestTimer,
-    onCollapse: () => setTimerFullscreen(false)
   }), showPrograms && /*#__PURE__*/React.createElement(ProgramsModal, {
     onClose: () => setShowPrograms(false),
     onApply: applyProgram
@@ -7479,7 +7528,7 @@ function RestTimerBar({ timer, onExpand, onAdjust, onSkip }) {
   const pct = timer.total > 0 ? (timer.remaining / timer.total) : 0;
   const R = 20, C = 2 * Math.PI * R;
   return /*#__PURE__*/React.createElement("div", {
-    style: { position: 'fixed', bottom: 74, left: 0, right: 0, zIndex: 90, padding: '0 12px' }
+    style: { position: 'fixed', bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))', left: 0, right: 0, zIndex: 90, padding: '0 12px' }
   }, /*#__PURE__*/React.createElement("div", {
     style: { maxWidth: 480, margin: '0 auto', background: 'linear-gradient(135deg,#1a0a0d,#0d0507)', border: '1px solid rgba(var(--accent-rgb),0.3)', borderRadius: 16, padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 13, boxShadow: '0 6px 24px rgba(0,0,0,0.5)' }
   },
@@ -7808,7 +7857,7 @@ function HomeView({
       style: S.dayCardSubtitle
     }, cfg.subtitle)), /*#__PURE__*/React.createElement("div", {
       style: { opacity: 0.65, flexShrink: 0, display: 'flex', marginLeft: 10 }
-    }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'chevronRight', size: 22, color: '#fff', strokeWidth: 2.5 }))), isCustom && /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'chevronRight', size: 22, color: '#fff', strokeWidth: 2.5 }))), /*#__PURE__*/React.createElement("div", {
       style: S.customDayBadge,
       onClick: e => {
         e.stopPropagation();
@@ -10067,7 +10116,8 @@ function ProgressTab({
     logs: [],
     sessions: [],
     customDays: [],
-    hiddenDays: []
+    hiddenDays: [],
+    dayOverrides: {}
   });
   const [detailExercise, setDetailExercise] = useState(null);
   // Alt sekmeye tekrar basınca listeye dön + yukarı kaydır
@@ -10098,7 +10148,8 @@ function ProgressTab({
           sessions: parsed.sessions || [],
           customDays: parsed.customDays || [],
           customMuscleMap: parsed.customMuscleMap || {},
-          hiddenDays: parsed.hiddenDays || []
+          hiddenDays: parsed.hiddenDays || [],
+          dayOverrides: parsed.dayOverrides || {}
         };
         setData(localData);
       } else {
@@ -10108,7 +10159,8 @@ function ProgressTab({
           sessions: [],
           customDays: [],
           customMuscleMap: {},
-          hiddenDays: []
+          hiddenDays: [],
+    dayOverrides: {}
         });
       }
     } catch (e) {}
@@ -10125,13 +10177,14 @@ function ProgressTab({
             sessions: cloud.sessions || [],
             customDays: cloud.customDays || [],
             customMuscleMap: cloud.customMuscleMap || {},
-            hiddenDays: cloud.hiddenDays || []
+            hiddenDays: cloud.hiddenDays || [],
+            dayOverrides: cloud.dayOverrides || {}
           });
         }
       }).catch(() => {});
     }
   }, [cloudReady, authUser, gymId]);
-  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays, data.hiddenDays), [data.customDays, data.hiddenDays]);
+  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays, data.hiddenDays, data.dayOverrides), [data.customDays, data.hiddenDays, data.dayOverrides]);
 
   // Tüm benzersiz egzersizler
   const allExercises = useMemo(() => {
