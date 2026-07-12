@@ -880,7 +880,159 @@ const EXERCISE_MUSCLE_MAP = [
   muscles: {
     abs: 1
   }
+}, {
+  match: ['russian twist', 'woodchopper', 'wood chopper', 'toe touch'],
+  muscles: {
+    abs: 1
+  }
+}, {
+  match: ['abs machine', 'ab machine', 'ab crunch machine'],
+  muscles: {
+    abs: 1
+  }
+}, {
+  match: ['svend press', 'plate press'],
+  muscles: {
+    chest: 1
+  }
+}, {
+  match: ['landmine press'],
+  muscles: {
+    chest: 1,
+    frontDelts: 0.5,
+    triceps: 0.5
+  }
+}, {
+  match: ['rack pull'],
+  muscles: {
+    back: 1,
+    traps: 0.5,
+    glutes: 0.5
+  }
+}, {
+  match: ['cable kickback', 'ankle strap', 'glute kickback'],
+  muscles: {
+    glutes: 1,
+    hamstrings: 0.5
+  }
+}, {
+  match: ['hip abduction', 'abduction'],
+  muscles: {
+    glutes: 1
+  }
+}, {
+  match: ['step up', 'step-up'],
+  muscles: {
+    quads: 1,
+    glutes: 0.5
+  }
 }];
+
+// ————— EGZERSİZ KÜTÜPHANESİ (100+ hazır egzersiz) —————
+const LIBRARY_CATS = [{id:"gogus",tr:"Göğüs"},{id:"sirt",tr:"Sırt"},{id:"omuz",tr:"Omuz"},{id:"kol",tr:"Kol"},{id:"bacak",tr:"Bacak"},{id:"karin",tr:"Karın"}];
+const EXERCISE_LIBRARY = [
+{n:"Barbell Bench Press",c:"gogus",m:"Göğüs · Triceps · Ön Omuz",d:"Bileşik itiş. Göğsün ana kütle yapıcısı."},
+{n:"Incline Barbell Press",c:"gogus",m:"Üst Göğüs · Ön Omuz",d:"Eğimli bar, üst göğsü hedefler."},
+{n:"Incline Dumbbell Press",c:"gogus",m:"Üst Göğüs · Ön Omuz",d:"Dambıl ile üst göğüs, geniş hareket açısı."},
+{n:"Decline Bench Press",c:"gogus",m:"Alt Göğüs · Triceps",d:"Alt göğsü vurgular."},
+{n:"Dumbbell Bench Press",c:"gogus",m:"Göğüs · Triceps",d:"Dambıl ile göğüs, denge ve açıklık."},
+{n:"Flat Dumbbell Fly",c:"gogus",m:"Göğüs (iç)",d:"İzolasyon, göğüs gerilmesi."},
+{n:"Cable Fly",c:"gogus",m:"Göğüs (iç)",d:"Kablo ile sürekli gerilim, göğüs izolasyonu."},
+{n:"Pec Deck",c:"gogus",m:"Göğüs (iç)",d:"Makine ile kontrollü göğüs izolasyonu."},
+{n:"Chest Press Machine",c:"gogus",m:"Göğüs · Triceps",d:"Makine itiş, güvenli ve sabit."},
+{n:"Push Up",c:"gogus",m:"Göğüs · Triceps · Ön Omuz",d:"Vücut ağırlığı ile göğüs."},
+{n:"Dips",c:"gogus",m:"Alt Göğüs · Triceps",d:"Öne eğilerek göğüs, dik durarak triceps."},
+{n:"Incline Cable Fly",c:"gogus",m:"Üst Göğüs",d:"Alttan yukarı kablo, üst göğüs izolasyonu."},
+{n:"Svend Press",c:"gogus",m:"Göğüs (iç)",d:"Plaka sıkıştırma, iç göğüs kasılması."},
+{n:"Deadlift",c:"sirt",m:"Sırt · Bacak · Kalça",d:"Tüm arka zincir. Güç ve kütle temeli."},
+{n:"Romanian Deadlift",c:"sirt",m:"Arka Bacak · Kalça",d:"Hamstring gerilmeli varyasyon."},
+{n:"Pull Up",c:"sirt",m:"Sırt (Lat) · Biceps",d:"Vücut ağırlığı ile geniş sırt."},
+{n:"Chin Up",c:"sirt",m:"Sırt · Biceps",d:"Ters kavrama, biceps daha aktif."},
+{n:"Lat Pulldown",c:"sirt",m:"Sırt (Lat) · Biceps",d:"Makine ile lat genişliği."},
+{n:"Wide Grip Pulldown",c:"sirt",m:"Sırt (Lat)",d:"Geniş kavrama, lat genişliği."},
+{n:"Close Grip Pulldown",c:"sirt",m:"Sırt · Biceps",d:"Dar kavrama, alt lat vurgusu."},
+{n:"Barbell Row",c:"sirt",m:"Sırt · Arka Omuz",d:"Bileşik çekiş, sırt kalınlığı."},
+{n:"Dumbbell Row",c:"sirt",m:"Sırt (Lat)",d:"Tek kol, geniş açı."},
+{n:"Seated Cable Row",c:"sirt",m:"Sırt · Arka Omuz",d:"Kablo ile orta sırt kalınlığı."},
+{n:"T-Bar Row",c:"sirt",m:"Sırt (orta)",d:"Ağır çekiş, sırt kalınlığı."},
+{n:"Pendlay Row",c:"sirt",m:"Sırt · Arka Omuz",d:"Patlayıcı yerden çekiş."},
+{n:"Face Pull",c:"sirt",m:"Arka Omuz · Trapez",d:"Kablo ile arka omuz ve duruş."},
+{n:"Pullover",c:"sirt",m:"Sırt (Lat) · Göğüs",d:"Lat gerilmesi, geniş açı."},
+{n:"Rack Pull",c:"sirt",m:"Sırt · Kalça",d:"Kısmi deadlift, üst sırt ve trapez."},
+{n:"Shrug",c:"sirt",m:"Trapez",d:"Trapez izolasyonu, omuz silkme."},
+{n:"Overhead Press",c:"omuz",m:"Ön Omuz · Triceps",d:"Bileşik omuz itişi."},
+{n:"Dumbbell Shoulder Press",c:"omuz",m:"Ön Omuz · Yan Omuz",d:"Dambıl ile omuz, geniş açı."},
+{n:"Arnold Press",c:"omuz",m:"Ön Omuz · Yan Omuz",d:"Rotasyonlu omuz presi."},
+{n:"Shoulder Press Machine",c:"omuz",m:"Ön Omuz · Triceps",d:"Makine ile güvenli omuz presi."},
+{n:"Lateral Raise",c:"omuz",m:"Yan Omuz",d:"Dambıl ile yan omuz izolasyonu."},
+{n:"Cable Lateral Raise",c:"omuz",m:"Yan Omuz",d:"Kablo ile sürekli gerilim, omuz genişliği."},
+{n:"Front Raise",c:"omuz",m:"Ön Omuz",d:"Ön omuz izolasyonu."},
+{n:"Rear Delt Fly",c:"omuz",m:"Arka Omuz",d:"Arka omuz izolasyonu."},
+{n:"Reverse Pec Deck",c:"omuz",m:"Arka Omuz",d:"Makine ile arka omuz."},
+{n:"Upright Row",c:"omuz",m:"Yan Omuz · Trapez",d:"Dikey çekiş, omuz ve trapez."},
+{n:"Cable Front Raise",c:"omuz",m:"Ön Omuz",d:"Kablo ile ön omuz, sürekli gerilim."},
+{n:"Triceps Pushdown",c:"kol",m:"Triceps",d:"Kablo ile triceps, üç başı çalıştırır."},
+{n:"Rope Pushdown",c:"kol",m:"Triceps",d:"İp ataçman, dış baş vurgusu."},
+{n:"Overhead Triceps Extension",c:"kol",m:"Triceps (uzun baş)",d:"Baş üstü, uzun baş gerilmesi."},
+{n:"Skull Crusher",c:"kol",m:"Triceps",d:"Yatarak triceps izolasyonu."},
+{n:"Triceps Kickback",c:"kol",m:"Triceps",d:"Dambıl ile arkaya uzatma."},
+{n:"Close Grip Bench Press",c:"kol",m:"Triceps · Göğüs",d:"Dar kavrama, triceps ağırlıklı."},
+{n:"Dumbbell Triceps Extension",c:"kol",m:"Triceps",d:"Dambıl ile baş üstü uzatma."},
+{n:"Bench Dip",c:"kol",m:"Triceps",d:"Sehpa ile vücut ağırlığı triceps."},
+{n:"Barbell Curl",c:"kol",m:"Biceps",d:"Bar ile biceps kütlesi."},
+{n:"Dumbbell Curl",c:"kol",m:"Biceps",d:"Dambıl ile biceps, tek tek."},
+{n:"Hammer Curl",c:"kol",m:"Biceps · Ön Kol",d:"Nötr kavrama, ön kol dahil."},
+{n:"Preacher Curl",c:"kol",m:"Biceps",d:"Sabit dirsek, sıkı izolasyon."},
+{n:"Cable Curl",c:"kol",m:"Biceps",d:"Kablo ile sürekli gerilim."},
+{n:"Concentration Curl",c:"kol",m:"Biceps (tepe)",d:"Tek kol, tepe kasılması."},
+{n:"Incline Dumbbell Curl",c:"kol",m:"Biceps (uzun baş)",d:"Eğimli, biceps gerilmesi."},
+{n:"Spider Curl",c:"kol",m:"Biceps",d:"Öne eğik, sıkı izolasyon."},
+{n:"Wrist Curl",c:"kol",m:"Ön Kol",d:"Bilek bükme, ön kol izolasyonu."},
+{n:"Reverse Curl",c:"kol",m:"Ön Kol · Biceps",d:"Ters kavrama, ön kol vurgusu."},
+{n:"Back Squat",c:"bacak",m:"Bacak · Kalça",d:"Bileşik bacak. Alt vücut temeli."},
+{n:"Front Squat",c:"bacak",m:"Ön Bacak",d:"Ön yüklü, quad vurgusu."},
+{n:"Leg Press",c:"bacak",m:"Bacak · Kalça",d:"Makine ile ağır bacak itişi."},
+{n:"Hack Squat",c:"bacak",m:"Ön Bacak",d:"Makine squat, quad odaklı."},
+{n:"Leg Extension",c:"bacak",m:"Ön Bacak",d:"Quad izolasyonu."},
+{n:"Leg Curl",c:"bacak",m:"Arka Bacak",d:"Hamstring izolasyonu."},
+{n:"Seated Leg Curl",c:"bacak",m:"Arka Bacak",d:"Oturarak hamstring."},
+{n:"Romanian Deadlift (Legs)",c:"bacak",m:"Arka Bacak · Kalça",d:"Hamstring ve kalça gerilmesi."},
+{n:"Walking Lunge",c:"bacak",m:"Bacak · Kalça",d:"Yürüyüş hamlesi, tek bacak."},
+{n:"Bulgarian Split Squat",c:"bacak",m:"Bacak · Kalça",d:"Arka ayak yüksek, tek bacak."},
+{n:"Hip Thrust",c:"bacak",m:"Kalça",d:"Kalça izolasyonu, güçlü kasılma."},
+{n:"Glute Bridge",c:"bacak",m:"Kalça",d:"Yerde kalça köprüsü."},
+{n:"Calf Raise",c:"bacak",m:"Baldır",d:"Baldır izolasyonu, ayak yükseltme."},
+{n:"Seated Calf Raise",c:"bacak",m:"Baldır",d:"Oturarak baldır."},
+{n:"Cable Kickback (Ankle Strap)",c:"bacak",m:"Kalça · Arka Bacak",d:"Ayak bileği strap ile kalça izolasyonu."},
+{n:"Cable Hip Abduction",c:"bacak",m:"Kalça (yan)",d:"Strap ile bacağı yana açma."},
+{n:"Goblet Squat",c:"bacak",m:"Bacak · Kalça",d:"Dambıl önde, temiz squat."},
+{n:"Step Up",c:"bacak",m:"Bacak · Kalça",d:"Sehpaya çıkış, tek bacak."},
+{n:"Crunch",c:"karin",m:"Karın (üst)",d:"Temel karın kasılması."},
+{n:"Cable Crunch",c:"karin",m:"Karın",d:"Kablo ile ağırlıklı karın."},
+{n:"Hanging Leg Raise",c:"karin",m:"Karın (alt)",d:"Asılı bacak kaldırma."},
+{n:"Leg Raise",c:"karin",m:"Karın (alt)",d:"Yatarak bacak kaldırma."},
+{n:"Plank",c:"karin",m:"Karın · Core",d:"İzometrik core dayanıklılığı."},
+{n:"Sit Up",c:"karin",m:"Karın",d:"Tam gövde kalkışı."},
+{n:"Russian Twist",c:"karin",m:"Karın (yan)",d:"Rotasyon, yan karın."},
+{n:"Abs Machine",c:"karin",m:"Karın",d:"Makine ile ağırlıklı karın."},
+{n:"Cable Woodchopper",c:"karin",m:"Karın (yan) · Core",d:"Çapraz kablo, oblik çalışma."},
+{n:"Ab Wheel Rollout",c:"karin",m:"Karın · Core",d:"Tekerlek ile core gerilmesi."},
+{n:"Smith Machine Bench Press",c:"gogus",m:"Göğüs · Triceps",d:"Sabit ray, güvenli itiş."},
+{n:"Landmine Press",c:"gogus",m:"Üst Göğüs · Ön Omuz",d:"Açılı bar presi."},
+{n:"Machine Row",c:"sirt",m:"Sırt",d:"Makine ile sabit çekiş."},
+{n:"Straight Arm Pulldown",c:"sirt",m:"Sırt (Lat)",d:"Düz kol kablo, lat izolasyonu."},
+{n:"Meadows Row",c:"sirt",m:"Sırt (Lat)",d:"Landmine tek kol çekiş."},
+{n:"Machine Lateral Raise",c:"omuz",m:"Yan Omuz",d:"Makine ile yan omuz izolasyonu."},
+{n:"Cable Rear Delt Fly",c:"omuz",m:"Arka Omuz",d:"Çapraz kablo, arka omuz."},
+{n:"EZ Bar Curl",c:"kol",m:"Biceps",d:"EZ bar, bilek dostu biceps."},
+{n:"Cable Hammer Curl",c:"kol",m:"Biceps · Ön Kol",d:"İp ile nötr kavrama biceps."},
+{n:"Single Arm Pushdown",c:"kol",m:"Triceps",d:"Tek kol kablo triceps."},
+{n:"Sissy Squat",c:"bacak",m:"Ön Bacak",d:"Diz öne, quad gerilmesi."},
+{n:"Standing Calf Raise",c:"bacak",m:"Baldır",d:"Ayakta makine baldır."},
+{n:"Nordic Curl",c:"bacak",m:"Arka Bacak",d:"Diz üstü hamstring, ağır izolasyon."},
+{n:"Decline Sit Up",c:"karin",m:"Karın",d:"Eğimli sehpa gövde kalkışı."},
+{n:"Toe Touch",c:"karin",m:"Karın (üst)",d:"Bacaklar dik, elle ayak dokunma."}
+];
 
 // Resolve an exercise name to its muscle contributions.
 // Returns null if unknown (so user can be asked to tag it).
@@ -945,7 +1097,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.14'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.15'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -1090,7 +1242,9 @@ const APEX_ICON_PATHS = {
   trash: 'M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6',
   plus: 'M12 5v14M5 12h14',
   ruler: 'M3 9l6-6 12 12-6 6zM9 5l2 2M13 9l2 2M17 13l2 2M7 11l2 2',
-  scale: 'M12 3a2 2 0 0 1 2 2 2 2 0 0 1-4 0 2 2 0 0 1 2-2zM6 8h12l3 12H3zM9 8v-.5M15 8v-.5'
+  scale: 'M12 3a2 2 0 0 1 2 2 2 2 0 0 1-4 0 2 2 0 0 1 2-2zM6 8h12l3 12H3zM9 8v-.5M15 8v-.5',
+  search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-4.3-4.3',
+  check: 'M20 6L9 17l-5-5'
 };
 const SK_BG = { background: 'linear-gradient(90deg,#161616 25%,#232323 50%,#161616 75%)', backgroundSize: '200% 100%', animation: 'apexShimmer 1.4s infinite' };
 function SkeletonFeed({ rows }) {
@@ -8835,6 +8989,72 @@ function ExerciseView({
     })));
   })));
 }
+// ————— EGZERSİZ KÜTÜPHANESİ SEÇİCİ —————
+function LibraryPicker({ cfg, existingExercises, currentDayId, onAdd }) {
+  const [query, setQuery] = useState('');
+  const [cat, setCat] = useState('all');
+  const [added, setAdded] = useState({});
+  // bu güne zaten ekli egzersizler (tekrar eklemeyi göster)
+  const alreadyIn = useMemo(() => {
+    const set = new Set();
+    ((existingExercises || {})[currentDayId] || []).forEach(e => set.add(e.toLowerCase()));
+    return set;
+  }, [existingExercises, currentDayId]);
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    return EXERCISE_LIBRARY.filter(e => {
+      if (cat !== 'all' && e.c !== cat) return false;
+      if (q && !e.n.toLowerCase().includes(q) && !e.m.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [query, cat]);
+  // kategoriye göre grupla
+  const grouped = useMemo(() => {
+    const g = {};
+    filtered.forEach(e => { (g[e.c] = g[e.c] || []).push(e); });
+    return g;
+  }, [filtered]);
+  const catTr = id => (LIBRARY_CATS.find(c => c.id === id) || {}).tr || id;
+  const handleAdd = (ex) => {
+    onAdd(ex.n);
+    setAdded(p => ({ ...p, [ex.n]: true }));
+    haptic(15);
+  };
+  return /*#__PURE__*/React.createElement("div", null,
+    // arama
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 9, background: '#161616', border: '1px solid #262626', borderRadius: 11, padding: '10px 12px', marginBottom: 11 } },
+      /*#__PURE__*/React.createElement(ApexIcon, { name: 'search', size: 15, color: '#666', strokeWidth: 2 }),
+      /*#__PURE__*/React.createElement("input", {
+        value: query, onChange: e => setQuery(e.target.value), placeholder: 'Egzersiz ara...',
+        style: { flex: 1, background: 'none', border: 'none', color: '#fff', fontSize: 13, fontFamily: 'inherit', outline: 'none' }
+      })),
+    // filtre çipleri
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, marginBottom: 13, flexWrap: 'wrap' } },
+      [{ id: 'all', tr: 'Tümü' }, ...LIBRARY_CATS].map(c => /*#__PURE__*/React.createElement("button", {
+        key: c.id, onClick: () => setCat(c.id),
+        style: { fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', background: cat === c.id ? cfg.accent : '#161616', border: '1px solid ' + (cat === c.id ? cfg.accent : '#262626'), color: cat === c.id ? '#fff' : '#999' }
+      }, c.tr))),
+    // liste
+    /*#__PURE__*/React.createElement("div", { style: { maxHeight: '46vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', margin: '0 -4px', padding: '0 4px' } },
+      filtered.length === 0 ? /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', color: '#666', fontSize: 13, padding: '30px 0' } }, 'Egzersiz bulunamadı') :
+      Object.keys(grouped).map(catId => /*#__PURE__*/React.createElement("div", { key: catId },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#666', fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', margin: '12px 0 2px' } }, catTr(catId)),
+        grouped[catId].map(ex => {
+          const isAdded = added[ex.n] || alreadyIn.has(ex.n.toLowerCase());
+          return /*#__PURE__*/React.createElement("div", { key: ex.n, style: { display: 'flex', alignItems: 'flex-start', gap: 11, padding: '12px 0', borderTop: '1px solid #191919' } },
+            /*#__PURE__*/React.createElement("div", { style: { width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#1a1a1a,#0f0f0f)', border: '1px solid #262626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 } },
+              /*#__PURE__*/React.createElement(ApexIcon, { name: 'dumbbell', size: 18, color: cfg.accent, strokeWidth: 2 })),
+            /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+              /*#__PURE__*/React.createElement("div", { style: { fontSize: 13.5, fontWeight: 700 } }, ex.n),
+              /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: 'var(--accent-light)', marginTop: 2, fontWeight: 600 } }, ex.m),
+              /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#888', marginTop: 3, lineHeight: 1.4 } }, ex.d)),
+            /*#__PURE__*/React.createElement("button", {
+              onClick: () => !isAdded && handleAdd(ex),
+              style: { alignSelf: 'center', width: 30, height: 30, borderRadius: 8, border: 'none', cursor: isAdded ? 'default' : 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', background: isAdded ? 'rgba(76,175,80,0.15)' : cfg.accentSoft, color: isAdded ? '#4CAF50' : cfg.accent }
+            }, isAdded ? /*#__PURE__*/React.createElement(ApexIcon, { name: 'check', size: 16, color: '#4CAF50', strokeWidth: 2.4 }) : /*#__PURE__*/React.createElement(ApexIcon, { name: 'plus', size: 16, color: cfg.accent, strokeWidth: 2.4 })));
+        })))));
+}
+
 function AddExerciseModal({
   cfg,
   existingExercises,
@@ -8893,7 +9113,22 @@ function AddExerciseModal({
         color: cfg.accent
       } : {})
     }
-  }, "KOPYALA")), mode === 'new' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("input", {
+  }, "KOPYALA"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMode('library'),
+    style: {
+      ...S.alarmDirBtn,
+      ...(mode === 'library' ? {
+        background: cfg.accentSoft,
+        borderColor: cfg.accent,
+        color: cfg.accent
+      } : {})
+    }
+  }, "KÜTÜPHANE")), mode === 'library' ? /*#__PURE__*/React.createElement(LibraryPicker, {
+    cfg: cfg,
+    existingExercises: existingExercises,
+    currentDayId: currentDayId,
+    onAdd: onAdd
+  }) : mode === 'new' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("input", {
     autoFocus: true,
     value: name,
     onChange: e => setName(e.target.value),
