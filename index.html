@@ -945,7 +945,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.13'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.14'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -988,6 +988,57 @@ function saveExerciseNote(dayKey, name, text) {
   if (text && text.trim()) notes[k] = text.trim();
   else delete notes[k];
   try { localStorage.setItem(EX_NOTES_KEY, JSON.stringify(notes)); } catch (e) {}
+}
+
+// ————— VÜCUT ÖLÇÜLERİ —————
+// localStorage: apex-measurements = [ { date: 'YYYY-MM-DD', weight, arm, chest, waist, hip, leg, shoulder }, ... ]
+const MEAS_KEY = 'apex-measurements';
+// Sabit 4 alan + opsiyonel ekstralar
+const MEAS_FIELDS = {
+  weight:   { tr: 'Kilo',   unit: 'kg', core: true },
+  arm:      { tr: 'Kol',    unit: 'cm', core: true },
+  chest:    { tr: 'Göğüs',  unit: 'cm', core: true },
+  waist:    { tr: 'Bel',    unit: 'cm', core: true },
+  hip:      { tr: 'Kalça',  unit: 'cm', core: false },
+  leg:      { tr: 'Bacak',  unit: 'cm', core: false },
+  shoulder: { tr: 'Omuz',   unit: 'cm', core: false },
+  neck:     { tr: 'Boyun',  unit: 'cm', core: false },
+  forearm:  { tr: 'Ön Kol', unit: 'cm', core: false },
+  calf:     { tr: 'Baldır', unit: 'cm', core: false }
+};
+function loadMeasurements() {
+  try { const raw = localStorage.getItem(MEAS_KEY); if (raw) { const a = JSON.parse(raw); if (Array.isArray(a)) return a.sort((x, y) => x.date < y.date ? -1 : 1); } } catch (e) {}
+  return [];
+}
+function saveMeasurement(entry) {
+  // entry: { date, weight?, arm?, ... } — aynı tarih varsa güncelle (birleştir)
+  const all = loadMeasurements();
+  const idx = all.findIndex(m => m.date === entry.date);
+  if (idx >= 0) all[idx] = { ...all[idx], ...entry };
+  else all.push(entry);
+  try { localStorage.setItem(MEAS_KEY, JSON.stringify(all)); } catch (e) {}
+  return all.sort((x, y) => x.date < y.date ? -1 : 1);
+}
+function deleteMeasurement(date) {
+  const all = loadMeasurements().filter(m => m.date !== date);
+  try { localStorage.setItem(MEAS_KEY, JSON.stringify(all)); } catch (e) {}
+  return all;
+}
+// Bir alan için: son değer + 30 gün önceye göre değişim
+function measurementStat(field) {
+  const all = loadMeasurements().filter(m => m[field] != null && m[field] !== '');
+  if (all.length === 0) return null;
+  const latest = all[all.length - 1];
+  const latestVal = parseFloat(latest[field]);
+  // 30 gün öncesine en yakın kaydı bul
+  const cutoff = new Date(latest.date).getTime() - 30 * 86400000;
+  let past = null;
+  for (let i = all.length - 2; i >= 0; i--) {
+    if (new Date(all[i].date).getTime() <= cutoff) { past = all[i]; break; }
+  }
+  if (!past) past = all.length > 1 ? all[0] : null; // 30 gün yoksa en eski
+  const delta = past ? (latestVal - parseFloat(past[field])) : 0;
+  return { value: latestVal, delta: delta, date: latest.date, history: all.map(m => ({ date: m.date, val: parseFloat(m[field]) })) };
 }
 
 // ————— TEMA SİSTEMİ —————
@@ -1036,7 +1087,10 @@ const APEX_ICON_PATHS = {
   users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   note: 'M4 4h16v13l-4 4H4zM15 21v-4a1 1 0 0 1 1-1h4M8 9h8M8 13h5',
   pencil: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
-  trash: 'M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6'
+  trash: 'M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6',
+  plus: 'M12 5v14M5 12h14',
+  ruler: 'M3 9l6-6 12 12-6 6zM9 5l2 2M13 9l2 2M17 13l2 2M7 11l2 2',
+  scale: 'M12 3a2 2 0 0 1 2 2 2 2 0 0 1-4 0 2 2 0 0 1 2-2zM6 8h12l3 12H3zM9 8v-.5M15 8v-.5'
 };
 const SK_BG = { background: 'linear-gradient(90deg,#161616 25%,#232323 50%,#161616 75%)', backgroundSize: '200% 100%', animation: 'apexShimmer 1.4s infinite' };
 function SkeletonFeed({ rows }) {
@@ -9408,6 +9462,164 @@ function estimate1RM(weight, reps) {
   if (reps === 1) return weight;
   return Math.round(weight * (1 + reps / 30));
 }
+// ————— VÜCUT ÖLÇÜLERİ BÖLÜMÜ (İLERLEME içinde) —————
+function fmtMeasDate(d) {
+  try { return new Date(d).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }); } catch (e) { return d; }
+}
+function MeasurementsSection() {
+  const [all, setAll] = useState(loadMeasurements);
+  const [showAdd, setShowAdd] = useState(false);
+  const [detailField, setDetailField] = useState(null);
+  // Hangi alanların verisi var — çekirdek 4 + veri girilmiş ekstralar
+  const activeFields = useMemo(() => {
+    const fields = Object.keys(MEAS_FIELDS).filter(f => MEAS_FIELDS[f].core);
+    Object.keys(MEAS_FIELDS).forEach(f => {
+      if (!MEAS_FIELDS[f].core && all.some(m => m[f] != null && m[f] !== '')) fields.push(f);
+    });
+    return fields;
+  }, [all]);
+  const refresh = () => setAll(loadMeasurements());
+  return /*#__PURE__*/React.createElement(React.Fragment, null,
+    /*#__PURE__*/React.createElement("div", {
+      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '20px 2px 12px' }
+    },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, fontWeight: 800, color: '#888', letterSpacing: 0.5, textTransform: 'uppercase' } }, "Vücut Ölçüleri"),
+      /*#__PURE__*/React.createElement("button", {
+        onClick: () => setShowAdd(true),
+        style: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 800, color: 'var(--accent-light)', background: 'rgba(var(--accent-rgb),0.1)', border: 'none', padding: '7px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }
+      }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'plus', size: 13, color: 'var(--accent-light)', strokeWidth: 2.4 }), "Ölçü Ekle")),
+    all.length === 0 ?
+      /*#__PURE__*/React.createElement("div", {
+        onClick: () => setShowAdd(true),
+        style: { background: '#0f0f0f', border: '1px dashed #2a2a2a', borderRadius: 14, padding: '24px 16px', textAlign: 'center', cursor: 'pointer' }
+      },
+        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'center', marginBottom: 8 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'ruler', size: 26, color: '#555', strokeWidth: 1.8 })),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, color: '#888', fontWeight: 600 } }, "Henüz ölçü yok"),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#555', marginTop: 3 } }, "İlk ölçünü ekle, gelişimini takip et")) :
+      /*#__PURE__*/React.createElement("div", {
+        style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }
+      }, activeFields.map(f => {
+        const stat = measurementStat(f);
+        if (!stat) return null;
+        const info = MEAS_FIELDS[f];
+        const isWeight = f === 'weight';
+        // kilo için düşüş yeşil (kesme amaçlı), diğerleri artış yeşil
+        const gain = stat.delta > 0.05, loss = stat.delta < -0.05;
+        const deltaColor = (isWeight ? loss : gain) ? '#4CAF50' : (isWeight ? gain : loss) ? '#FF8A65' : '#888';
+        return /*#__PURE__*/React.createElement("button", {
+          key: f,
+          onClick: () => setDetailField(f),
+          style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 13, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }
+        },
+          /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 } },
+            /*#__PURE__*/React.createElement(ApexIcon, { name: isWeight ? 'scale' : 'ruler', size: 14, color: 'var(--accent-light)', strokeWidth: 2 }),
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 10.5, color: '#999', textTransform: 'uppercase', letterSpacing: 0.3, fontWeight: 800 } }, info.tr)),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 24, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1 } }, stat.value, /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#888', fontWeight: 700 } }, " " + info.unit)),
+          Math.abs(stat.delta) > 0.05 ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, fontWeight: 800, marginTop: 5, color: deltaColor, display: 'flex', alignItems: 'center', gap: 3 } },
+            (stat.delta > 0 ? '▲ ' : '▼ ') + Math.abs(stat.delta).toFixed(1) + ' ' + info.unit + ' (30g)') :
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, fontWeight: 700, marginTop: 5, color: '#666' } }, "değişim yok"));
+      })),
+    showAdd && /*#__PURE__*/React.createElement(AddMeasurementModal, { onClose: () => setShowAdd(false), onSaved: () => { refresh(); setShowAdd(false); } }),
+    detailField && /*#__PURE__*/React.createElement(MeasurementDetailModal, { field: detailField, onClose: () => setDetailField(null), onChanged: refresh }));
+}
+
+// Ölçü ekleme modalı
+function AddMeasurementModal({ onClose, onSaved }) {
+  const today = dateKey(Date.now());
+  const [vals, setVals] = useState({});
+  const [extras, setExtras] = useState([]); // aktif ekstra alanlar
+  const [showExtraPicker, setShowExtraPicker] = useState(false);
+  const coreFields = Object.keys(MEAS_FIELDS).filter(f => MEAS_FIELDS[f].core);
+  const extraAvailable = Object.keys(MEAS_FIELDS).filter(f => !MEAS_FIELDS[f].core && !extras.includes(f));
+  const setVal = (f, v) => setVals(p => ({ ...p, [f]: v }));
+  const save = () => {
+    const entry = { date: today };
+    let any = false;
+    [...coreFields, ...extras].forEach(f => {
+      const v = parseFloat(vals[f]);
+      if (!isNaN(v) && v > 0) { entry[f] = v; any = true; }
+    });
+    if (!any) { onClose(); return; }
+    saveMeasurement(entry);
+    haptic(15);
+    onSaved();
+  };
+  const fieldInput = (f) => /*#__PURE__*/React.createElement("div", { key: f, style: { marginBottom: 11 } },
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#999', fontWeight: 700, marginBottom: 5 } }, MEAS_FIELDS[f].tr),
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+      /*#__PURE__*/React.createElement("input", {
+        type: 'number', inputMode: 'decimal', value: vals[f] || '', onChange: e => setVal(f, e.target.value),
+        placeholder: '—',
+        style: { flex: 1, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 9, padding: 11, color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: 'inherit', boxSizing: 'border-box' }
+      }),
+      /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#666', fontWeight: 700, width: 24 } }, MEAS_FIELDS[f].unit)));
+  return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: onClose },
+    /*#__PURE__*/React.createElement("div", { style: S.modal, onClick: e => e.stopPropagation() },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 18, fontWeight: 800 } }, "Ölçü Ekle"),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#888', marginBottom: 16, marginTop: 2 } }, fmtMeasDate(today) + " · sadece girdiğin alanlar kaydedilir"),
+      coreFields.map(fieldInput),
+      extras.map(fieldInput),
+      showExtraPicker ? /*#__PURE__*/React.createElement("div", { style: { background: '#141414', border: '1px solid #262626', borderRadius: 10, padding: 8, marginBottom: 11 } },
+        extraAvailable.length === 0 ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#666', padding: 6, textAlign: 'center' } }, "Hepsi eklendi") :
+        extraAvailable.map(f => /*#__PURE__*/React.createElement("button", {
+          key: f, onClick: () => { setExtras(p => [...p, f]); setShowExtraPicker(false); },
+          style: { display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#ddd', fontSize: 13, fontWeight: 600, padding: '9px 6px', cursor: 'pointer', fontFamily: 'inherit', borderBottom: '1px solid #1d1d1d' }
+        }, MEAS_FIELDS[f].tr))) :
+        /*#__PURE__*/React.createElement("button", {
+          onClick: () => setShowExtraPicker(true),
+          style: { width: '100%', background: 'none', border: '1px dashed #2a2a2a', borderRadius: 9, padding: '10px', marginBottom: 11, color: '#888', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }
+        }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'plus', size: 13, color: '#888', strokeWidth: 2.4 }), "Ekstra ölçü ekle (kalça, bacak...)"),
+      /*#__PURE__*/React.createElement("button", { onClick: save, style: { width: '100%', background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', border: 'none', borderRadius: 11, padding: 13, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 } }, "Kaydet"),
+      /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel, marginTop: 8 } }, "İptal")));
+}
+
+// Ölçü detay + grafik modalı
+function MeasurementDetailModal({ field, onClose, onChanged }) {
+  const [stat, setStat] = useState(() => measurementStat(field));
+  const info = MEAS_FIELDS[field];
+  if (!stat) return null;
+  const hist = stat.history;
+  const vals = hist.map(h => h.val);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = max - min || 1;
+  const isWeight = field === 'weight';
+  const delItem = (date) => {
+    if (!confirm(fmtMeasDate(date) + ' ölçümünü sil?')) return;
+    // sadece bu alanı sil (tüm kaydı değil) — kaydı yükle, alanı çıkar
+    const all = loadMeasurements();
+    const rec = all.find(m => m.date === date);
+    if (rec) { delete rec[field]; const hasOther = Object.keys(rec).some(k => k !== 'date' && rec[k] != null); if (hasOther) saveMeasurement({ ...rec, date }); else deleteMeasurement(date); }
+    try { localStorage.setItem(MEAS_KEY, JSON.stringify(loadMeasurements().map(m => m.date === date && rec ? rec : m))); } catch (e) {}
+    const ns = measurementStat(field);
+    if (!ns) { onChanged(); onClose(); } else { setStat(ns); onChanged(); }
+  };
+  return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: onClose },
+    /*#__PURE__*/React.createElement("div", { style: S.modal, onClick: e => e.stopPropagation() },
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 } },
+        /*#__PURE__*/React.createElement(ApexIcon, { name: isWeight ? 'scale' : 'ruler', size: 18, color: 'var(--accent-light)', strokeWidth: 2 }),
+        /*#__PURE__*/React.createElement("span", { style: { fontSize: 18, fontWeight: 800 } }, info.tr)),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 26, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", marginBottom: 16 } }, stat.value, /*#__PURE__*/React.createElement("span", { style: { fontSize: 14, color: '#888' } }, " " + info.unit)),
+      // grafik
+      hist.length >= 2 ? /*#__PURE__*/React.createElement("div", { style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 14, marginBottom: 14 } },
+        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'flex-end', gap: 5, height: 90 } },
+          hist.map((h, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' } },
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 8, color: '#888', fontWeight: 700, marginBottom: 3 } }, h.val),
+            /*#__PURE__*/React.createElement("div", { style: { width: '100%', height: (12 + (h.val - min) / range * 68) + '%', background: 'linear-gradient(180deg,var(--accent),var(--accent-deep))', borderRadius: '4px 4px 0 0', minHeight: 8 } })))),
+        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 5, marginTop: 5 } },
+          hist.map((h, i) => /*#__PURE__*/React.createElement("span", { key: i, style: { flex: 1, textAlign: 'center', fontSize: 8, color: '#666', fontWeight: 700 } }, fmtMeasDate(h.date))))) :
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#666', textAlign: 'center', padding: '16px 0', marginBottom: 8 } }, "Grafik için en az 2 ölçüm gerekir"),
+      // geçmiş liste
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#888', fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 } }, "Geçmiş"),
+      /*#__PURE__*/React.createElement("div", { style: { maxHeight: 160, overflowY: 'auto' } },
+        hist.slice().reverse().map((h, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid #191919' } },
+          /*#__PURE__*/React.createElement("span", { style: { fontSize: 12.5, color: '#aaa' } }, fmtMeasDate(h.date)),
+          /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 14, fontWeight: 800 } }, h.val + ' ' + info.unit),
+            /*#__PURE__*/React.createElement("button", { onClick: () => delItem(h.date), style: { background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex' } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'trash', size: 14, color: '#FF5252', strokeWidth: 2 }))))))
+      ,
+      /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel, marginTop: 12 } }, "Kapat")));
+}
+
 function ProgressTab({
   authUser,
   activeGym,
@@ -9793,7 +10005,7 @@ function ProgressTab({
     }
   }, es.isStuck ? `⏳ ${es.weeksSince} haftadır takılı` : `tahmini 1RM ~${es.oneRM}kg`)), /*#__PURE__*/React.createElement("div", {
     style: S.prRowWt
-  }, es.weight, "kg")))));
+  }, es.weight, "kg")))), /*#__PURE__*/React.createElement(MeasurementsSection, null));
 }
 
 // Tek hareket derin grafik ekranı
