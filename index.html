@@ -1109,7 +1109,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.22'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.23'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -7324,22 +7324,17 @@ function WorkoutTab({
     onOpenNotifs: () => setShowNotifs(true),
     onOpenPrograms: () => setShowPrograms(true),
     journalUnseen: (() => {
-      // journalSeenTs'den sonra kaydı olan benzersiz antrenman günü sayısı
-      if (!data || !data.logs) return 0;
-      // Devam eden (bitmemiş) seans günlerini sayma — antrenman bitince rozet çıksın
-      const activeDayKeys = new Set((data.sessions || []).filter(s => s.startTime && !s.endTime).map(s => dateKey(s.startTime)));
-      const seenDayKeys = new Set();
-      const newDayKeys = new Set();
-      data.logs.forEach(l => {
-        const k = dateKey(l.timestamp);
-        if (activeDayKeys.has(k)) return; // aktif antrenman günü: henüz tamamlanmadı
-        if (l.timestamp > journalSeenTs) newDayKeys.add(k);
-        else seenDayKeys.add(k);
+      // Tamamlanmış (endTime'ı olan) antrenmanlardan, bitiş zamanı journalSeenTs'den
+      // sonra olanların benzersiz gün sayısı. Böylece antrenman BİTİNCE rozet çıkar
+      // (set girme zamanı değil, bitiş zamanı baz alınır).
+      if (!data || !data.sessions) return 0;
+      const newDays = new Set();
+      (data.sessions || []).forEach(s => {
+        if (s.endTime && s.endTime > journalSeenTs) {
+          newDays.add(dateKey(s.startTime || s.endTime));
+        }
       });
-      // sadece tamamen yeni günler (daha önce hiç görülmemiş)
-      let count = 0;
-      newDayKeys.forEach(k => { if (!seenDayKeys.has(k)) count++; });
-      return count;
+      return newDays.size;
     })(),
     onOpenJournal: () => {
       const now = Date.now();
