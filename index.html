@@ -942,107 +942,107 @@ const EXERCISE_MUSCLE_MAP = [
 // ————— EGZERSİZ KÜTÜPHANESİ (100+ hazır egzersiz) —————
 const LIBRARY_CATS = [{id:"gogus",tr:"Göğüs"},{id:"sirt",tr:"Sırt"},{id:"omuz",tr:"Omuz"},{id:"kol",tr:"Kol"},{id:"bacak",tr:"Bacak"},{id:"karin",tr:"Karın"}];
 const EXERCISE_LIBRARY = [
-{n:"Barbell Bench Press",c:"gogus",m:"Göğüs · Triceps · Ön Omuz",d:"Bileşik itiş. Göğsün ana kütle yapıcısı."},
-{n:"Incline Barbell Press",c:"gogus",m:"Üst Göğüs · Ön Omuz",d:"Eğimli bar, üst göğsü hedefler."},
-{n:"Incline Dumbbell Press",c:"gogus",m:"Üst Göğüs · Ön Omuz",d:"Dambıl ile üst göğüs, geniş hareket açısı."},
-{n:"Decline Bench Press",c:"gogus",m:"Alt Göğüs · Triceps",d:"Alt göğsü vurgular."},
-{n:"Dumbbell Bench Press",c:"gogus",m:"Göğüs · Triceps",d:"Dambıl ile göğüs, denge ve açıklık."},
-{n:"Flat Dumbbell Fly",c:"gogus",m:"Göğüs (iç)",d:"İzolasyon, göğüs gerilmesi."},
-{n:"Cable Fly",c:"gogus",m:"Göğüs (iç)",d:"Kablo ile sürekli gerilim, göğüs izolasyonu."},
-{n:"Pec Deck",c:"gogus",m:"Göğüs (iç)",d:"Makine ile kontrollü göğüs izolasyonu."},
-{n:"Chest Press Machine",c:"gogus",m:"Göğüs · Triceps",d:"Makine itiş, güvenli ve sabit."},
-{n:"Push Up",c:"gogus",m:"Göğüs · Triceps · Ön Omuz",d:"Vücut ağırlığı ile göğüs."},
-{n:"Dips",c:"gogus",m:"Alt Göğüs · Triceps",d:"Öne eğilerek göğüs, dik durarak triceps."},
-{n:"Incline Cable Fly",c:"gogus",m:"Üst Göğüs",d:"Alttan yukarı kablo, üst göğüs izolasyonu."},
-{n:"Svend Press",c:"gogus",m:"Göğüs (iç)",d:"Plaka sıkıştırma, iç göğüs kasılması."},
-{n:"Deadlift",c:"sirt",m:"Sırt · Bacak · Kalça",d:"Tüm arka zincir. Güç ve kütle temeli."},
-{n:"Romanian Deadlift",c:"sirt",m:"Arka Bacak · Kalça",d:"Hamstring gerilmeli varyasyon."},
-{n:"Pull Up",c:"sirt",m:"Sırt (Lat) · Biceps",d:"Vücut ağırlığı ile geniş sırt."},
-{n:"Chin Up",c:"sirt",m:"Sırt · Biceps",d:"Ters kavrama, biceps daha aktif."},
-{n:"Lat Pulldown",c:"sirt",m:"Sırt (Lat) · Biceps",d:"Makine ile lat genişliği."},
-{n:"Wide Grip Pulldown",c:"sirt",m:"Sırt (Lat)",d:"Geniş kavrama, lat genişliği."},
-{n:"Close Grip Pulldown",c:"sirt",m:"Sırt · Biceps",d:"Dar kavrama, alt lat vurgusu."},
-{n:"Barbell Row",c:"sirt",m:"Sırt · Arka Omuz",d:"Bileşik çekiş, sırt kalınlığı."},
-{n:"Dumbbell Row",c:"sirt",m:"Sırt (Lat)",d:"Tek kol, geniş açı."},
-{n:"Seated Cable Row",c:"sirt",m:"Sırt · Arka Omuz",d:"Kablo ile orta sırt kalınlığı."},
-{n:"T-Bar Row",c:"sirt",m:"Sırt (orta)",d:"Ağır çekiş, sırt kalınlığı."},
-{n:"Pendlay Row",c:"sirt",m:"Sırt · Arka Omuz",d:"Patlayıcı yerden çekiş."},
-{n:"Face Pull",c:"sirt",m:"Arka Omuz · Trapez",d:"Kablo ile arka omuz ve duruş."},
-{n:"Pullover",c:"sirt",m:"Sırt (Lat) · Göğüs",d:"Lat gerilmesi, geniş açı."},
-{n:"Rack Pull",c:"sirt",m:"Sırt · Kalça",d:"Kısmi deadlift, üst sırt ve trapez."},
-{n:"Shrug",c:"sirt",m:"Trapez",d:"Trapez izolasyonu, omuz silkme."},
-{n:"Overhead Press",c:"omuz",m:"Ön Omuz · Triceps",d:"Bileşik omuz itişi."},
-{n:"Dumbbell Shoulder Press",c:"omuz",m:"Ön Omuz · Yan Omuz",d:"Dambıl ile omuz, geniş açı."},
-{n:"Arnold Press",c:"omuz",m:"Ön Omuz · Yan Omuz",d:"Rotasyonlu omuz presi."},
-{n:"Shoulder Press Machine",c:"omuz",m:"Ön Omuz · Triceps",d:"Makine ile güvenli omuz presi."},
-{n:"Lateral Raise",c:"omuz",m:"Yan Omuz",d:"Dambıl ile yan omuz izolasyonu."},
-{n:"Cable Lateral Raise",c:"omuz",m:"Yan Omuz",d:"Kablo ile sürekli gerilim, omuz genişliği."},
-{n:"Front Raise",c:"omuz",m:"Ön Omuz",d:"Ön omuz izolasyonu."},
-{n:"Rear Delt Fly",c:"omuz",m:"Arka Omuz",d:"Arka omuz izolasyonu."},
-{n:"Reverse Pec Deck",c:"omuz",m:"Arka Omuz",d:"Makine ile arka omuz."},
-{n:"Upright Row",c:"omuz",m:"Yan Omuz · Trapez",d:"Dikey çekiş, omuz ve trapez."},
-{n:"Cable Front Raise",c:"omuz",m:"Ön Omuz",d:"Kablo ile ön omuz, sürekli gerilim."},
-{n:"Triceps Pushdown",c:"kol",m:"Triceps",d:"Kablo ile triceps, üç başı çalıştırır."},
-{n:"Rope Pushdown",c:"kol",m:"Triceps",d:"İp ataçman, dış baş vurgusu."},
-{n:"Overhead Triceps Extension",c:"kol",m:"Triceps (uzun baş)",d:"Baş üstü, uzun baş gerilmesi."},
-{n:"Skull Crusher",c:"kol",m:"Triceps",d:"Yatarak triceps izolasyonu."},
-{n:"Triceps Kickback",c:"kol",m:"Triceps",d:"Dambıl ile arkaya uzatma."},
-{n:"Close Grip Bench Press",c:"kol",m:"Triceps · Göğüs",d:"Dar kavrama, triceps ağırlıklı."},
-{n:"Dumbbell Triceps Extension",c:"kol",m:"Triceps",d:"Dambıl ile baş üstü uzatma."},
-{n:"Bench Dip",c:"kol",m:"Triceps",d:"Sehpa ile vücut ağırlığı triceps."},
-{n:"Barbell Curl",c:"kol",m:"Biceps",d:"Bar ile biceps kütlesi."},
-{n:"Dumbbell Curl",c:"kol",m:"Biceps",d:"Dambıl ile biceps, tek tek."},
-{n:"Hammer Curl",c:"kol",m:"Biceps · Ön Kol",d:"Nötr kavrama, ön kol dahil."},
-{n:"Preacher Curl",c:"kol",m:"Biceps",d:"Sabit dirsek, sıkı izolasyon."},
-{n:"Cable Curl",c:"kol",m:"Biceps",d:"Kablo ile sürekli gerilim."},
-{n:"Concentration Curl",c:"kol",m:"Biceps (tepe)",d:"Tek kol, tepe kasılması."},
-{n:"Incline Dumbbell Curl",c:"kol",m:"Biceps (uzun baş)",d:"Eğimli, biceps gerilmesi."},
-{n:"Spider Curl",c:"kol",m:"Biceps",d:"Öne eğik, sıkı izolasyon."},
-{n:"Wrist Curl",c:"kol",m:"Ön Kol",d:"Bilek bükme, ön kol izolasyonu."},
-{n:"Reverse Curl",c:"kol",m:"Ön Kol · Biceps",d:"Ters kavrama, ön kol vurgusu."},
-{n:"Back Squat",c:"bacak",m:"Bacak · Kalça",d:"Bileşik bacak. Alt vücut temeli."},
-{n:"Front Squat",c:"bacak",m:"Ön Bacak",d:"Ön yüklü, quad vurgusu."},
-{n:"Leg Press",c:"bacak",m:"Bacak · Kalça",d:"Makine ile ağır bacak itişi."},
-{n:"Hack Squat",c:"bacak",m:"Ön Bacak",d:"Makine squat, quad odaklı."},
-{n:"Leg Extension",c:"bacak",m:"Ön Bacak",d:"Quad izolasyonu."},
-{n:"Leg Curl",c:"bacak",m:"Arka Bacak",d:"Hamstring izolasyonu."},
-{n:"Seated Leg Curl",c:"bacak",m:"Arka Bacak",d:"Oturarak hamstring."},
-{n:"Romanian Deadlift (Legs)",c:"bacak",m:"Arka Bacak · Kalça",d:"Hamstring ve kalça gerilmesi."},
-{n:"Walking Lunge",c:"bacak",m:"Bacak · Kalça",d:"Yürüyüş hamlesi, tek bacak."},
-{n:"Bulgarian Split Squat",c:"bacak",m:"Bacak · Kalça",d:"Arka ayak yüksek, tek bacak."},
-{n:"Hip Thrust",c:"bacak",m:"Kalça",d:"Kalça izolasyonu, güçlü kasılma."},
-{n:"Glute Bridge",c:"bacak",m:"Kalça",d:"Yerde kalça köprüsü."},
-{n:"Calf Raise",c:"bacak",m:"Baldır",d:"Baldır izolasyonu, ayak yükseltme."},
-{n:"Seated Calf Raise",c:"bacak",m:"Baldır",d:"Oturarak baldır."},
-{n:"Cable Kickback (Ankle Strap)",c:"bacak",m:"Kalça · Arka Bacak",d:"Ayak bileği strap ile kalça izolasyonu."},
-{n:"Cable Hip Abduction",c:"bacak",m:"Kalça (yan)",d:"Strap ile bacağı yana açma."},
-{n:"Goblet Squat",c:"bacak",m:"Bacak · Kalça",d:"Dambıl önde, temiz squat."},
-{n:"Step Up",c:"bacak",m:"Bacak · Kalça",d:"Sehpaya çıkış, tek bacak."},
-{n:"Crunch",c:"karin",m:"Karın (üst)",d:"Temel karın kasılması."},
-{n:"Cable Crunch",c:"karin",m:"Karın",d:"Kablo ile ağırlıklı karın."},
-{n:"Hanging Leg Raise",c:"karin",m:"Karın (alt)",d:"Asılı bacak kaldırma."},
-{n:"Leg Raise",c:"karin",m:"Karın (alt)",d:"Yatarak bacak kaldırma."},
-{n:"Plank",c:"karin",m:"Karın · Core",d:"İzometrik core dayanıklılığı."},
-{n:"Sit Up",c:"karin",m:"Karın",d:"Tam gövde kalkışı."},
-{n:"Russian Twist",c:"karin",m:"Karın (yan)",d:"Rotasyon, yan karın."},
-{n:"Abs Machine",c:"karin",m:"Karın",d:"Makine ile ağırlıklı karın."},
-{n:"Cable Woodchopper",c:"karin",m:"Karın (yan) · Core",d:"Çapraz kablo, oblik çalışma."},
-{n:"Ab Wheel Rollout",c:"karin",m:"Karın · Core",d:"Tekerlek ile core gerilmesi."},
-{n:"Smith Machine Bench Press",c:"gogus",m:"Göğüs · Triceps",d:"Sabit ray, güvenli itiş."},
-{n:"Landmine Press",c:"gogus",m:"Üst Göğüs · Ön Omuz",d:"Açılı bar presi."},
-{n:"Machine Row",c:"sirt",m:"Sırt",d:"Makine ile sabit çekiş."},
-{n:"Straight Arm Pulldown",c:"sirt",m:"Sırt (Lat)",d:"Düz kol kablo, lat izolasyonu."},
-{n:"Meadows Row",c:"sirt",m:"Sırt (Lat)",d:"Landmine tek kol çekiş."},
-{n:"Machine Lateral Raise",c:"omuz",m:"Yan Omuz",d:"Makine ile yan omuz izolasyonu."},
-{n:"Cable Rear Delt Fly",c:"omuz",m:"Arka Omuz",d:"Çapraz kablo, arka omuz."},
-{n:"EZ Bar Curl",c:"kol",m:"Biceps",d:"EZ bar, bilek dostu biceps."},
-{n:"Cable Hammer Curl",c:"kol",m:"Biceps · Ön Kol",d:"İp ile nötr kavrama biceps."},
-{n:"Single Arm Pushdown",c:"kol",m:"Triceps",d:"Tek kol kablo triceps."},
-{n:"Sissy Squat",c:"bacak",m:"Ön Bacak",d:"Diz öne, quad gerilmesi."},
-{n:"Standing Calf Raise",c:"bacak",m:"Baldır",d:"Ayakta makine baldır."},
-{n:"Nordic Curl",c:"bacak",m:"Arka Bacak",d:"Diz üstü hamstring, ağır izolasyon."},
-{n:"Decline Sit Up",c:"karin",m:"Karın",d:"Eğimli sehpa gövde kalkışı."},
-{n:"Toe Touch",c:"karin",m:"Karın (üst)",d:"Bacaklar dik, elle ayak dokunma."}
+{n:"Barbell Bench Press",c:"gogus",m:"Göğüs · Triceps · Ön Omuz",d:"Bileşik itiş. Göğsün ana kütle yapıcısı.",me:"Chest · Triceps · Front Delts",de:"Compound press. Main chest mass builder."},
+{n:"Incline Barbell Press",c:"gogus",m:"Üst Göğüs · Ön Omuz",d:"Eğimli bar, üst göğsü hedefler.",me:"Upper Chest · Front Delts",de:"Incline barbell, targets upper chest."},
+{n:"Incline Dumbbell Press",c:"gogus",m:"Üst Göğüs · Ön Omuz",d:"Dambıl ile üst göğüs, geniş hareket açısı.",me:"Upper Chest · Front Delts",de:"Dumbbell upper chest, wide range of motion."},
+{n:"Decline Bench Press",c:"gogus",m:"Alt Göğüs · Triceps",d:"Alt göğsü vurgular.",me:"Lower Chest · Triceps",de:"Emphasizes lower chest."},
+{n:"Dumbbell Bench Press",c:"gogus",m:"Göğüs · Triceps",d:"Dambıl ile göğüs, denge ve açıklık.",me:"Chest · Triceps",de:"Dumbbell chest, balance and range."},
+{n:"Flat Dumbbell Fly",c:"gogus",m:"Göğüs (iç)",d:"İzolasyon, göğüs gerilmesi.",me:"Chest (inner)",de:"Isolation, chest stretch."},
+{n:"Cable Fly",c:"gogus",m:"Göğüs (iç)",d:"Kablo ile sürekli gerilim, göğüs izolasyonu.",me:"Chest (inner)",de:"Cable constant tension, chest isolation."},
+{n:"Pec Deck",c:"gogus",m:"Göğüs (iç)",d:"Makine ile kontrollü göğüs izolasyonu.",me:"Chest (inner)",de:"Machine controlled chest isolation."},
+{n:"Chest Press Machine",c:"gogus",m:"Göğüs · Triceps",d:"Makine itiş, güvenli ve sabit.",me:"Chest · Triceps",de:"Machine press, safe and stable."},
+{n:"Push Up",c:"gogus",m:"Göğüs · Triceps · Ön Omuz",d:"Vücut ağırlığı ile göğüs.",me:"Chest · Triceps · Front Delts",de:"Bodyweight chest."},
+{n:"Dips",c:"gogus",m:"Alt Göğüs · Triceps",d:"Öne eğilerek göğüs, dik durarak triceps.",me:"Lower Chest · Triceps",de:"Lean forward for chest, upright for triceps."},
+{n:"Incline Cable Fly",c:"gogus",m:"Üst Göğüs",d:"Alttan yukarı kablo, üst göğüs izolasyonu.",me:"Upper Chest",de:"Low-to-high cable, upper chest isolation."},
+{n:"Svend Press",c:"gogus",m:"Göğüs (iç)",d:"Plaka sıkıştırma, iç göğüs kasılması.",me:"Chest (inner)",de:"Plate squeeze, inner chest contraction."},
+{n:"Deadlift",c:"sirt",m:"Sırt · Bacak · Kalça",d:"Tüm arka zincir. Güç ve kütle temeli.",me:"Back · Legs · Glutes",de:"Full posterior chain. Strength and mass base."},
+{n:"Romanian Deadlift",c:"sirt",m:"Arka Bacak · Kalça",d:"Hamstring gerilmeli varyasyon.",me:"Hamstrings · Glutes",de:"Hamstring-stretch variation."},
+{n:"Pull Up",c:"sirt",m:"Sırt (Lat) · Biceps",d:"Vücut ağırlığı ile geniş sırt.",me:"Lats · Biceps",de:"Bodyweight wide back."},
+{n:"Chin Up",c:"sirt",m:"Sırt · Biceps",d:"Ters kavrama, biceps daha aktif.",me:"Back · Biceps",de:"Reverse grip, biceps more active."},
+{n:"Lat Pulldown",c:"sirt",m:"Sırt (Lat) · Biceps",d:"Makine ile lat genişliği.",me:"Lats · Biceps",de:"Machine lat width."},
+{n:"Wide Grip Pulldown",c:"sirt",m:"Sırt (Lat)",d:"Geniş kavrama, lat genişliği.",me:"Lats",de:"Wide grip, lat width."},
+{n:"Close Grip Pulldown",c:"sirt",m:"Sırt · Biceps",d:"Dar kavrama, alt lat vurgusu.",me:"Back · Biceps",de:"Close grip, lower lat emphasis."},
+{n:"Barbell Row",c:"sirt",m:"Sırt · Arka Omuz",d:"Bileşik çekiş, sırt kalınlığı.",me:"Back · Rear Delts",de:"Compound row, back thickness."},
+{n:"Dumbbell Row",c:"sirt",m:"Sırt (Lat)",d:"Tek kol, geniş açı.",me:"Lats",de:"Single arm, wide range."},
+{n:"Seated Cable Row",c:"sirt",m:"Sırt · Arka Omuz",d:"Kablo ile orta sırt kalınlığı.",me:"Back · Rear Delts",de:"Cable mid-back thickness."},
+{n:"T-Bar Row",c:"sirt",m:"Sırt (orta)",d:"Ağır çekiş, sırt kalınlığı.",me:"Back (mid)",de:"Heavy row, back thickness."},
+{n:"Pendlay Row",c:"sirt",m:"Sırt · Arka Omuz",d:"Patlayıcı yerden çekiş.",me:"Back · Rear Delts",de:"Explosive floor pull."},
+{n:"Face Pull",c:"sirt",m:"Arka Omuz · Trapez",d:"Kablo ile arka omuz ve duruş.",me:"Rear Delts · Traps",de:"Cable rear delts and posture."},
+{n:"Pullover",c:"sirt",m:"Sırt (Lat) · Göğüs",d:"Lat gerilmesi, geniş açı.",me:"Lats · Chest",de:"Lat stretch, wide range."},
+{n:"Rack Pull",c:"sirt",m:"Sırt · Kalça",d:"Kısmi deadlift, üst sırt ve trapez.",me:"Back · Glutes",de:"Partial deadlift, upper back and traps."},
+{n:"Shrug",c:"sirt",m:"Trapez",d:"Trapez izolasyonu, omuz silkme.",me:"Traps",de:"Trap isolation, shoulder shrug."},
+{n:"Overhead Press",c:"omuz",m:"Ön Omuz · Triceps",d:"Bileşik omuz itişi.",me:"Front Delts · Triceps",de:"Compound shoulder press."},
+{n:"Dumbbell Shoulder Press",c:"omuz",m:"Ön Omuz · Yan Omuz",d:"Dambıl ile omuz, geniş açı.",me:"Front Delts · Side Delts",de:"Dumbbell shoulder, wide range."},
+{n:"Arnold Press",c:"omuz",m:"Ön Omuz · Yan Omuz",d:"Rotasyonlu omuz presi.",me:"Front Delts · Side Delts",de:"Rotational shoulder press."},
+{n:"Shoulder Press Machine",c:"omuz",m:"Ön Omuz · Triceps",d:"Makine ile güvenli omuz presi.",me:"Front Delts · Triceps",de:"Machine safe shoulder press."},
+{n:"Lateral Raise",c:"omuz",m:"Yan Omuz",d:"Dambıl ile yan omuz izolasyonu.",me:"Side Delts",de:"Dumbbell side delt isolation."},
+{n:"Cable Lateral Raise",c:"omuz",m:"Yan Omuz",d:"Kablo ile sürekli gerilim, omuz genişliği.",me:"Side Delts",de:"Cable constant tension, shoulder width."},
+{n:"Front Raise",c:"omuz",m:"Ön Omuz",d:"Ön omuz izolasyonu.",me:"Front Delts",de:"Front delt isolation."},
+{n:"Rear Delt Fly",c:"omuz",m:"Arka Omuz",d:"Arka omuz izolasyonu.",me:"Rear Delts",de:"Rear delt isolation."},
+{n:"Reverse Pec Deck",c:"omuz",m:"Arka Omuz",d:"Makine ile arka omuz.",me:"Rear Delts",de:"Machine rear delts."},
+{n:"Upright Row",c:"omuz",m:"Yan Omuz · Trapez",d:"Dikey çekiş, omuz ve trapez.",me:"Side Delts · Traps",de:"Upright row, shoulders and traps."},
+{n:"Cable Front Raise",c:"omuz",m:"Ön Omuz",d:"Kablo ile ön omuz, sürekli gerilim.",me:"Front Delts",de:"Cable front delt, constant tension."},
+{n:"Triceps Pushdown",c:"kol",m:"Triceps",d:"Kablo ile triceps, üç başı çalıştırır.",me:"Triceps",de:"Cable triceps, works all three heads."},
+{n:"Rope Pushdown",c:"kol",m:"Triceps",d:"İp ataçman, dış baş vurgusu.",me:"Triceps",de:"Rope attachment, outer head emphasis."},
+{n:"Overhead Triceps Extension",c:"kol",m:"Triceps (uzun baş)",d:"Baş üstü, uzun baş gerilmesi.",me:"Triceps (long head)",de:"Overhead, long head stretch."},
+{n:"Skull Crusher",c:"kol",m:"Triceps",d:"Yatarak triceps izolasyonu.",me:"Triceps",de:"Lying triceps isolation."},
+{n:"Triceps Kickback",c:"kol",m:"Triceps",d:"Dambıl ile arkaya uzatma.",me:"Triceps",de:"Dumbbell kickback."},
+{n:"Close Grip Bench Press",c:"kol",m:"Triceps · Göğüs",d:"Dar kavrama, triceps ağırlıklı.",me:"Triceps · Chest",de:"Close grip, triceps focused."},
+{n:"Dumbbell Triceps Extension",c:"kol",m:"Triceps",d:"Dambıl ile baş üstü uzatma.",me:"Triceps",de:"Dumbbell overhead extension."},
+{n:"Bench Dip",c:"kol",m:"Triceps",d:"Sehpa ile vücut ağırlığı triceps.",me:"Triceps",de:"Bench bodyweight triceps."},
+{n:"Barbell Curl",c:"kol",m:"Biceps",d:"Bar ile biceps kütlesi.",me:"Biceps",de:"Barbell biceps mass."},
+{n:"Dumbbell Curl",c:"kol",m:"Biceps",d:"Dambıl ile biceps, tek tek.",me:"Biceps",de:"Dumbbell biceps, alternating."},
+{n:"Hammer Curl",c:"kol",m:"Biceps · Ön Kol",d:"Nötr kavrama, ön kol dahil.",me:"Biceps · Forearm",de:"Neutral grip, includes forearm."},
+{n:"Preacher Curl",c:"kol",m:"Biceps",d:"Sabit dirsek, sıkı izolasyon.",me:"Biceps",de:"Fixed elbow, strict isolation."},
+{n:"Cable Curl",c:"kol",m:"Biceps",d:"Kablo ile sürekli gerilim.",me:"Biceps",de:"Cable constant tension."},
+{n:"Concentration Curl",c:"kol",m:"Biceps (tepe)",d:"Tek kol, tepe kasılması.",me:"Biceps (tepe)",de:"Single arm, peak contraction."},
+{n:"Incline Dumbbell Curl",c:"kol",m:"Biceps (uzun baş)",d:"Eğimli, biceps gerilmesi.",me:"Biceps (long head)",de:"Incline, biceps stretch."},
+{n:"Spider Curl",c:"kol",m:"Biceps",d:"Öne eğik, sıkı izolasyon.",me:"Biceps",de:"Preacher, strict isolation."},
+{n:"Wrist Curl",c:"kol",m:"Ön Kol",d:"Bilek bükme, ön kol izolasyonu.",me:"Forearm",de:"Wrist curl, forearm isolation."},
+{n:"Reverse Curl",c:"kol",m:"Ön Kol · Biceps",d:"Ters kavrama, ön kol vurgusu.",me:"Forearm · Biceps",de:"Reverse grip, forearm emphasis."},
+{n:"Back Squat",c:"bacak",m:"Bacak · Kalça",d:"Bileşik bacak. Alt vücut temeli.",me:"Legs · Glutes",de:"Compound leg. Lower body base."},
+{n:"Front Squat",c:"bacak",m:"Ön Bacak",d:"Ön yüklü, quad vurgusu.",me:"Quads",de:"Front loaded, quad emphasis."},
+{n:"Leg Press",c:"bacak",m:"Bacak · Kalça",d:"Makine ile ağır bacak itişi.",me:"Legs · Glutes",de:"Machine heavy leg press."},
+{n:"Hack Squat",c:"bacak",m:"Ön Bacak",d:"Makine squat, quad odaklı.",me:"Quads",de:"Machine squat, quad focused."},
+{n:"Leg Extension",c:"bacak",m:"Ön Bacak",d:"Quad izolasyonu.",me:"Quads",de:"Quad isolation."},
+{n:"Leg Curl",c:"bacak",m:"Arka Bacak",d:"Hamstring izolasyonu.",me:"Hamstrings",de:"Hamstring isolation."},
+{n:"Seated Leg Curl",c:"bacak",m:"Arka Bacak",d:"Oturarak hamstring.",me:"Hamstrings",de:"Seated hamstring."},
+{n:"Romanian Deadlift (Legs)",c:"bacak",m:"Arka Bacak · Kalça",d:"Hamstring ve kalça gerilmesi.",me:"Hamstrings · Glutes",de:"Hamstring and glute stretch."},
+{n:"Walking Lunge",c:"bacak",m:"Bacak · Kalça",d:"Yürüyüş hamlesi, tek bacak.",me:"Legs · Glutes",de:"Walking lunge, single leg."},
+{n:"Bulgarian Split Squat",c:"bacak",m:"Bacak · Kalça",d:"Arka ayak yüksek, tek bacak.",me:"Legs · Glutes",de:"Rear foot elevated, single leg."},
+{n:"Hip Thrust",c:"bacak",m:"Kalça",d:"Kalça izolasyonu, güçlü kasılma.",me:"Glutes",de:"Glute isolation, strong contraction."},
+{n:"Glute Bridge",c:"bacak",m:"Kalça",d:"Yerde kalça köprüsü.",me:"Glutes",de:"Floor glute bridge."},
+{n:"Calf Raise",c:"bacak",m:"Baldır",d:"Baldır izolasyonu, ayak yükseltme.",me:"Calves",de:"Calf isolation, foot raise."},
+{n:"Seated Calf Raise",c:"bacak",m:"Baldır",d:"Oturarak baldır.",me:"Calves",de:"Seated calf."},
+{n:"Cable Kickback (Ankle Strap)",c:"bacak",m:"Kalça · Arka Bacak",d:"Ayak bileği strap ile kalça izolasyonu.",me:"Glutes · Hamstrings",de:"Ankle strap glute isolation."},
+{n:"Cable Hip Abduction",c:"bacak",m:"Kalça (yan)",d:"Strap ile bacağı yana açma.",me:"Glutes (side)",de:"Strap side leg abduction."},
+{n:"Goblet Squat",c:"bacak",m:"Bacak · Kalça",d:"Dambıl önde, temiz squat.",me:"Legs · Glutes",de:"Dumbbell front, clean squat."},
+{n:"Step Up",c:"bacak",m:"Bacak · Kalça",d:"Sehpaya çıkış, tek bacak.",me:"Legs · Glutes",de:"Step up, single leg."},
+{n:"Crunch",c:"karin",m:"Karın (üst)",d:"Temel karın kasılması.",me:"Abs (upper)",de:"Basic ab contraction."},
+{n:"Cable Crunch",c:"karin",m:"Karın",d:"Kablo ile ağırlıklı karın.",me:"Abs",de:"Cable weighted abs."},
+{n:"Hanging Leg Raise",c:"karin",m:"Karın (alt)",d:"Asılı bacak kaldırma.",me:"Abs (lower)",de:"Hanging leg raise."},
+{n:"Leg Raise",c:"karin",m:"Karın (alt)",d:"Yatarak bacak kaldırma.",me:"Abs (lower)",de:"Lying leg raise."},
+{n:"Plank",c:"karin",m:"Karın · Core",d:"İzometrik core dayanıklılığı.",me:"Abs · Core",de:"Isometric core endurance."},
+{n:"Sit Up",c:"karin",m:"Karın",d:"Tam gövde kalkışı.",me:"Abs",de:"Full sit up."},
+{n:"Russian Twist",c:"karin",m:"Karın (yan)",d:"Rotasyon, yan karın.",me:"Abs (side)",de:"Rotation, side abs."},
+{n:"Abs Machine",c:"karin",m:"Karın",d:"Makine ile ağırlıklı karın.",me:"Abs",de:"Machine weighted abs."},
+{n:"Cable Woodchopper",c:"karin",m:"Karın (yan) · Core",d:"Çapraz kablo, oblik çalışma.",me:"Abs (side) · Core",de:"Cross cable, oblique work."},
+{n:"Ab Wheel Rollout",c:"karin",m:"Karın · Core",d:"Tekerlek ile core gerilmesi.",me:"Abs · Core",de:"Ab wheel core stretch."},
+{n:"Smith Machine Bench Press",c:"gogus",m:"Göğüs · Triceps",d:"Sabit ray, güvenli itiş.",me:"Chest · Triceps",de:"Fixed rail, safe press."},
+{n:"Landmine Press",c:"gogus",m:"Üst Göğüs · Ön Omuz",d:"Açılı bar presi.",me:"Upper Chest · Front Delts",de:"Angled bar press."},
+{n:"Machine Row",c:"sirt",m:"Sırt",d:"Makine ile sabit çekiş.",me:"Back",de:"Machine fixed row."},
+{n:"Straight Arm Pulldown",c:"sirt",m:"Sırt (Lat)",d:"Düz kol kablo, lat izolasyonu.",me:"Lats",de:"Straight arm cable, lat isolation."},
+{n:"Meadows Row",c:"sirt",m:"Sırt (Lat)",d:"Landmine tek kol çekiş.",me:"Lats",de:"Landmine single arm row."},
+{n:"Machine Lateral Raise",c:"omuz",m:"Yan Omuz",d:"Makine ile yan omuz izolasyonu.",me:"Side Delts",de:"Machine side delt isolation."},
+{n:"Cable Rear Delt Fly",c:"omuz",m:"Arka Omuz",d:"Çapraz kablo, arka omuz.",me:"Rear Delts",de:"Cross cable, rear delts."},
+{n:"EZ Bar Curl",c:"kol",m:"Biceps",d:"EZ bar, bilek dostu biceps.",me:"Biceps",de:"EZ bar, wrist-friendly biceps."},
+{n:"Cable Hammer Curl",c:"kol",m:"Biceps · Ön Kol",d:"İp ile nötr kavrama biceps.",me:"Biceps · Forearm",de:"Rope neutral grip biceps."},
+{n:"Single Arm Pushdown",c:"kol",m:"Triceps",d:"Tek kol kablo triceps.",me:"Triceps",de:"Single arm cable triceps."},
+{n:"Sissy Squat",c:"bacak",m:"Ön Bacak",d:"Diz öne, quad gerilmesi.",me:"Quads",de:"Knee forward, quad stretch."},
+{n:"Standing Calf Raise",c:"bacak",m:"Baldır",d:"Ayakta makine baldır.",me:"Calves",de:"Standing machine calf."},
+{n:"Nordic Curl",c:"bacak",m:"Arka Bacak",d:"Diz üstü hamstring, ağır izolasyon.",me:"Hamstrings",de:"Kneeling hamstring, heavy isolation."},
+{n:"Decline Sit Up",c:"karin",m:"Karın",d:"Eğimli sehpa gövde kalkışı.",me:"Abs",de:"Decline bench sit up."},
+{n:"Toe Touch",c:"karin",m:"Karın (üst)",d:"Bacaklar dik, elle ayak dokunma.",me:"Abs (upper)",de:"Legs up, hand-to-foot touch."}
 ];
 
 // ————— HAZIR PROGRAMLAR —————
@@ -1112,7 +1112,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.28'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.30'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1158,7 +1158,7 @@ const I18N = {
     save: 'Kaydet', cancel: 'İptal', close: 'Kapat', delete: 'Sil', edit: 'Düzenle', add: 'Ekle', back: 'Geri', apply: 'Uygula', done: 'Tamam',
     // Ölçüler
     measurements: 'Vücut Ölçüleri', add_measurement: 'Ölçü Ekle', meas_weight: 'Kilo', meas_arm: 'Kol', meas_chest: 'Göğüs', meas_waist: 'Bel', meas_hip: 'Kalça', meas_leg: 'Bacak', meas_shoulder: 'Omuz', meas_neck: 'Boyun', meas_forearm: 'Ön Kol', meas_calf: 'Baldır',
-    meas_right: 'Sağ', meas_left: 'Sol', meas_balanced: '✓ Dengeli', meas_no_change: 'değişim yok', meas_history: 'Geçmiş', meas_add_extra: 'Ekstra ölçü ekle (kalça, bacak...)', meas_none: 'Henüz ölçü yok', meas_none_sub: 'İlk ölçünü ekle, gelişimini takip et', meas_chart_need: 'Grafik için en az 2 ölçüm gerekir', meas_only_entered: 'sadece girdiğin alanlar kaydedilir',
+    meas_right: 'Sağ', meas_left: 'Sol', meas_balanced: '✓ Dengeli', meas_no_change: 'değişim yok', meas_history: 'Geçmiş', meas_add_extra: 'Ekstra ölçü ekle (kalça, bacak...)', meas_none: 'Henüz ölçü yok', meas_none_sub: 'İlk ölçünü ekle, gelişimini takip et', meas_chart_need: 'Grafik için en az 2 ölçüm gerekir', meas_only_entered: 'sadece girdiğin alanlar kaydedilir', meas_all_added: 'Hepsi eklendi', username_check_hint: 'Kullanıcı adını doğru yazdığından emin ol',
     // Programlar
     prog_expert: 'Uzman programları · tek dokunuşla günlerine ekle', prog_free: 'BEDAVA', prog_apply: 'Bu Programı Uygula', prog_suggestion_tip: 'Set×tekrar sadece öneridir. Setleri her zamanki gibi girerken kaydedersin.', prog_suggestion: 'öneri', prog_days: 'gün', prog_exercises: 'egzersiz', prog_all: 'Tümü',
     level_baslangic: 'Başlangıç', level_orta: 'Orta', level_ileri: 'İleri', level_guc: 'Güç Odaklı',
@@ -1187,7 +1187,30 @@ const I18N = {
     calendar: 'TAKVİM', last_6_months: 'SON 6 AY', tap_month_detail: 'Detay için bir aya dokun', muscle_map: 'KAS HARİTASI · SON 7 GÜN', front: 'ÖN', back: 'ARKA', set_label: 'SET', volume_label: 'HACİM', my_gym: 'Salonum', friends_need_online: 'Arkadaşlar için internet', friends_need_online2: 've giriş gerekli 🌐', firebase_offline: 'Firebase yüklenemedi - offline modda çalışılıyor',
     // Yerleşik gün isimleri + alt başlıkları
     day_push: 'İTİŞ', day_pull: 'ÇEKİŞ', day_upper: 'ÜST', day_leg: 'BACAK',
-    day_push_sub: 'Göğüs · Omuz · Triceps', day_pull_sub: 'Sırt · Biceps', day_upper_sub: 'Tüm üst vücut', day_leg_sub: 'Bacak · Kalça · Baldır'
+    day_push_sub: 'Göğüs · Omuz · Triceps', day_pull_sub: 'Sırt · Biceps', day_upper_sub: 'Tüm üst vücut', day_leg_sub: 'Bacak · Kalça · Baldır',
+    // Ayarlar
+    set_photo_remove: 'Fotoğrafı kaldır', user_label: 'Kullanıcı', cloud_sync_on: '☁ Bulut senkronizasyonu açık', theme: 'Tema', data_label: 'Veri',
+    timer_title: 'Dinlenme Zamanlayıcısı', timer_toggle: 'Zamanlayıcı', timer_auto: 'Set sonrası otomatik başlat', timer_default_dur: 'Varsayılan Süre', timer_for_new: 'Yeni egzersizler için (saniye)', timer_custom: 'Özel', timer_vibrate: 'Titreşim', timer_vibrate_sub: 'Süre bitince titret',
+    export_backup: 'Yedek Dışa Aktar', import_backup: 'Yedek Yükle', logout: 'Çıkış Yap',
+    // Gün editörü
+    edit_day: 'Günü Düzenle', new_day: 'Yeni Gün', day_name: 'GÜN ADI', subtitle_opt: 'Alt başlık (opsiyonel)', day_name_ph: 'Örn. Shoulders & Arms', subtitle_cap: 'ALT BAŞLIK (OPSİYONEL)', subtitle_ph: 'Örn. Omuz · Biceps · Triceps', copy_from_days: ' Mevcut günlerden egzersiz kopyala ', create: 'OLUŞTUR', delete_this_day: '🗑 Bu günü sil',
+    // Egzersiz / gün detayı
+    add_exercise_btn: 'EGZERSİZ EKLE', no_exercises: 'Henüz egzersiz yok.', no_exercises_sub: 'Aşağıdan ekleyebilirsin.', edit_ex_name: 'Egzersiz adını düzelt:', ex_name_ph: 'Örn. Cable Fly', add_btn: 'EKLE',
+    no_copy_ex: 'Kopyalanacak egzersiz yok.', no_copy_ex_sub: 'Diğer günlere egzersiz ekledikçe burada görünür.',
+    new_workout_add: 'YENİ ANTRENMAN EKLE', add_to_this_day: 'BU GÜNE ANTRENMAN EKLE', save_cap: 'KAYDET', edit_cap: 'DÜZENLE', cancel_cap: 'İPTAL', history_cap: 'GEÇMİŞ',
+    finish_workout: 'BİTİR', start_workout: 'BAŞLA', backdated_entry: 'GEÇMİŞ TARİHE KAYIT',
+    reorder_hint: 'Sürüklemek için uzun bas. Silmek için sağdaki butona dokun.', reorder_hint2: 'İpucu: Sırayı değiştirmek için kart üzerinde uzun bas.',
+    completed_workout: 'Bu antrenmanı tamamladın. Değiştirmek için sağ üstteki DÜZENLE',
+    no_records: 'Henüz kayıt yok', add_first_set: 'İlk setini ekle, geçmiş burada görünecek.',
+    unrecognized: 'TANINMAYAN EGZERSİZLER', reset_auto: '↺ Otomatik tanımaya sıfırla', select_muscles_hint: 'Dokun, hangi kasları çalıştırdığını seç — haritaya eklensin', secondary: 'İkincil', auto_recognized: 'Bu egzersiz otomatik tanınıyor. Yanlışsa düzeltebilirsin.',
+    no_record_7d: 'Son 7 günde kayıt yok',
+    top_record: 'TOP REKOR', backoff_record: 'BACK-OFF REKOR', target_label: 'HEDEF', new_records: 'YENİ REKORLAR', this_week_dist: 'BU HAFTANIN DAĞILIMI', total_volume_cap: 'TOPLAM HACİM',
+    // Kas detay
+    vol_not_worked: 'Çalışılmadı', vol_low: 'Düşük hacim', vol_ideal: 'İdeal aralık', vol_high: 'Yüksek hacim',
+    sci_target: ' · bilimsel hedef: haftada 10-20 set', this_week: 'BU HAFTA', this_month: 'BU AY', md_sets: 'SETS', md_volume: 'VOLUME', md_days: 'GÜN',
+    md_exercises: 'EGZERSİZLER · düzenlemek için dokun', md_days_header: 'GÜNLER', unknown_exercises: 'TANINMAYAN EGZERSİZLER',
+    journal_empty: 'Henüz kayıtlı antrenman yok', journal_empty_sub: 'İlk antrenmanını kaydet, burada görünsün',
+    balance_warning: '⚠ DENGE UYARISI'
   },
   en: {
     tab_workout: 'WORKOUT', tab_progress: 'PROGRESS', tab_friends: 'FRIENDS',
@@ -1199,7 +1222,7 @@ const I18N = {
     hidden_days: 'HIDDEN DAYS', hidden_days_sub: 'tap to restore',
     save: 'Save', cancel: 'Cancel', close: 'Close', delete: 'Delete', edit: 'Edit', add: 'Add', back: 'Back', apply: 'Apply', done: 'Done',
     measurements: 'Body Measurements', add_measurement: 'Add Measurement', meas_weight: 'Weight', meas_arm: 'Arm', meas_chest: 'Chest', meas_waist: 'Waist', meas_hip: 'Hip', meas_leg: 'Leg', meas_shoulder: 'Shoulder', meas_neck: 'Neck', meas_forearm: 'Forearm', meas_calf: 'Calf',
-    meas_right: 'Right', meas_left: 'Left', meas_balanced: '✓ Balanced', meas_no_change: 'no change', meas_history: 'History', meas_add_extra: 'Add extra measurement (hip, leg...)', meas_none: 'No measurements yet', meas_none_sub: 'Add your first measurement, track your progress', meas_chart_need: 'At least 2 measurements needed for chart', meas_only_entered: 'only entered fields are saved',
+    meas_right: 'Right', meas_left: 'Left', meas_balanced: '✓ Balanced', meas_no_change: 'no change', meas_history: 'History', meas_add_extra: 'Add extra measurement (hip, leg...)', meas_none: 'No measurements yet', meas_none_sub: 'Add your first measurement, track your progress', meas_chart_need: 'At least 2 measurements needed for chart', meas_only_entered: 'only entered fields are saved', meas_all_added: 'All added', username_check_hint: 'Make sure you typed the username correctly',
     prog_expert: 'Expert programs · add to your days with one tap', prog_free: 'FREE', prog_apply: 'Apply This Program', prog_suggestion_tip: 'Sets×reps are just suggestions. You log sets as you enter them, as always.', prog_suggestion: 'suggested', prog_days: 'days', prog_exercises: 'exercises', prog_all: 'All',
     level_baslangic: 'Beginner', level_orta: 'Intermediate', level_ileri: 'Advanced', level_guc: 'Strength',
     lib_new: 'NEW', lib_copy: 'COPY', lib_library: 'LIBRARY', lib_search: 'Search exercise...', lib_not_found: 'No exercise found', add_exercise: 'Add Exercise',
@@ -1218,7 +1241,26 @@ const I18N = {
     next_label: 'Next up: {name}', last_label: 'Last: {n} days ago', never_done: 'Never done yet — start!', today_chart: 'today',
     calendar: 'CALENDAR', last_6_months: 'LAST 6 MONTHS', tap_month_detail: 'Tap a month for details', muscle_map: 'MUSCLE MAP · LAST 7 DAYS', front: 'FRONT', back: 'BACK', set_label: 'SETS', volume_label: 'VOLUME', my_gym: 'My Gym', friends_need_online: 'Friends need internet', friends_need_online2: 'and sign-in 🌐', firebase_offline: 'Firebase could not load - working offline',
     day_push: 'PUSH', day_pull: 'PULL', day_upper: 'UPPER', day_leg: 'LEGS',
-    day_push_sub: 'Chest · Shoulders · Triceps', day_pull_sub: 'Back · Biceps', day_upper_sub: 'Full upper body', day_leg_sub: 'Legs · Glutes · Calves'
+    day_push_sub: 'Chest · Shoulders · Triceps', day_pull_sub: 'Back · Biceps', day_upper_sub: 'Full upper body', day_leg_sub: 'Legs · Glutes · Calves',
+    set_photo_remove: 'Remove photo', user_label: 'User', cloud_sync_on: '☁ Cloud sync on', theme: 'Theme', data_label: 'Data',
+    timer_title: 'Rest Timer', timer_toggle: 'Timer', timer_auto: 'Auto-start after set', timer_default_dur: 'Default Duration', timer_for_new: 'For new exercises (seconds)', timer_custom: 'Custom', timer_vibrate: 'Vibrate', timer_vibrate_sub: 'Vibrate when time is up',
+    export_backup: 'Export Backup', import_backup: 'Import Backup', logout: 'Log Out',
+    edit_day: 'Edit Day', new_day: 'New Day', day_name: 'DAY NAME', subtitle_opt: 'Subtitle (optional)', day_name_ph: 'e.g. Shoulders & Arms', subtitle_cap: 'SUBTITLE (OPTIONAL)', subtitle_ph: 'e.g. Shoulders · Biceps · Triceps', copy_from_days: ' Copy exercises from existing days ', create: 'CREATE', delete_this_day: '🗑 Delete this day',
+    add_exercise_btn: 'ADD EXERCISE', no_exercises: 'No exercises yet.', no_exercises_sub: 'Add one below.', edit_ex_name: 'Edit exercise name:', ex_name_ph: 'e.g. Cable Fly', add_btn: 'ADD',
+    no_copy_ex: 'No exercises to copy.', no_copy_ex_sub: 'They appear here as you add exercises to other days.',
+    new_workout_add: 'ADD NEW WORKOUT', add_to_this_day: 'ADD WORKOUT TO THIS DAY', save_cap: 'SAVE', edit_cap: 'EDIT', cancel_cap: 'CANCEL', history_cap: 'HISTORY',
+    finish_workout: 'FINISH', start_workout: 'START', backdated_entry: 'BACKDATED ENTRY',
+    reorder_hint: 'Long press to drag. Tap the button on the right to delete.', reorder_hint2: 'Tip: long press on a card to reorder.',
+    completed_workout: 'You completed this workout. Tap EDIT at top right to change it',
+    no_records: 'No records yet', add_first_set: 'Add your first set, history appears here.',
+    unrecognized: 'UNRECOGNIZED EXERCISES', reset_auto: '↺ Reset to auto-detect', select_muscles_hint: 'Tap to pick which muscles you worked — added to the map', secondary: 'Secondary', auto_recognized: 'This exercise is auto-detected. Fix it if wrong.',
+    no_record_7d: 'No records in the last 7 days',
+    top_record: 'TOP RECORD', backoff_record: 'BACK-OFF RECORD', target_label: 'TARGET', new_records: 'NEW RECORDS', this_week_dist: "THIS WEEK'S DISTRIBUTION", total_volume_cap: 'TOTAL VOLUME',
+    vol_not_worked: 'Not worked', vol_low: 'Low volume', vol_ideal: 'Ideal range', vol_high: 'High volume',
+    sci_target: ' · science target: 10-20 sets/week', this_week: 'THIS WEEK', this_month: 'THIS MONTH', md_sets: 'SETS', md_volume: 'VOLUME', md_days: 'DAYS',
+    md_exercises: 'EXERCISES · tap to edit', md_days_header: 'DAYS', unknown_exercises: 'UNRECOGNIZED EXERCISES',
+    journal_empty: 'No saved workouts yet', journal_empty_sub: 'Log your first workout, it will appear here',
+    balance_warning: '⚠ BALANCE WARNING'
   }
 };
 
@@ -2927,8 +2969,8 @@ function JournalModal({ data, myUsername, onClose }) {
   // boş durum
   entries.length === 0 ? /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', padding: '50px 20px', color: '#555' } },
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 34, marginBottom: 10 } }, '📔'),
-    /*#__PURE__*/React.createElement("div", { style: { fontSize: 14 } }, 'Henüz kayıtlı antrenman yok'),
-    /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, opacity: 0.7, marginTop: 4 } }, 'İlk antrenmanını kaydet, burada görünsün'))
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 14 } }, t('journal_empty')),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, opacity: 0.7, marginTop: 4 } }, t('journal_empty_sub')))
   : byMonth.map((month, mi) => /*#__PURE__*/React.createElement("div", { key: mi },
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, fontWeight: 800, letterSpacing: 2, color: '#666', margin: mi === 0 ? '0 0 14px 2px' : '20px 0 14px 2px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 10 } },
       month.label.toUpperCase(),
@@ -5006,7 +5048,7 @@ function AddFriendView({
       marginTop: 24,
       fontSize: 13
     }
-  }, "@", normalizeUsername(query), " bulunamadı 🤔", /*#__PURE__*/React.createElement("br", null), "Kullanıcı adını doğru yazdığından emin ol"), result && /*#__PURE__*/React.createElement("div", {
+  }, "@", normalizeUsername(query), " bulunamadı 🤔", /*#__PURE__*/React.createElement("br", null), t('username_check_hint')), result && /*#__PURE__*/React.createElement("div", {
     style: S.friendRow
   }, /*#__PURE__*/React.createElement(Avatar, {
     name: result.name || result.username
@@ -6226,7 +6268,8 @@ function App() {
     authUser: authUser,
     activeGym: activeGym,
     resetSignal: resetSignals.progress,
-    onOpenGymPicker: () => setShowGymPicker(true)
+    onOpenGymPicker: () => setShowGymPicker(true),
+    appLang: lang
   }), tab === 'friends' && /*#__PURE__*/React.createElement(FriendsTab, {
     authUser: authUser,
     myUsername: myUsername,
@@ -6757,7 +6800,7 @@ function WorkoutTab({
   }, [cloudReady, authUser, gymId]);
 
   // Build the merged day config (built-in + custom) — used everywhere
-  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays, data.hiddenDays, data.dayOverrides), [data.customDays, data.hiddenDays, data.dayOverrides]);
+  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays, data.hiddenDays, data.dayOverrides), [data.customDays, data.hiddenDays, data.dayOverrides, appLang]);
   const saveData = newData => {
     setData(newData);
     // Her zaman localStorage'a yaz (offline yedek)
@@ -8142,7 +8185,7 @@ function SixMonthStats({
         color: isSelected ? 'var(--accent)' : active ? '#fff' : '#888',
         fontWeight: active || isSelected ? 800 : 600
       }
-    }, m.label));
+    }, TR_MONTHS_SHORT[m.month]));
   })), selected ? /*#__PURE__*/React.createElement("div", {
     style: S.statsDetail
   }, /*#__PURE__*/React.createElement("div", {
@@ -8228,19 +8271,19 @@ function MuscleHeatmap({
   };
   const muscleStatus = sets => {
     if (sets === 0) return {
-      label: 'Çalışılmadı',
+      label: t('vol_not_worked'),
       color: '#555'
     };
     if (sets < 6) return {
-      label: 'Düşük hacim',
+      label: t('vol_low'),
       color: '#FFA726'
     };
     if (sets <= 20) return {
-      label: 'İdeal aralık',
+      label: t('vol_ideal'),
       color: '#4CAF50'
     };
     return {
-      label: 'Yüksek hacim',
+      label: t('vol_high'),
       color: '#FF5252'
     };
   };
@@ -8361,7 +8404,7 @@ function MuscleHeatmap({
     style: S.imbalanceBox
   }, /*#__PURE__*/React.createElement("div", {
     style: S.imbalanceTitle
-  }, "⚠ DENGE UYARISI"), imbalances.map((im, i) => /*#__PURE__*/React.createElement("div", {
+  }, t('balance_warning')), imbalances.map((im, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: S.imbalanceRow
   }, im))), workedMuscles.length > 0 ? /*#__PURE__*/React.createElement("div", {
@@ -8410,7 +8453,7 @@ function MuscleHeatmap({
       style: {
         color: '#666'
       }
-    }, " · bilimsel hedef: haftada 10-20 set")), /*#__PURE__*/React.createElement("div", {
+    }, t('sci_target'))), /*#__PURE__*/React.createElement("div", {
       style: S.muscleExpandPeriodToggle
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setDetailPeriod('week'),
@@ -8418,13 +8461,13 @@ function MuscleHeatmap({
         ...S.expandPeriodBtn,
         ...(detailPeriod === 'week' ? S.expandPeriodBtnActive : {})
       }
-    }, "BU HAFTA"), /*#__PURE__*/React.createElement("button", {
+    }, t('this_week')), /*#__PURE__*/React.createElement("button", {
       onClick: () => setDetailPeriod('month'),
       style: {
         ...S.expandPeriodBtn,
         ...(detailPeriod === 'month' ? S.expandPeriodBtnActive : {})
       }
-    }, "BU AY")), /*#__PURE__*/React.createElement("div", {
+    }, t('this_month'))), /*#__PURE__*/React.createElement("div", {
       style: S.muscleExpandTotals
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
       style: S.expandTotalVal
@@ -8438,11 +8481,11 @@ function MuscleHeatmap({
       style: S.expandTotalVal
     }, muscleDetail.days.length), /*#__PURE__*/React.createElement("span", {
       style: S.expandTotalLbl
-    }, "GÜN"))), muscleDetail.exercises.length > 0 && /*#__PURE__*/React.createElement("div", {
+    }, t('md_days')))), muscleDetail.exercises.length > 0 && /*#__PURE__*/React.createElement("div", {
       style: S.expandSection
     }, /*#__PURE__*/React.createElement("div", {
       style: S.expandSectionLabel
-    }, "EGZERSİZLER · düzenlemek için dokun"), muscleDetail.exercises.map((ex, i) => /*#__PURE__*/React.createElement("button", {
+    }, t('md_exercises')), muscleDetail.exercises.map((ex, i) => /*#__PURE__*/React.createElement("button", {
       key: i,
       onClick: () => setTagging(ex.name),
       style: S.expandExRow
@@ -8456,7 +8499,7 @@ function MuscleHeatmap({
       style: S.expandSection
     }, /*#__PURE__*/React.createElement("div", {
       style: S.expandSectionLabel
-    }, "GÜNLER"), muscleDetail.days.map((d, i) => {
+    }, t('md_days_header')), muscleDetail.days.map((d, i) => {
       const dt = new Date(d.ts);
       const cfg = dayConfig[d.dayType];
       return /*#__PURE__*/React.createElement("div", {
@@ -8480,13 +8523,13 @@ function MuscleHeatmap({
       borderTop: 'none',
       paddingTop: 0
     }
-  }, "Son 7 günde kayıt yok"), unknownNames.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, t('no_record_7d')), unknownNames.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: S.unknownBox
   }, /*#__PURE__*/React.createElement("div", {
     style: S.unknownBoxTitle
-  }, "TANINMAYAN EGZERSİZLER"), /*#__PURE__*/React.createElement("div", {
+  }, t('unknown_exercises')), /*#__PURE__*/React.createElement("div", {
     style: S.unknownBoxHint
-  }, "Dokun, hangi kasları çalıştırdığını seç — haritaya eklensin"), unknownNames.map((name, i) => /*#__PURE__*/React.createElement("button", {
+  }, t('select_muscles_hint')), unknownNames.map((name, i) => /*#__PURE__*/React.createElement("button", {
     key: i,
     onClick: () => setTagging(name),
     style: S.unknownTagBtn
@@ -8541,7 +8584,7 @@ function MuscleTagModal({
     style: S.modalTitle
   }, exerciseName), isAuto && /*#__PURE__*/React.createElement("div", {
     style: S.autoTagNotice
-  }, "Bu egzersiz otomatik tanınıyor. Yanlışsa düzeltebilirsin."), /*#__PURE__*/React.createElement("div", {
+  }, t('auto_recognized')), /*#__PURE__*/React.createElement("div", {
     style: S.tagHint
   }, "Çalıştırdığı kaslara dokun. Bir kez = birincil (tam), iki kez = ikincil (yarım), üç kez = kaldır."), /*#__PURE__*/React.createElement("div", {
     style: S.tagGrid
@@ -8580,7 +8623,7 @@ function MuscleTagModal({
   }, "KAYDET")), /*#__PURE__*/React.createElement("button", {
     onClick: () => onSave(null),
     style: S.resetAutoBtn
-  }, "↺ Otomatik tanımaya sıfırla")));
+  }, t('reset_auto'))));
 }
 function BodyFront({
   muscleColor,
@@ -8727,7 +8770,7 @@ function DayView({
     }
   }, /*#__PURE__*/React.createElement(Icon.Cal, null), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: S.backdateLabel
-  }, "GEÇMİŞ TARİHE KAYIT"), /*#__PURE__*/React.createElement("div", {
+  }, t('backdated_entry')), /*#__PURE__*/React.createElement("div", {
     style: S.backdateDate
   }, backdatedLabel))) : /*#__PURE__*/React.createElement("div", {
     style: {
@@ -8761,9 +8804,9 @@ function DayView({
     }
   }, /*#__PURE__*/React.createElement(Icon.Play, null), " BAŞLA")), editMode && /*#__PURE__*/React.createElement("div", {
     style: S.hintBox
-  }, "Sürüklemek için uzun bas. Silmek için sağdaki butona dokun."), !editMode && exercises.length > 1 && /*#__PURE__*/React.createElement("div", {
+  }, t('reorder_hint')), !editMode && exercises.length > 1 && /*#__PURE__*/React.createElement("div", {
     style: S.hintBoxSmall
-  }, "İpucu: Sırayı değiştirmek için kart üzerinde uzun bas."), /*#__PURE__*/React.createElement(ReorderableList, {
+  }, t('reorder_hint2')), /*#__PURE__*/React.createElement(ReorderableList, {
     items: exercises,
     getKey: name => name,
     onReorder: onReorderExercises,
@@ -8811,7 +8854,7 @@ function DayView({
           ...S.exerciseLast,
           color: '#555'
         }
-      }, "Henüz kayıt yok")), !editMode && (isDone ? /*#__PURE__*/React.createElement("div", {
+      }, t('no_records'))), !editMode && (isDone ? /*#__PURE__*/React.createElement("div", {
         style: {
           ...S.doneBadge,
           background: cfg.accentSoft,
@@ -8824,7 +8867,7 @@ function DayView({
         }
       }, "→"))), editMode && /*#__PURE__*/React.createElement("button", {
         onClick: () => {
-          const yeni = prompt('Egzersiz adını düzelt:', name);
+          const yeni = prompt(t('edit_ex_name'), name);
           if (yeni && yeni.trim() && yeni.trim() !== name) {
             onRenameExercise(name, yeni.trim());
           }
@@ -8837,7 +8880,7 @@ function DayView({
     }
   }), exercises.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: S.emptyState
-  }, "Henüz egzersiz yok.", /*#__PURE__*/React.createElement("br", null), "Aşağıdan ekleyebilirsin."), /*#__PURE__*/React.createElement("button", {
+  }, t('no_exercises'), /*#__PURE__*/React.createElement("br", null), t('no_exercises_sub')), /*#__PURE__*/React.createElement("button", {
     onClick: onAddExercise,
     style: {
       ...S.addBtn,
@@ -9196,7 +9239,7 @@ function ExerciseView({
     style: S.sectionLabel
   }, "GEÇMİŞ"), history.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: S.emptyState
-  }, "İlk setini ekle, geçmiş burada görünecek."), /*#__PURE__*/React.createElement("div", {
+  }, t('add_first_set')), /*#__PURE__*/React.createElement("div", {
     style: S.historyList
   }, history.map((session, i) => {
     const sorted = [...session.sets].sort((a, b) => a.timestamp - b.timestamp);
@@ -9302,8 +9345,8 @@ function LibraryPicker({ cfg, existingExercises, currentDayId, onAdd }) {
               /*#__PURE__*/React.createElement(ApexIcon, { name: 'dumbbell', size: 18, color: cfg.accent, strokeWidth: 2 })),
             /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
               /*#__PURE__*/React.createElement("div", { style: { fontSize: 13.5, fontWeight: 700 } }, ex.n),
-              /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: 'var(--accent-light)', marginTop: 2, fontWeight: 600 } }, ex.m),
-              /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#888', marginTop: 3, lineHeight: 1.4 } }, ex.d)),
+              /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: 'var(--accent-light)', marginTop: 2, fontWeight: 600 } }, CURRENT_LANG === 'en' && ex.me ? ex.me : ex.m),
+              /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#888', marginTop: 3, lineHeight: 1.4 } }, CURRENT_LANG === 'en' && ex.de ? ex.de : ex.d)),
             /*#__PURE__*/React.createElement("button", {
               onClick: () => !isAdded && handleAdd(ex),
               style: { alignSelf: 'center', width: 30, height: 30, borderRadius: 8, border: 'none', cursor: isAdded ? 'default' : 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', background: isAdded ? 'rgba(76,175,80,0.15)' : cfg.accentSoft, color: isAdded ? '#4CAF50' : cfg.accent }
@@ -9472,7 +9515,7 @@ function AddExerciseModal({
       padding: '24px 16px',
       fontSize: 13
     }
-  }, "Kopyalanacak egzersiz yok.", /*#__PURE__*/React.createElement("br", null), "Diğer günlere egzersiz ekledikçe burada görünür.") : /*#__PURE__*/React.createElement("div", {
+  }, t('no_copy_ex'), /*#__PURE__*/React.createElement("br", null), t('no_copy_ex_sub')) : /*#__PURE__*/React.createElement("div", {
     style: {
       maxHeight: '50vh',
       overflowY: 'auto',
@@ -9603,7 +9646,7 @@ function MenuModal({
     onClick: removePhoto,
     disabled: busy,
     style: { background: 'none', border: 'none', color: '#FF5252', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginTop: 2 }
-  }, "Fotoğrafı kaldır")), /*#__PURE__*/React.createElement("div", {
+  }, t('set_photo_remove'))), /*#__PURE__*/React.createElement("div", {
     style: S.menuUserName
   }, authUser.displayName || 'Kullanıcı', myUsername && /*#__PURE__*/React.createElement("span", {
     style: { color: 'var(--accent)', fontSize: 13, fontWeight: 700, marginLeft: 8 }
@@ -9611,9 +9654,9 @@ function MenuModal({
     style: S.menuUserEmail
   }, authUser.email), /*#__PURE__*/React.createElement("div", {
     style: S.menuUserSync
-  }, "☁ Bulut senkronizasyonu açık")), /*#__PURE__*/React.createElement("div", {
+  }, t('cloud_sync_on'))), /*#__PURE__*/React.createElement("div", {
     style: S.modalTitle
-  }, timerSettings && onTimerSettingsChange ? "Tema" : "Veri"),
+  }, timerSettings && onTimerSettingsChange ? t('theme') : t('data_label')),
     // ————— DİL SEÇİCİ —————
     timerSettings && onTimerSettingsChange && onChangeLang && /*#__PURE__*/React.createElement("div", { style: { ...S.modalTitle, marginTop: 0 } }, t('language')),
     timerSettings && onTimerSettingsChange && onChangeLang && /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginBottom: 16 } },
@@ -9623,20 +9666,20 @@ function MenuModal({
       }, l.label))),
     // ————— TEMA SEÇİCİ —————
     timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement(ThemePicker, null),
-    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: S.modalTitle }, "Dinlenme Zamanlayıcısı"),
+    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: S.modalTitle }, t('timer_title')),
     // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
     timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: { background: '#0d0d0d', border: '1px solid #1c1c1c', borderRadius: 14, overflow: 'hidden', marginBottom: 12 } },
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 15px' } },
         /*#__PURE__*/React.createElement("div", null,
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'clock', size: 16 }), "Zamanlayıcı"),
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginTop: 1 } }, "Set sonrası otomatik başlat")),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'clock', size: 16 }), t('timer_toggle')),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginTop: 1 } }, t('timer_auto'))),
         /*#__PURE__*/React.createElement("div", {
           onClick: () => onTimerSettingsChange({ ...timerSettings, enabled: !timerSettings.enabled }),
           style: { width: 44, height: 26, borderRadius: 13, background: timerSettings.enabled ? 'var(--accent)' : '#2a2a2a', position: 'relative', flexShrink: 0, cursor: 'pointer' }
         }, /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 3, left: timerSettings.enabled ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff' } }))),
       timerSettings.enabled && /*#__PURE__*/React.createElement("div", { style: { padding: '13px 15px', borderTop: '1px solid #161616' } },
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'hourglass', size: 16 }), "Varsayılan Süre"),
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginBottom: 10 } }, "Yeni egzersizler için (saniye)"),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'hourglass', size: 16 }), t('timer_default_dur')),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginBottom: 10 } }, t('timer_for_new')),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' } },
           [60, 90, 120, 180].map(sec => /*#__PURE__*/React.createElement("button", {
             key: sec,
@@ -9651,8 +9694,8 @@ function MenuModal({
           }))),
       timerSettings.enabled && /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 15px', borderTop: '1px solid #161616' } },
         /*#__PURE__*/React.createElement("div", null,
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'vibrate', size: 16 }), "Titreşim"),
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginTop: 1 } }, "Süre bitince titret")),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'vibrate', size: 16 }), t('timer_vibrate')),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#777', marginTop: 1 } }, t('timer_vibrate_sub'))),
         /*#__PURE__*/React.createElement("div", {
           onClick: () => onTimerSettingsChange({ ...timerSettings, vibrate: !timerSettings.vibrate }),
           style: { width: 44, height: 26, borderRadius: 13, background: timerSettings.vibrate ? 'var(--accent)' : '#2a2a2a', position: 'relative', flexShrink: 0, cursor: 'pointer' }
@@ -9661,16 +9704,16 @@ function MenuModal({
     /*#__PURE__*/React.createElement("button", {
     onClick: onExport,
     style: { ...S.menuItem, display: 'flex', alignItems: 'center', gap: 10 }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'export' }), "Yedek Dışa Aktar"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'export' }), t('export_backup')), /*#__PURE__*/React.createElement("button", {
     onClick: onImport,
     style: { ...S.menuItem, display: 'flex', alignItems: 'center', gap: 10 }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'import' }), "Yedek Yükle"), authUser && /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'import' }), t('import_backup')), authUser && /*#__PURE__*/React.createElement("button", {
     onClick: logout,
     style: {
       ...S.menuItem,
       color: '#FF5252', display: 'flex', alignItems: 'center', gap: 10
     }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'logout', color: '#FF5252' }), "Çıkış Yap"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'logout', color: '#FF5252' }), t('logout')), /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     style: {
       ...S.modalCancel,
@@ -9753,11 +9796,11 @@ function DayEditorModal({
     style: S.dayPreviewSub
   }, subtitle.trim() || 'Alt başlık (opsiyonel)')), /*#__PURE__*/React.createElement("div", {
     style: S.inputLabel
-  }, "GÜN ADI"), /*#__PURE__*/React.createElement("input", {
+  }, t('day_name')), /*#__PURE__*/React.createElement("input", {
     autoFocus: true,
     value: name,
     onChange: e => setName(e.target.value),
-    placeholder: "Örn. Shoulders & Arms",
+    placeholder: t('day_name_ph'),
     style: {
       ...S.modalInput,
       marginTop: 6,
@@ -9765,10 +9808,10 @@ function DayEditorModal({
     }
   }), /*#__PURE__*/React.createElement("div", {
     style: S.inputLabel
-  }, "ALT BAŞLIK (OPSİYONEL)"), /*#__PURE__*/React.createElement("input", {
+  }, t('subtitle_cap')), /*#__PURE__*/React.createElement("input", {
     value: subtitle,
     onChange: e => setSubtitle(e.target.value),
-    placeholder: "Örn. Omuz · Biceps · Triceps",
+    placeholder: t('subtitle_ph'),
     style: {
       ...S.modalInput,
       marginTop: 6,
@@ -9845,7 +9888,7 @@ function DayEditorModal({
   }, isEdit ? 'KAYDET' : 'OLUŞTUR')), isEdit && onDelete && /*#__PURE__*/React.createElement("button", {
     onClick: onDelete,
     style: S.deleteDayBtn
-  }, "🗑 Bu günü sil")));
+  }, t('delete_this_day'))));
 }
 function SessionSummaryModal({
   summary,
@@ -10056,7 +10099,7 @@ function MeasurementsSection() {
       /*#__PURE__*/React.createElement("button", {
         onClick: () => setShowAdd(true),
         style: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 800, color: 'var(--accent-light)', background: 'rgba(var(--accent-rgb),0.1)', border: 'none', padding: '7px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }
-      }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'plus', size: 13, color: 'var(--accent-light)', strokeWidth: 2.4 }), "Ölçü Ekle")),
+      }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'plus', size: 13, color: 'var(--accent-light)', strokeWidth: 2.4 }), t("add_measurement"))),
     all.length === 0 ?
       /*#__PURE__*/React.createElement("div", {
         onClick: () => setShowAdd(true),
@@ -10078,7 +10121,7 @@ function MeasurementsSection() {
           let sym;
           if (stat.diff == null) sym = null;
           else if (Math.abs(stat.diff) < 0.25) sym = { txt: '✓ Dengeli', col: '#4CAF50' };
-          else sym = { txt: (stat.diff > 0 ? 'Sağ ' : 'Sol ') + Math.abs(stat.diff).toFixed(1) + info.unit + ' önde', col: '#FF8A65' };
+          else sym = { txt: (stat.diff > 0 ? t('meas_right')+' ' : t('meas_left')+' ') + '+' + Math.abs(stat.diff).toFixed(1) + info.unit, col: '#FF8A65' };
           return /*#__PURE__*/React.createElement("button", {
             key: f, onClick: () => setDetailField(f),
             style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 13, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }
@@ -10110,7 +10153,7 @@ function MeasurementsSection() {
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 24, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1 } }, stat.value, /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#888', fontWeight: 700 } }, " " + info.unit)),
           Math.abs(stat.delta) > 0.05 ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, fontWeight: 800, marginTop: 5, color: deltaColor, display: 'flex', alignItems: 'center', gap: 3 } },
             (stat.delta > 0 ? '▲ ' : '▼ ') + Math.abs(stat.delta).toFixed(1) + ' ' + info.unit + ' (30g)') :
-            /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, fontWeight: 700, marginTop: 5, color: '#666' } }, "değişim yok"));
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, fontWeight: 700, marginTop: 5, color: '#666' } }, t('meas_no_change')));
       })),
     showAdd && /*#__PURE__*/React.createElement(AddMeasurementModal, { onClose: () => setShowAdd(false), onSaved: () => { refresh(); setShowAdd(false); } }),
     detailField && /*#__PURE__*/React.createElement(MeasurementDetailModal, { field: detailField, onClose: () => setDetailField(null), onChanged: refresh }));
@@ -10174,11 +10217,11 @@ function AddMeasurementModal({ onClose, onSaved }) {
   return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: onClose },
     /*#__PURE__*/React.createElement("div", { style: S.modal, onClick: e => e.stopPropagation() },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 18, fontWeight: 800 } }, t('add_measurement')),
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#888', marginBottom: 16, marginTop: 2 } }, fmtMeasDate(today) + " · sadece girdiğin alanlar kaydedilir"),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#888', marginBottom: 16, marginTop: 2 } }, fmtMeasDate(today) + ' · ' + t('meas_only_entered')),
       coreFields.map(fieldInput),
       extras.map(fieldInput),
       showExtraPicker ? /*#__PURE__*/React.createElement("div", { style: { background: '#141414', border: '1px solid #262626', borderRadius: 10, padding: 8, marginBottom: 11 } },
-        extraAvailable.length === 0 ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#666', padding: 6, textAlign: 'center' } }, "Hepsi eklendi") :
+        extraAvailable.length === 0 ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#666', padding: 6, textAlign: 'center' } }, t('meas_all_added')) :
         extraAvailable.map(f => /*#__PURE__*/React.createElement("button", {
           key: f, onClick: () => { setExtras(p => [...p, f]); setShowExtraPicker(false); },
           style: { display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#ddd', fontSize: 13, fontWeight: 600, padding: '9px 6px', cursor: 'pointer', fontFamily: 'inherit', borderBottom: '1px solid #1d1d1d' }
@@ -10186,9 +10229,9 @@ function AddMeasurementModal({ onClose, onSaved }) {
         /*#__PURE__*/React.createElement("button", {
           onClick: () => setShowExtraPicker(true),
           style: { width: '100%', background: 'none', border: '1px dashed #2a2a2a', borderRadius: 9, padding: '10px', marginBottom: 11, color: '#888', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }
-        }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'plus', size: 13, color: '#888', strokeWidth: 2.4 }), "Ekstra ölçü ekle (kalça, bacak...)"),
-      /*#__PURE__*/React.createElement("button", { onClick: save, style: { width: '100%', background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', border: 'none', borderRadius: 11, padding: 13, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 } }, "Kaydet"),
-      /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel, marginTop: 8 } }, "İptal")));
+        }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'plus', size: 13, color: '#888', strokeWidth: 2.4 }), t("meas_add_extra")),
+      /*#__PURE__*/React.createElement("button", { onClick: save, style: { width: '100%', background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', border: 'none', borderRadius: 11, padding: 13, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 } }, t('save')),
+      /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel, marginTop: 8 } }, t('cancel'))));
 }
 
 // Ölçü detay + grafik modalı
@@ -10199,7 +10242,7 @@ function MeasurementDetailModal({ field, onClose, onChanged }) {
   const isWeight = field === 'weight';
   // Bir alt-alanın (subfield) kaydını sil
   const delItem = (subfield, date) => {
-    if (!confirm(fmtMeasDate(date) + ' ölçümünü sil?')) return;
+    if (!confirm(fmtMeasDate(date) + ' - ' + t('delete') + '?')) return;
     const all = loadMeasurements();
     const rec = all.find(m => m.date === date);
     if (rec) {
@@ -10213,7 +10256,7 @@ function MeasurementDetailModal({ field, onClose, onChanged }) {
   };
   // Tek bir seri için grafik + geçmiş bloğu
   const seriesBlock = (s, subfield, label, labelColor) => {
-    if (!s) return /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#666', textAlign: 'center', padding: '14px 0' } }, (label ? label + ': ' : '') + "veri yok");
+    if (!s) return /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#666', textAlign: 'center', padding: '14px 0' } }, (label ? label + ': ' : '') + t('prog_no_data'));
     const hist = s.history;
     const vals = hist.map(h => h.val);
     const min = Math.min(...vals), max = Math.max(...vals), range = max - min || 1;
@@ -10257,7 +10300,8 @@ function ProgressTab({
   authUser,
   activeGym,
   resetSignal,
-  onOpenGymPicker
+  onOpenGymPicker,
+  appLang
 }) {
   const [data, setData] = useState({
     exercises: DEFAULT_EXERCISES,
@@ -10332,7 +10376,7 @@ function ProgressTab({
       }).catch(() => {});
     }
   }, [cloudReady, authUser, gymId]);
-  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays, data.hiddenDays, data.dayOverrides), [data.customDays, data.hiddenDays, data.dayOverrides]);
+  const dayConfig = useMemo(() => buildDayConfigMap(data.customDays, data.hiddenDays, data.dayOverrides), [data.customDays, data.hiddenDays, data.dayOverrides, appLang]);
 
   // Tüm benzersiz egzersizler
   const allExercises = useMemo(() => {
