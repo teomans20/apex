@@ -1097,7 +1097,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.15'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.17'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -1147,16 +1147,16 @@ function saveExerciseNote(dayKey, name, text) {
 const MEAS_KEY = 'apex-measurements';
 // Sabit 4 alan + opsiyonel ekstralar
 const MEAS_FIELDS = {
-  weight:   { tr: 'Kilo',   unit: 'kg', core: true },
-  arm:      { tr: 'Kol',    unit: 'cm', core: true },
-  chest:    { tr: 'Göğüs',  unit: 'cm', core: true },
-  waist:    { tr: 'Bel',    unit: 'cm', core: true },
-  hip:      { tr: 'Kalça',  unit: 'cm', core: false },
-  leg:      { tr: 'Bacak',  unit: 'cm', core: false },
-  shoulder: { tr: 'Omuz',   unit: 'cm', core: false },
-  neck:     { tr: 'Boyun',  unit: 'cm', core: false },
-  forearm:  { tr: 'Ön Kol', unit: 'cm', core: false },
-  calf:     { tr: 'Baldır', unit: 'cm', core: false }
+  weight:   { tr: 'Kilo',   unit: 'kg', core: true,  dual: false },
+  arm:      { tr: 'Kol',    unit: 'cm', core: true,  dual: true },
+  chest:    { tr: 'Göğüs',  unit: 'cm', core: true,  dual: false },
+  waist:    { tr: 'Bel',    unit: 'cm', core: true,  dual: false },
+  hip:      { tr: 'Kalça',  unit: 'cm', core: false, dual: false },
+  leg:      { tr: 'Bacak',  unit: 'cm', core: false, dual: true },
+  shoulder: { tr: 'Omuz',   unit: 'cm', core: false, dual: false },
+  neck:     { tr: 'Boyun',  unit: 'cm', core: false, dual: false },
+  forearm:  { tr: 'Ön Kol', unit: 'cm', core: false, dual: true },
+  calf:     { tr: 'Baldır', unit: 'cm', core: false, dual: true }
 };
 function loadMeasurements() {
   try { const raw = localStorage.getItem(MEAS_KEY); if (raw) { const a = JSON.parse(raw); if (Array.isArray(a)) return a.sort((x, y) => x.date < y.date ? -1 : 1); } } catch (e) {}
@@ -1177,20 +1177,34 @@ function deleteMeasurement(date) {
   return all;
 }
 // Bir alan için: son değer + 30 gün önceye göre değişim
-function measurementStat(field) {
-  const all = loadMeasurements().filter(m => m[field] != null && m[field] !== '');
+// Tek bir alt-alan (weight, arm_r, arm_l...) için istatistik
+function measurementStatRaw(subfield) {
+  const all = loadMeasurements().filter(m => m[subfield] != null && m[subfield] !== '');
   if (all.length === 0) return null;
   const latest = all[all.length - 1];
-  const latestVal = parseFloat(latest[field]);
-  // 30 gün öncesine en yakın kaydı bul
+  const latestVal = parseFloat(latest[subfield]);
   const cutoff = new Date(latest.date).getTime() - 30 * 86400000;
   let past = null;
   for (let i = all.length - 2; i >= 0; i--) {
     if (new Date(all[i].date).getTime() <= cutoff) { past = all[i]; break; }
   }
-  if (!past) past = all.length > 1 ? all[0] : null; // 30 gün yoksa en eski
-  const delta = past ? (latestVal - parseFloat(past[field])) : 0;
-  return { value: latestVal, delta: delta, date: latest.date, history: all.map(m => ({ date: m.date, val: parseFloat(m[field]) })) };
+  if (!past) past = all.length > 1 ? all[0] : null;
+  const delta = past ? (latestVal - parseFloat(past[subfield])) : 0;
+  return { value: latestVal, delta: delta, date: latest.date, history: all.map(m => ({ date: m.date, val: parseFloat(m[subfield]) })) };
+}
+// Alan istatistiği — çift ise { dual:true, right, left, diff }, tek ise düz stat
+function measurementStat(field) {
+  const info = MEAS_FIELDS[field];
+  if (info && info.dual) {
+    const right = measurementStatRaw(field + '_r');
+    const left = measurementStatRaw(field + '_l');
+    if (!right && !left) return null;
+    // simetri farkı (son değerler)
+    let diff = null;
+    if (right && left) diff = right.value - left.value;
+    return { dual: true, right: right, left: left, diff: diff, date: (right || left).date };
+  }
+  return measurementStatRaw(field);
 }
 
 // ————— TEMA SİSTEMİ —————
@@ -9707,9 +9721,14 @@ function MeasurementsSection() {
   const [detailField, setDetailField] = useState(null);
   // Hangi alanların verisi var — çekirdek 4 + veri girilmiş ekstralar
   const activeFields = useMemo(() => {
+    const hasData = (f) => {
+      const info = MEAS_FIELDS[f];
+      if (info.dual) return all.some(m => (m[f + '_r'] != null && m[f + '_r'] !== '') || (m[f + '_l'] != null && m[f + '_l'] !== ''));
+      return all.some(m => m[f] != null && m[f] !== '');
+    };
     const fields = Object.keys(MEAS_FIELDS).filter(f => MEAS_FIELDS[f].core);
     Object.keys(MEAS_FIELDS).forEach(f => {
-      if (!MEAS_FIELDS[f].core && all.some(m => m[f] != null && m[f] !== '')) fields.push(f);
+      if (!MEAS_FIELDS[f].core && hasData(f)) fields.push(f);
     });
     return fields;
   }, [all]);
@@ -9738,7 +9757,31 @@ function MeasurementsSection() {
         if (!stat) return null;
         const info = MEAS_FIELDS[f];
         const isWeight = f === 'weight';
-        // kilo için düşüş yeşil (kesme amaçlı), diğerleri artış yeşil
+        // ——— ÇİFT ALAN (sağ/sol yan yana + simetri) ———
+        if (info.dual) {
+          const r = stat.right, l = stat.left;
+          let sym;
+          if (stat.diff == null) sym = null;
+          else if (Math.abs(stat.diff) < 0.25) sym = { txt: '✓ Dengeli', col: '#4CAF50' };
+          else sym = { txt: (stat.diff > 0 ? 'Sağ ' : 'Sol ') + Math.abs(stat.diff).toFixed(1) + info.unit + ' önde', col: '#FF8A65' };
+          return /*#__PURE__*/React.createElement("button", {
+            key: f, onClick: () => setDetailField(f),
+            style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 13, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }
+          },
+            /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 } },
+              /*#__PURE__*/React.createElement(ApexIcon, { name: 'ruler', size: 14, color: 'var(--accent-light)', strokeWidth: 2 }),
+              /*#__PURE__*/React.createElement("span", { style: { fontSize: 10.5, color: '#999', textTransform: 'uppercase', letterSpacing: 0.3, fontWeight: 800 } }, info.tr)),
+            /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, alignItems: 'stretch' } },
+              /*#__PURE__*/React.createElement("div", { style: { flex: 1 } },
+                /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#FF6B6B', fontWeight: 800, letterSpacing: 0.3, textTransform: 'uppercase' } }, "Sağ"),
+                /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1.15 } }, r ? r.value : '—', r ? /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888' } }, " " + info.unit) : null)),
+              /*#__PURE__*/React.createElement("div", { style: { width: 1, background: '#242424' } }),
+              /*#__PURE__*/React.createElement("div", { style: { flex: 1 } },
+                /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#4A90E2', fontWeight: 800, letterSpacing: 0.3, textTransform: 'uppercase' } }, "Sol"),
+                /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1.15 } }, l ? l.value : '—', l ? /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888' } }, " " + info.unit) : null))),
+            sym ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, fontWeight: 800, marginTop: 6, color: sym.col } }, sym.txt) : null);
+        }
+        // ——— TEK ALAN ———
         const gain = stat.delta > 0.05, loss = stat.delta < -0.05;
         const deltaColor = (isWeight ? loss : gain) ? '#4CAF50' : (isWeight ? gain : loss) ? '#FF8A65' : '#888';
         return /*#__PURE__*/React.createElement("button", {
@@ -9770,24 +9813,49 @@ function AddMeasurementModal({ onClose, onSaved }) {
   const save = () => {
     const entry = { date: today };
     let any = false;
+    const parseVal = (key) => {
+      const raw = (vals[key] || '').toString().replace(',', '.');
+      const v = parseFloat(raw);
+      return (!isNaN(v) && v > 0) ? v : null;
+    };
     [...coreFields, ...extras].forEach(f => {
-      const v = parseFloat(vals[f]);
-      if (!isNaN(v) && v > 0) { entry[f] = v; any = true; }
+      if (MEAS_FIELDS[f].dual) {
+        const rv = parseVal(f + '_r'), lv = parseVal(f + '_l');
+        if (rv != null) { entry[f + '_r'] = rv; any = true; }
+        if (lv != null) { entry[f + '_l'] = lv; any = true; }
+      } else {
+        const v = parseVal(f);
+        if (v != null) { entry[f] = v; any = true; }
+      }
     });
     if (!any) { onClose(); return; }
     saveMeasurement(entry);
     haptic(15);
     onSaved();
   };
-  const fieldInput = (f) => /*#__PURE__*/React.createElement("div", { key: f, style: { marginBottom: 11 } },
+  const numInputStyle = { width: '100%', background: '#161616', border: '1px solid #2a2a2a', borderRadius: 9, padding: 11, color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: 'inherit', boxSizing: 'border-box', textAlign: 'center' };
+  // tek alan input
+  const singleInput = (f) => /*#__PURE__*/React.createElement("div", { key: f, style: { marginBottom: 12 } },
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#999', fontWeight: 700, marginBottom: 5 } }, MEAS_FIELDS[f].tr),
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8 } },
       /*#__PURE__*/React.createElement("input", {
-        type: 'number', inputMode: 'decimal', value: vals[f] || '', onChange: e => setVal(f, e.target.value),
-        placeholder: '—',
-        style: { flex: 1, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 9, padding: 11, color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: 'inherit', boxSizing: 'border-box' }
+        type: 'text', inputMode: 'decimal', value: vals[f] || '', onChange: e => setVal(f, e.target.value.replace(/[^0-9.,]/g, '')),
+        placeholder: '—', style: { ...numInputStyle, textAlign: 'left' }
       }),
-      /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#666', fontWeight: 700, width: 24 } }, MEAS_FIELDS[f].unit)));
+      /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#666', fontWeight: 700, width: 22, flexShrink: 0 } }, MEAS_FIELDS[f].unit)));
+  // çift alan input — sağ/sol dar kutu, taşmadan
+  const dualInput = (f) => /*#__PURE__*/React.createElement("div", { key: f, style: { marginBottom: 12 } },
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 } },
+      /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#999', fontWeight: 700 } }, MEAS_FIELDS[f].tr),
+      /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666', fontWeight: 700 } }, MEAS_FIELDS[f].unit)),
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8 } },
+      /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#FF6B6B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 3, textAlign: 'center' } }, "Sağ"),
+        /*#__PURE__*/React.createElement("input", { type: 'text', inputMode: 'decimal', value: vals[f + '_r'] || '', onChange: e => setVal(f + '_r', e.target.value.replace(/[^0-9.,]/g, '')), placeholder: '—', style: numInputStyle })),
+      /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#4A90E2', fontWeight: 800, textTransform: 'uppercase', marginBottom: 3, textAlign: 'center' } }, "Sol"),
+        /*#__PURE__*/React.createElement("input", { type: 'text', inputMode: 'decimal', value: vals[f + '_l'] || '', onChange: e => setVal(f + '_l', e.target.value.replace(/[^0-9.,]/g, '')), placeholder: '—', style: numInputStyle }))));
+  const fieldInput = (f) => MEAS_FIELDS[f].dual ? dualInput(f) : singleInput(f);
   return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: onClose },
     /*#__PURE__*/React.createElement("div", { style: S.modal, onClick: e => e.stopPropagation() },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 18, fontWeight: 800 } }, "Ölçü Ekle"),
@@ -9810,48 +9878,63 @@ function AddMeasurementModal({ onClose, onSaved }) {
 
 // Ölçü detay + grafik modalı
 function MeasurementDetailModal({ field, onClose, onChanged }) {
-  const [stat, setStat] = useState(() => measurementStat(field));
   const info = MEAS_FIELDS[field];
+  const [stat, setStat] = useState(() => measurementStat(field));
   if (!stat) return null;
-  const hist = stat.history;
-  const vals = hist.map(h => h.val);
-  const min = Math.min(...vals), max = Math.max(...vals);
-  const range = max - min || 1;
   const isWeight = field === 'weight';
-  const delItem = (date) => {
+  // Bir alt-alanın (subfield) kaydını sil
+  const delItem = (subfield, date) => {
     if (!confirm(fmtMeasDate(date) + ' ölçümünü sil?')) return;
-    // sadece bu alanı sil (tüm kaydı değil) — kaydı yükle, alanı çıkar
     const all = loadMeasurements();
     const rec = all.find(m => m.date === date);
-    if (rec) { delete rec[field]; const hasOther = Object.keys(rec).some(k => k !== 'date' && rec[k] != null); if (hasOther) saveMeasurement({ ...rec, date }); else deleteMeasurement(date); }
-    try { localStorage.setItem(MEAS_KEY, JSON.stringify(loadMeasurements().map(m => m.date === date && rec ? rec : m))); } catch (e) {}
+    if (rec) {
+      delete rec[subfield];
+      const hasOther = Object.keys(rec).some(k => k !== 'date' && rec[k] != null);
+      const next = hasOther ? all.map(m => m.date === date ? rec : m) : all.filter(m => m.date !== date);
+      try { localStorage.setItem(MEAS_KEY, JSON.stringify(next)); } catch (e) {}
+    }
     const ns = measurementStat(field);
     if (!ns) { onChanged(); onClose(); } else { setStat(ns); onChanged(); }
   };
-  return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: onClose },
-    /*#__PURE__*/React.createElement("div", { style: S.modal, onClick: e => e.stopPropagation() },
-      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 } },
-        /*#__PURE__*/React.createElement(ApexIcon, { name: isWeight ? 'scale' : 'ruler', size: 18, color: 'var(--accent-light)', strokeWidth: 2 }),
-        /*#__PURE__*/React.createElement("span", { style: { fontSize: 18, fontWeight: 800 } }, info.tr)),
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 26, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", marginBottom: 16 } }, stat.value, /*#__PURE__*/React.createElement("span", { style: { fontSize: 14, color: '#888' } }, " " + info.unit)),
-      // grafik
-      hist.length >= 2 ? /*#__PURE__*/React.createElement("div", { style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 14, marginBottom: 14 } },
-        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'flex-end', gap: 5, height: 90 } },
+  // Tek bir seri için grafik + geçmiş bloğu
+  const seriesBlock = (s, subfield, label, labelColor) => {
+    if (!s) return /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#666', textAlign: 'center', padding: '14px 0' } }, (label ? label + ': ' : '') + "veri yok");
+    const hist = s.history;
+    const vals = hist.map(h => h.val);
+    const min = Math.min(...vals), max = Math.max(...vals), range = max - min || 1;
+    return /*#__PURE__*/React.createElement("div", null,
+      label ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: labelColor, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 } },
+        label, /*#__PURE__*/React.createElement("span", { style: { color: '#fff', fontSize: 15, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif" } }, s.value + ' ' + info.unit)) : null,
+      hist.length >= 2 ? /*#__PURE__*/React.createElement("div", { style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 14, marginBottom: 10 } },
+        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'flex-end', gap: 5, height: 80 } },
           hist.map((h, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' } },
             /*#__PURE__*/React.createElement("div", { style: { fontSize: 8, color: '#888', fontWeight: 700, marginBottom: 3 } }, h.val),
             /*#__PURE__*/React.createElement("div", { style: { width: '100%', height: (12 + (h.val - min) / range * 68) + '%', background: 'linear-gradient(180deg,var(--accent),var(--accent-deep))', borderRadius: '4px 4px 0 0', minHeight: 8 } })))),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 5, marginTop: 5 } },
           hist.map((h, i) => /*#__PURE__*/React.createElement("span", { key: i, style: { flex: 1, textAlign: 'center', fontSize: 8, color: '#666', fontWeight: 700 } }, fmtMeasDate(h.date))))) :
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#666', textAlign: 'center', padding: '16px 0', marginBottom: 8 } }, "Grafik için en az 2 ölçüm gerekir"),
-      // geçmiş liste
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#888', fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 } }, "Geçmiş"),
-      /*#__PURE__*/React.createElement("div", { style: { maxHeight: 160, overflowY: 'auto' } },
-        hist.slice().reverse().map((h, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid #191919' } },
-          /*#__PURE__*/React.createElement("span", { style: { fontSize: 12.5, color: '#aaa' } }, fmtMeasDate(h.date)),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#666', textAlign: 'center', padding: '12px 0', marginBottom: 6 } }, "Grafik için en az 2 ölçüm gerekir"),
+      /*#__PURE__*/React.createElement("div", { style: { maxHeight: 130, overflowY: 'auto' } },
+        hist.slice().reverse().map((h, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderTop: i === 0 ? 'none' : '1px solid #191919' } },
+          /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#aaa' } }, fmtMeasDate(h.date)),
           /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-            /*#__PURE__*/React.createElement("span", { style: { fontSize: 14, fontWeight: 800 } }, h.val + ' ' + info.unit),
-            /*#__PURE__*/React.createElement("button", { onClick: () => delItem(h.date), style: { background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex' } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'trash', size: 14, color: '#FF5252', strokeWidth: 2 }))))))
-      ,
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 13.5, fontWeight: 800 } }, h.val + ' ' + info.unit),
+            /*#__PURE__*/React.createElement("button", { onClick: () => delItem(subfield, h.date), style: { background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex' } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'trash', size: 14, color: '#FF5252', strokeWidth: 2 })))))));
+  };
+  return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: onClose },
+    /*#__PURE__*/React.createElement("div", { style: S.modal, onClick: e => e.stopPropagation() },
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 } },
+        /*#__PURE__*/React.createElement(ApexIcon, { name: isWeight ? 'scale' : 'ruler', size: 18, color: 'var(--accent-light)', strokeWidth: 2 }),
+        /*#__PURE__*/React.createElement("span", { style: { fontSize: 18, fontWeight: 800 } }, info.tr)),
+      info.dual ?
+        /*#__PURE__*/React.createElement(React.Fragment, null,
+          stat.diff != null ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, fontWeight: 800, marginBottom: 14, color: Math.abs(stat.diff) < 0.25 ? '#4CAF50' : '#FF8A65' } },
+            Math.abs(stat.diff) < 0.25 ? '✓ Sağ-sol dengeli' : ((stat.diff > 0 ? 'Sağ' : 'Sol') + ' ' + Math.abs(stat.diff).toFixed(1) + info.unit + ' önde')) : null,
+          seriesBlock(stat.right, field + '_r', 'Sağ', '#FF6B6B'),
+          /*#__PURE__*/React.createElement("div", { style: { height: 14 } }),
+          seriesBlock(stat.left, field + '_l', 'Sol', '#4A90E2')) :
+        /*#__PURE__*/React.createElement(React.Fragment, null,
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 26, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", marginBottom: 16, marginTop: -8 } }, stat.value, /*#__PURE__*/React.createElement("span", { style: { fontSize: 14, color: '#888' } }, " " + info.unit)),
+          seriesBlock(stat, field, null, null)),
       /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel, marginTop: 12 } }, "Kapat")));
 }
 
