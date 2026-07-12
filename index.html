@@ -1034,6 +1034,10 @@ const EXERCISE_LIBRARY = [
 {n:"Toe Touch",c:"karin",m:"Karın (üst)",d:"Bacaklar dik, elle ayak dokunma."}
 ];
 
+// ————— HAZIR PROGRAMLAR —————
+const WORKOUT_PROGRAMS = [{"id":"fullbody3","name":"Full Body 3 Gün","level":"baslangic","desc":"Haftada 3 gün tüm vücut. Yeni başlayanlar için ideal, hızlı gelişim.","pro":false,"days":[{"name":"GÜN A","subtitle":"Full Body","accent":"#FF3D3D","exercises":[{"n":"Back Squat","sets":3,"reps":8},{"n":"Barbell Bench Press","sets":3,"reps":8},{"n":"Barbell Row","sets":3,"reps":10},{"n":"Overhead Press","sets":3,"reps":10},{"n":"Barbell Curl","sets":2,"reps":12}]},{"name":"GÜN B","subtitle":"Full Body","accent":"#4A90E2","exercises":[{"n":"Deadlift","sets":3,"reps":6},{"n":"Incline Dumbbell Press","sets":3,"reps":10},{"n":"Lat Pulldown","sets":3,"reps":10},{"n":"Leg Press","sets":3,"reps":12},{"n":"Triceps Pushdown","sets":2,"reps":12}]},{"name":"GÜN C","subtitle":"Full Body","accent":"#4CAF50","exercises":[{"n":"Front Squat","sets":3,"reps":8},{"n":"Dumbbell Bench Press","sets":3,"reps":10},{"n":"Seated Cable Row","sets":3,"reps":10},{"n":"Lateral Raise","sets":3,"reps":15},{"n":"Hammer Curl","sets":2,"reps":12}]}]},{"id":"ppl","name":"Push / Pull / Legs","level":"orta","desc":"Klasik 6 günlük split. Kas kütlesi için ideal, hacim odaklı.","pro":true,"days":[{"name":"PUSH","subtitle":"Göğüs · Omuz · Triceps","accent":"#FF3D3D","exercises":[{"n":"Barbell Bench Press","sets":4,"reps":8},{"n":"Incline Dumbbell Press","sets":3,"reps":10},{"n":"Overhead Press","sets":3,"reps":10},{"n":"Cable Lateral Raise","sets":3,"reps":15},{"n":"Triceps Pushdown","sets":3,"reps":12},{"n":"Overhead Triceps Extension","sets":3,"reps":12}]},{"name":"PULL","subtitle":"Sırt · Biceps","accent":"#4A90E2","exercises":[{"n":"Deadlift","sets":4,"reps":6},{"n":"Pull Up","sets":3,"reps":10},{"n":"Barbell Row","sets":3,"reps":10},{"n":"Lat Pulldown","sets":3,"reps":12},{"n":"Barbell Curl","sets":3,"reps":12},{"n":"Hammer Curl","sets":3,"reps":12}]},{"name":"LEGS","subtitle":"Bacak · Kalça","accent":"#4CAF50","exercises":[{"n":"Back Squat","sets":4,"reps":8},{"n":"Romanian Deadlift","sets":3,"reps":10},{"n":"Leg Press","sets":3,"reps":12},{"n":"Leg Curl","sets":3,"reps":12},{"n":"Leg Extension","sets":3,"reps":15},{"n":"Calf Raise","sets":4,"reps":15}]}]},{"id":"upperlower","name":"Upper / Lower","level":"orta","desc":"4 günlük üst-alt bölünmesi. Dengeli, sürdürülebilir, zaman verimli.","pro":true,"days":[{"name":"UPPER","subtitle":"Üst Vücut","accent":"#D4A547","exercises":[{"n":"Barbell Bench Press","sets":4,"reps":8},{"n":"Barbell Row","sets":4,"reps":8},{"n":"Overhead Press","sets":3,"reps":10},{"n":"Lat Pulldown","sets":3,"reps":10},{"n":"Barbell Curl","sets":3,"reps":12},{"n":"Triceps Pushdown","sets":3,"reps":12}]},{"name":"LOWER","subtitle":"Alt Vücut","accent":"#4CAF50","exercises":[{"n":"Back Squat","sets":4,"reps":8},{"n":"Romanian Deadlift","sets":4,"reps":8},{"n":"Leg Press","sets":3,"reps":12},{"n":"Leg Curl","sets":3,"reps":12},{"n":"Calf Raise","sets":4,"reps":15}]}]},{"id":"startingstrength","name":"Starting Strength","level":"guc","desc":"Güç odaklı. Bileşik hareketler, düşük tekrar, ağır yük. Temel güç için.","pro":true,"days":[{"name":"GÜN A","subtitle":"Güç","accent":"#A78BFA","exercises":[{"n":"Back Squat","sets":3,"reps":5},{"n":"Barbell Bench Press","sets":3,"reps":5},{"n":"Deadlift","sets":1,"reps":5}]},{"name":"GÜN B","subtitle":"Güç","accent":"#7B6EF6","exercises":[{"n":"Back Squat","sets":3,"reps":5},{"n":"Overhead Press","sets":3,"reps":5},{"n":"Barbell Row","sets":3,"reps":5}]}]},{"id":"arnold","name":"Arnold Split","level":"ileri","desc":"6 günlük klasik. Göğüs-sırt, omuz-kol, bacak ikişer kez. Yüksek hacim.","pro":true,"days":[{"name":"CHEST & BACK","subtitle":"Göğüs · Sırt","accent":"#E8952E","exercises":[{"n":"Barbell Bench Press","sets":4,"reps":10},{"n":"Incline Dumbbell Press","sets":4,"reps":10},{"n":"Barbell Row","sets":4,"reps":10},{"n":"Lat Pulldown","sets":4,"reps":10},{"n":"Cable Fly","sets":3,"reps":12}]},{"name":"SHOULDER & ARMS","subtitle":"Omuz · Kol","accent":"#7B6EF6","exercises":[{"n":"Overhead Press","sets":4,"reps":10},{"n":"Lateral Raise","sets":4,"reps":12},{"n":"Barbell Curl","sets":3,"reps":12},{"n":"Triceps Pushdown","sets":3,"reps":12},{"n":"Hammer Curl","sets":3,"reps":12}]},{"name":"LEGS","subtitle":"Bacak","accent":"#4CAF50","exercises":[{"n":"Back Squat","sets":5,"reps":10},{"n":"Leg Press","sets":4,"reps":12},{"n":"Leg Curl","sets":4,"reps":12},{"n":"Calf Raise","sets":5,"reps":15}]}]}];
+const PROGRAM_LEVELS = [{id:"baslangic",tr:"Başlangıç",color:"#4CAF50"},{id:"orta",tr:"Orta",color:"#FFB74D"},{id:"ileri",tr:"İleri",color:"#FF6B6B"},{id:"guc",tr:"Güç Odaklı",color:"#A78BFA"}];
+
 // Resolve an exercise name to its muscle contributions.
 // Returns null if unknown (so user can be asked to tag it).
 const getExerciseMuscles = (exerciseName, customMap) => {
@@ -1097,7 +1101,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.17'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.19'; // PNG ikon (eski iOS uyumlu)
 
 // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
 // localStorage: apex-timer-settings = { enabled, defaultSec, vibrate }
@@ -1258,7 +1262,9 @@ const APEX_ICON_PATHS = {
   ruler: 'M3 9l6-6 12 12-6 6zM9 5l2 2M13 9l2 2M17 13l2 2M7 11l2 2',
   scale: 'M12 3a2 2 0 0 1 2 2 2 2 0 0 1-4 0 2 2 0 0 1 2-2zM6 8h12l3 12H3zM9 8v-.5M15 8v-.5',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-4.3-4.3',
-  check: 'M20 6L9 17l-5-5'
+  check: 'M20 6L9 17l-5-5',
+  chevronRight: 'M9 18l6-6-6-6',
+  clipboard: 'M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1zM8 6H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-2M9 11h6M9 15h4'
 };
 const SK_BG = { background: 'linear-gradient(90deg,#161616 25%,#232323 50%,#161616 75%)', backgroundSize: '200% 100%', animation: 'apexShimmer 1.4s infinite' };
 function SkeletonFeed({ rows }) {
@@ -6402,6 +6408,7 @@ function WorkoutTab({
   const restIntervalRef = useRef(null);
   const [prCelebration, setPrCelebration] = useState(null);
   const [toast, setToast] = useState(null);
+  const [showPrograms, setShowPrograms] = useState(false);
   const [dayDetailKey, setDayDetailKey] = useState(null);
   const [shareProgram, setShareProgram] = useState(null); // {dayType, dayName, exercises} — arkadaşa gönderme modalı
   const [showNotifs, setShowNotifs] = useState(false); // bildirim paneli açık mı
@@ -6595,6 +6602,31 @@ function WorkoutTab({
       exercises: newExercises
     });
     setShowAddDay(false);
+  };
+
+  // Hazır programı uygula — her gününü kullanıcının günü olarak ekler
+  const applyProgram = (program) => {
+    const stamp = Date.now();
+    const newDays = [];
+    const newExercises = { ...data.exercises };
+    (program.days || []).forEach((pd, i) => {
+      const id = 'prog_' + stamp.toString(36) + '_' + i;
+      newDays.push({
+        id,
+        name: pd.name,
+        subtitle: pd.subtitle || '',
+        accent: pd.accent || '#FF3D3D',
+        dark: pd.accent || '#8B1111',
+        paletteId: 'custom'
+      });
+      newExercises[id] = (pd.exercises || []).map(e => e.n);
+    });
+    saveData({
+      ...data,
+      customDays: [...(data.customDays || []), ...newDays],
+      exercises: newExercises
+    });
+    setToast('✓ "' + program.name + '" programı eklendi!');
   };
 
   // Arkadaştan gelen programı yeni gün olarak ekle (egzersizler boş: sadece isimler)
@@ -7231,6 +7263,7 @@ function WorkoutTab({
     userName: (authUser && authUser.displayName) || myUsername || '',
     notifCount: notifs.filter(n => !n.read).length + notifProgReqs.length,
     onOpenNotifs: () => setShowNotifs(true),
+    onOpenPrograms: () => setShowPrograms(true),
     journalUnseen: (() => {
       // journalSeenTs'den sonra kaydı olan benzersiz antrenman günü sayısı
       if (!data || !data.logs) return 0;
@@ -7431,6 +7464,9 @@ function WorkoutTab({
     onAdjust: adjustRestTimer,
     onSkip: stopRestTimer,
     onCollapse: () => setTimerFullscreen(false)
+  }), showPrograms && /*#__PURE__*/React.createElement(ProgramsModal, {
+    onClose: () => setShowPrograms(false),
+    onApply: applyProgram
   }));
 }
 
@@ -7505,6 +7541,7 @@ function HomeView({
   userName,
   notifCount,
   onOpenNotifs,
+  onOpenPrograms,
   journalUnseen,
   onOpenJournal,
   weeklyUnseen,
@@ -7729,7 +7766,20 @@ function HomeView({
     style: S.statValue
   }, (totalVolume / 1000).toFixed(1), "t"), /*#__PURE__*/React.createElement("div", {
     style: S.statLabel
-  }, "TOPLAM HACİM"))), /*#__PURE__*/React.createElement("div", {
+  }, "TOPLAM HACİM"))), /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenPrograms,
+    style: { display: 'flex', alignItems: 'center', gap: 11, width: '100%', background: 'linear-gradient(135deg,rgba(255,183,77,0.1),rgba(245,124,0,0.03))', border: '1px solid rgba(255,183,77,0.25)', borderRadius: 13, padding: '13px 15px', marginTop: 18, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#FFB74D,#F57C00)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'clipboard', size: 19, color: '#1a1a1a', strokeWidth: 2.2 })), /*#__PURE__*/React.createElement("div", {
+    style: { flex: 1 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 13.5, fontWeight: 800, color: '#fff' }
+  }, "Hazır Programlar"), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 11, color: '#999', marginTop: 1 }
+  }, "Uzman programları · tek dokunuşla uygula")), /*#__PURE__*/React.createElement("div", {
+    style: { color: '#FFB74D', flexShrink: 0, display: 'flex' }
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'chevronRight', size: 18, color: '#FFB74D', strokeWidth: 2.5 }))), /*#__PURE__*/React.createElement("div", {
     style: S.sectionLabel
   }, "BUGÜN HANGİSİ?"), /*#__PURE__*/React.createElement("div", {
     style: S.dayGrid
@@ -7751,10 +7801,14 @@ function HomeView({
     }, /*#__PURE__*/React.createElement("div", {
       style: S.dayCardInner
     }, /*#__PURE__*/React.createElement("div", {
+      style: { flex: 1, minWidth: 0 }
+    }, /*#__PURE__*/React.createElement("div", {
       style: S.dayCardName
     }, cfg.name), /*#__PURE__*/React.createElement("div", {
       style: S.dayCardSubtitle
-    }, cfg.subtitle)), isCustom && /*#__PURE__*/React.createElement("div", {
+    }, cfg.subtitle)), /*#__PURE__*/React.createElement("div", {
+      style: { opacity: 0.65, flexShrink: 0, display: 'flex', marginLeft: 10 }
+    }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'chevronRight', size: 22, color: '#fff', strokeWidth: 2.5 }))), isCustom && /*#__PURE__*/React.createElement("div", {
       style: S.customDayBadge,
       onClick: e => {
         e.stopPropagation();
@@ -9067,6 +9121,70 @@ function LibraryPicker({ cfg, existingExercises, currentDayId, onAdd }) {
               style: { alignSelf: 'center', width: 30, height: 30, borderRadius: 8, border: 'none', cursor: isAdded ? 'default' : 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', background: isAdded ? 'rgba(76,175,80,0.15)' : cfg.accentSoft, color: isAdded ? '#4CAF50' : cfg.accent }
             }, isAdded ? /*#__PURE__*/React.createElement(ApexIcon, { name: 'check', size: 16, color: '#4CAF50', strokeWidth: 2.4 }) : /*#__PURE__*/React.createElement(ApexIcon, { name: 'plus', size: 16, color: cfg.accent, strokeWidth: 2.4 })));
         })))));
+}
+
+// ————— HAZIR PROGRAMLAR EKRANI —————
+function ProgramsModal({ onClose, onApply }) {
+  const [level, setLevel] = useState('all');
+  const [selected, setSelected] = useState(null); // seçili program (detay)
+  const levelInfo = id => PROGRAM_LEVELS.find(l => l.id === id) || { tr: id, color: '#888' };
+  const filtered = level === 'all' ? WORKOUT_PROGRAMS : WORKOUT_PROGRAMS.filter(p => p.level === level);
+  // DETAY GÖRÜNÜMÜ
+  if (selected) {
+    const totalEx = selected.days.reduce((s, d) => s + d.exercises.length, 0);
+    const li = levelInfo(selected.level);
+    return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: onClose },
+      /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxHeight: '86vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }, onClick: e => e.stopPropagation() },
+        /*#__PURE__*/React.createElement("button", { onClick: () => setSelected(null), style: { background: 'none', border: 'none', color: '#888', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 } },
+          /*#__PURE__*/React.createElement("span", { style: { fontSize: 16 } }, "‹"), " Programlar"),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 20, fontWeight: 800, marginBottom: 4 } }, selected.name),
+        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' } },
+          /*#__PURE__*/React.createElement("span", { style: { fontSize: 9.5, fontWeight: 800, padding: '3px 9px', borderRadius: 20, background: li.color + '22', color: li.color } }, li.tr.toUpperCase()),
+          /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#888', fontWeight: 700 } }, selected.days.length + ' gün · ' + totalEx + ' egzersiz')),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#aaa', lineHeight: 1.5, marginBottom: 14 } }, selected.desc),
+        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, background: 'rgba(74,144,226,0.07)', border: '1px solid rgba(74,144,226,0.2)', borderRadius: 10, padding: '10px 12px', marginBottom: 14 } },
+          /*#__PURE__*/React.createElement("span", { style: { color: '#4A90E2', flexShrink: 0, fontSize: 14, fontWeight: 800 } }, "i"),
+          /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#bfd4ee', lineHeight: 1.5 } }, "Set×tekrar sadece öneridir. Setleri her zamanki gibi girerken kaydedersin.")),
+        selected.days.map((d, di) => /*#__PURE__*/React.createElement("div", { key: di, style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 11, padding: 12, marginBottom: 8 } },
+          /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 } },
+            /*#__PURE__*/React.createElement("span", { style: { width: 8, height: 8, borderRadius: 3, background: d.accent } }),
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 13, fontWeight: 800 } }, d.name),
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666', marginLeft: 'auto', fontWeight: 700 } }, d.subtitle)),
+          d.exercises.map((ex, ei) => /*#__PURE__*/React.createElement("div", { key: ei, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderTop: ei === 0 ? 'none' : '1px solid #191919' } },
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#bbb' } }, ex.n),
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 10.5, color: '#FF8A65', fontWeight: 800, background: 'rgba(255,61,61,0.08)', padding: '2px 7px', borderRadius: 6 } }, "öneri " + ex.sets + "×" + ex.reps))))),
+        /*#__PURE__*/React.createElement("button", {
+          onClick: () => { onApply(selected); onClose(); },
+          style: { width: '100%', background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', border: 'none', borderRadius: 12, padding: 14, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', marginTop: 6 }
+        }, "Bu Programı Uygula"),
+        /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel, marginTop: 8 } }, "Kapat")));
+  }
+  // LİSTE GÖRÜNÜMÜ
+  return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: onClose },
+    /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxHeight: '86vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }, onClick: e => e.stopPropagation() },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 20, fontWeight: 800, marginBottom: 3 } }, "Hazır Programlar"),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 11.5, color: '#888', marginBottom: 14 } }, "Uzman programları · tek dokunuşla günlerine ekle"),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' } },
+        [{ id: 'all', tr: 'Tümü' }, ...PROGRAM_LEVELS].map(l => /*#__PURE__*/React.createElement("button", {
+          key: l.id, onClick: () => setLevel(l.id),
+          style: { fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', background: level === l.id ? 'var(--accent)' : '#161616', border: '1px solid ' + (level === l.id ? 'var(--accent)' : '#262626'), color: level === l.id ? '#fff' : '#999' }
+        }, l.tr))),
+      filtered.map(p => {
+        const li = levelInfo(p.level);
+        const totalEx = p.days.reduce((s, d) => s + d.exercises.length, 0);
+        return /*#__PURE__*/React.createElement("button", {
+          key: p.id, onClick: () => setSelected(p),
+          style: { display: 'block', width: '100%', textAlign: 'left', background: 'linear-gradient(135deg,#141414,#0d0d0d)', border: '1px solid #232323', borderRadius: 14, padding: 15, marginBottom: 11, cursor: 'pointer', fontFamily: 'inherit', position: 'relative', overflow: 'hidden' }
+        },
+          /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 0, right: 0, fontSize: 9, fontWeight: 900, padding: '4px 11px', borderBottomLeftRadius: 10, letterSpacing: 0.4, background: p.pro ? 'linear-gradient(135deg,#FFB74D,#F57C00)' : 'linear-gradient(135deg,#4CAF50,#2e7d32)', color: p.pro ? '#1a1a1a' : '#fff' } }, p.pro ? '🔒 PRO' : 'BEDAVA'),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginBottom: 3, color: '#fff' } }, p.name),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11.5, color: '#999', lineHeight: 1.45, marginBottom: 11, maxWidth: '82%' } }, p.desc),
+          /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' } },
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#aaa', fontWeight: 700 } }, /*#__PURE__*/React.createElement("b", { style: { color: '#FF6B6B' } }, p.days.length), " gün"),
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#aaa', fontWeight: 700 } }, /*#__PURE__*/React.createElement("b", { style: { color: '#FF6B6B' } }, totalEx), " egzersiz"),
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 9.5, fontWeight: 800, padding: '3px 9px', borderRadius: 20, background: li.color + '22', color: li.color } }, li.tr.toUpperCase())));
+      }),
+      /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel, marginTop: 6 } }, "Kapat")));
 }
 
 function AddExerciseModal({
@@ -11196,40 +11314,40 @@ const S = {
     marginTop: 8
   },
   dayGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: 10
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 11
   },
   dayCard: {
     border: 'none',
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 0,
     cursor: 'pointer',
-    aspectRatio: '1 / 1.05',
     color: '#fff',
     overflow: 'hidden',
-    position: 'relative'
+    position: 'relative',
+    minHeight: 84
   },
   dayCardInner: {
-    height: '100%',
-    padding: 18,
+    minHeight: 84,
+    padding: '18px 18px',
     display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
     textAlign: 'left'
   },
   dayCardName: {
     fontFamily: "'Big Shoulders Display',sans-serif",
-    fontSize: 44,
+    fontSize: 32,
     fontWeight: 900,
     lineHeight: 0.9,
     letterSpacing: -0.5
   },
   dayCardSubtitle: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: 600,
-    opacity: 0.85,
-    marginTop: 8,
+    opacity: 0.9,
+    marginTop: 5,
     letterSpacing: 0.3
   },
   topBar: {
@@ -12623,10 +12741,10 @@ const S = {
   },
   addDayCard: {
     border: '1.5px dashed #2a2a2a',
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 0,
     cursor: 'pointer',
-    aspectRatio: '1 / 1.05',
+    minHeight: 62,
     background: '#0d0d0d',
     display: 'flex',
     alignItems: 'center',
@@ -12635,18 +12753,18 @@ const S = {
   },
   addDayInner: {
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     color: '#555'
   },
   addDayPlus: {
-    fontSize: 36,
+    fontSize: 24,
     fontWeight: 300,
     lineHeight: 1
   },
   addDayText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
     letterSpacing: 1.5
   },
