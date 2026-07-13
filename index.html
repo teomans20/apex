@@ -1129,7 +1129,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.42'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.43'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1234,7 +1234,7 @@ function t(key, vars) {
 const I18N = {
   tr: {
     // Sekmeler
-    tab_workout: 'ANTRENMAN', tab_progress: 'İLERLEME', tab_friends: 'ARKADAŞLAR',
+    tab_workout: 'ANTRENMAN', tab_progress: 'İLERLEME', subtab_growth: 'Gelişim', subtab_goals: 'Hedefler', subtab_measure: 'Ölçüler', goals_soon_title: 'Hedefler yakında', goals_soon_desc: 'Kişisel hedefler koyup ilerlemeni takip edebileceksin.', tab_friends: 'ARKADAŞLAR',
     // Ana ekran
     greeting_night: 'İyi geceler', greeting_morning: 'Günaydın', greeting_afternoon: 'İyi günler', greeting_evening: 'İyi akşamlar',
     stat_today_sets: 'BUGÜN SET', stat_workouts: 'ANTRENMAN', stat_volume: 'HACİM',
@@ -1482,7 +1482,7 @@ const I18N = {
     all_short: 'TÜM'
   },
   en: {
-    tab_workout: 'WORKOUT', tab_progress: 'PROGRESS', tab_friends: 'FRIENDS',
+    tab_workout: 'WORKOUT', tab_progress: 'PROGRESS', subtab_growth: 'Growth', subtab_goals: 'Goals', subtab_measure: 'Measures', goals_soon_title: 'Goals coming soon', goals_soon_desc: 'Set personal goals and track your progress toward them.', tab_friends: 'FRIENDS',
     greeting_night: 'Good night', greeting_morning: 'Good morning', greeting_afternoon: 'Good afternoon', greeting_evening: 'Good evening',
     stat_today_sets: "TODAY'S SETS", stat_workouts: 'WORKOUTS', stat_volume: 'TOTAL VOLUME',
     programs_title: 'Ready Programs', programs_sub: 'Expert programs · apply with one tap',
@@ -10997,6 +10997,7 @@ function ProgressTab({
     dayOverrides: {}
   });
   const [detailExercise, setDetailExercise] = useState(null);
+  const [subTab, setSubTab] = useState('gelisim'); // gelisim | hedefler | olculer
   // Alt sekmeye tekrar basınca listeye dön + yukarı kaydır
   const firstResetRefP = useRef(true);
   useEffect(() => {
@@ -11262,7 +11263,13 @@ function ProgressTab({
     style: {
       width: 40
     }
-  })), exerciseStats.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', gap: 6, background: '#141414', borderRadius: 12, padding: 4, marginBottom: 18 }
+  }, [{ id: 'gelisim', label: t('subtab_growth') }, { id: 'hedefler', label: t('subtab_goals') }, { id: 'olculer', label: t('subtab_measure') }].map(st => /*#__PURE__*/React.createElement("button", {
+    key: st.id,
+    onClick: () => setSubTab(st.id),
+    style: { flex: 1, textAlign: 'center', padding: '9px 4px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 800, border: 'none', background: subTab === st.id ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : 'transparent', color: subTab === st.id ? '#fff' : '#888' }
+  }, st.label))), exerciseStats.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
       color: '#555',
@@ -11270,7 +11277,7 @@ function ProgressTab({
       fontSize: 14,
       lineHeight: 1.6
     }
-  }, t('prog_no_data'), /*#__PURE__*/React.createElement("br", null), t('prog_empty')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, t('prog_no_data'), /*#__PURE__*/React.createElement("br", null), t('prog_empty')) : /*#__PURE__*/React.createElement(React.Fragment, null, subTab === 'gelisim' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.progHero
   }, /*#__PURE__*/React.createElement("div", {
     style: S.progHeroBig
@@ -11371,7 +11378,9 @@ function ProgressTab({
     }
   }, es.isStuck ? t('weeks_stuck',{n:es.weeksSince}) : t('est_1rm_lower',{n:es.oneRM}))), /*#__PURE__*/React.createElement("div", {
     style: S.prRowWt
-  }, wFmt(es.weight), " " + wUnit())))), /*#__PURE__*/React.createElement(MeasurementsSection, null));
+  }, wFmt(es.weight), " " + wUnit())))), subTab === 'olculer' && /*#__PURE__*/React.createElement(MeasurementsSection, null), subTab === 'hedefler' && /*#__PURE__*/React.createElement("div", {
+    style: { textAlign: 'center', padding: '48px 20px', color: '#666' }
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'medal', size: 40, color: '#333', strokeWidth: 1.8, style: { marginBottom: 14 } }), /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: '#888', marginBottom: 6 } }, t('goals_soon_title')), /*#__PURE__*/React.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.5 } }, t('goals_soon_desc')))));
 }
 
 // Tek hareket derin grafik ekranı
