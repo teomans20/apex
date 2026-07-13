@@ -1129,7 +1129,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.41'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.42'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -6688,6 +6688,8 @@ function App() {
   const changeLang = (l) => { setLang(l); setLangState(l); };
   const [unit, setUnitState] = useState(getUnit());
   const changeUnit = (u) => { setUnit(u); setUnitState(u); };
+  const [themeVersion, setThemeVersion] = useState(0);
+  const bumpTheme = () => setThemeVersion(v => v + 1);
   // İlk açılışta hoş geldin ekranı (bir kez gösterilir, localStorage'da tutulur)
   const [showOnboarding, setShowOnboarding] = useState(() => {
     try { return !localStorage.getItem('apex-onboarding-seen'); } catch (e) { return false; }
@@ -6885,7 +6887,8 @@ function App() {
     appLang: lang,
     onChangeLang: changeLang,
     appUnit: unit,
-    onChangeUnit: changeUnit
+    onChangeUnit: changeUnit,
+    onThemeChange: bumpTheme
   }), tab === 'progress' && /*#__PURE__*/React.createElement(ProgressTab, {
     key: activeGymId,
     authUser: authUser,
@@ -6893,7 +6896,8 @@ function App() {
     resetSignal: resetSignals.progress,
     onOpenGymPicker: () => setShowGymPicker(true),
     appLang: lang,
-    appUnit: unit
+    appUnit: unit,
+    themeVersion: themeVersion
   }), tab === 'friends' && /*#__PURE__*/React.createElement(FriendsTab, {
     authUser: authUser,
     myUsername: myUsername,
@@ -7259,7 +7263,8 @@ function WorkoutTab({
   appLang,
   onChangeLang,
   appUnit,
-  onChangeUnit
+  onChangeUnit,
+  onThemeChange
 }) {
   const [view, setView] = useState('home');
   const [currentDay, setCurrentDay] = useState(null);
@@ -8231,7 +8236,8 @@ function WorkoutTab({
     onChangeLang: onChangeLang,
     onReopenOnboarding: onReopenOnboarding,
     currentUnit: appUnit,
-    onChangeUnit: onChangeUnit
+    onChangeUnit: onChangeUnit,
+    onThemeChange: onThemeChange
   }), showAddDay && /*#__PURE__*/React.createElement(DayEditorModal, {
     onClose: () => setShowAddDay(false),
     onSave: addCustomDay,
@@ -8809,7 +8815,7 @@ function SixMonthStats({
       style: {
         ...S.barFill,
         height: `${Math.max(heightPct, 4)}%`,
-        background: isSelected ? 'var(--accent)' : active ? 'var(--accent)' : '#5a1f1f',
+        background: isSelected ? 'var(--accent)' : active ? 'var(--accent)' : 'rgba(var(--accent-rgb),0.32)',
         opacity: isSelected || active ? 1 : 0.7
       }
     })), /*#__PURE__*/React.createElement("div", {
@@ -8897,9 +8903,18 @@ function MuscleHeatmap({
     const val = acc[muscleKey]?.[metric] || 0;
     if (val === 0) return '#1a1a1a';
     const intensity = val / maxVal;
-    const r = Math.round(80 + intensity * 175);
-    const g = Math.round(20 + intensity * 40);
-    const b = Math.round(20 + intensity * 20);
+    // Aktif tema rengini (--accent-rgb) alıp yoğunluğa göre koyudan açığa çevir
+    let base = [255, 61, 61];
+    try {
+      const rgbStr = getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim();
+      const parts = rgbStr.split(',').map(x => parseInt(x.trim(), 10));
+      if (parts.length === 3 && parts.every(n => !isNaN(n))) base = parts;
+    } catch (e) {}
+    // düşük yoğunluk = koyu (temanın %35'i), yüksek = tam renk
+    const f = 0.35 + intensity * 0.65;
+    const r = Math.round(base[0] * f);
+    const g = Math.round(base[1] * f);
+    const b = Math.round(base[2] * f);
     return `rgb(${r},${g},${b})`;
   };
   const muscleStatus = sets => {
@@ -10200,9 +10215,9 @@ function AddExerciseModal({
   }, "KAPAT"))));
 }
 // ————— TEMA SEÇİCİ —————
-function ThemePicker() {
+function ThemePicker({ onThemeChange }) {
   const [sel, setSel] = useState(loadTheme);
-  const pick = (id) => { setSel(id); saveTheme(id); haptic(15); };
+  const pick = (id) => { setSel(id); saveTheme(id); haptic(15); if (onThemeChange) onThemeChange(id); };
   return /*#__PURE__*/React.createElement("div", {
     style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }
   }, Object.entries(APEX_THEMES).map(([id, t]) =>
@@ -10237,7 +10252,8 @@ function MenuModal({
   onChangeLang,
   onReopenOnboarding,
   currentUnit,
-  onChangeUnit
+  onChangeUnit,
+  onThemeChange
 }) {
   const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
@@ -10329,7 +10345,7 @@ function MenuModal({
     }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'info', size: 16 }), t('show_intro')),
     // ————— TEMA SEÇİCİ —————
     timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: S.modalTitle }, t('theme')),
-    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement(ThemePicker, null),
+    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement(ThemePicker, { onThemeChange: onThemeChange }),
     timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: S.modalTitle }, t('timer_title')),
     // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
     timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: { background: '#0d0d0d', border: '1px solid #1c1c1c', borderRadius: 14, overflow: 'hidden', marginBottom: 12 } },
@@ -10968,7 +10984,9 @@ function ProgressTab({
   activeGym,
   resetSignal,
   onOpenGymPicker,
-  appLang
+  appLang,
+  appUnit,
+  themeVersion
 }) {
   const [data, setData] = useState({
     exercises: DEFAULT_EXERCISES,
