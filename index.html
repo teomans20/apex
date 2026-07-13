@@ -1129,7 +1129,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.47'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.48'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1288,6 +1288,10 @@ const I18N = {
     set_photo_remove: 'Fotoğrafı kaldır', user_label: 'Kullanıcı', cloud_sync_on: '☁ Bulut senkronizasyonu açık', theme: 'Tema', data_label: 'Veri',
     timer_title: 'Dinlenme Zamanlayıcısı', timer_toggle: 'Zamanlayıcı', timer_auto: 'Set sonrası otomatik başlat', timer_default_dur: 'Varsayılan Süre', timer_for_new: 'Yeni egzersizler için (saniye)', timer_custom: 'Özel', timer_vibrate: 'Titreşim', timer_vibrate_sub: 'Süre bitince titret',
     export_backup: 'Yedek Dışa Aktar', import_backup: 'Yedek Yükle', logout: 'Çıkış Yap',
+    account_section: 'Hesap', verify_email: 'E-postanı doğrula', verify_sent: 'Doğrulama e-postası gönderildi', change_password: 'Şifre Değiştir', delete_account: 'Hesabı Sil',
+    change_pass_desc: 'Güvenlik için mevcut şifreni gir, sonra yeni şifreni belirle.', current_password: 'Mevcut şifre', new_password: 'Yeni şifre (en az 6 karakter)',
+    delete_account_warn: 'Bu işlem geri alınamaz. Hesabın, bulut verilerin, arkadaşlıkların ve kullanıcı adın kalıcı olarak silinir. Onaylamak için mevcut şifreni gir.', delete_account_confirm: 'HESABI KALICI OLARAK SİL',
+    pass_changed: 'Şifre değiştirildi', pass_changed_desc: 'Yeni şifrenle giriş yapabilirsin.', err_enter_cur_pass: 'Mevcut şifreni gir', err_wrong_cur_pass: 'Mevcut şifre yanlış',
     // Gün editörü
     edit_day: 'Günü Düzenle', new_day: 'Yeni Gün', day_name: 'GÜN ADI', subtitle_opt: 'Alt başlık (opsiyonel)', day_name_ph: 'Örn. Shoulders & Arms', subtitle_cap: 'ALT BAŞLIK (OPSİYONEL)', subtitle_ph: 'Örn. Omuz · Biceps · Triceps', copy_from_days: ' Mevcut günlerden egzersiz kopyala ', create: 'OLUŞTUR', delete_this_day: '🗑 Bu günü sil',
     // Egzersiz / gün detayı
@@ -1530,6 +1534,10 @@ const I18N = {
     set_photo_remove: 'Remove photo', user_label: 'User', cloud_sync_on: '☁ Cloud sync on', theme: 'Theme', data_label: 'Data',
     timer_title: 'Rest Timer', timer_toggle: 'Timer', timer_auto: 'Auto-start after set', timer_default_dur: 'Default Duration', timer_for_new: 'For new exercises (seconds)', timer_custom: 'Custom', timer_vibrate: 'Vibrate', timer_vibrate_sub: 'Vibrate when time is up',
     export_backup: 'Export Backup', import_backup: 'Import Backup', logout: 'Log Out',
+    account_section: 'Account', verify_email: 'Verify your email', verify_sent: 'Verification email sent', change_password: 'Change Password', delete_account: 'Delete Account',
+    change_pass_desc: 'For security, enter your current password, then set a new one.', current_password: 'Current password', new_password: 'New password (min 6 characters)',
+    delete_account_warn: 'This cannot be undone. Your account, cloud data, friendships and username will be permanently deleted. Enter your current password to confirm.', delete_account_confirm: 'PERMANENTLY DELETE ACCOUNT',
+    pass_changed: 'Password changed', pass_changed_desc: 'You can sign in with your new password.', err_enter_cur_pass: 'Enter your current password', err_wrong_cur_pass: 'Current password is incorrect',
     edit_day: 'Edit Day', new_day: 'New Day', day_name: 'DAY NAME', subtitle_opt: 'Subtitle (optional)', day_name_ph: 'e.g. Shoulders & Arms', subtitle_cap: 'SUBTITLE (OPTIONAL)', subtitle_ph: 'e.g. Shoulders · Biceps · Triceps', copy_from_days: ' Copy exercises from existing days ', create: 'CREATE', delete_this_day: '🗑 Delete this day',
     add_exercise_btn: 'ADD EXERCISE', no_exercises: 'No exercises yet.', no_exercises_sub: 'Add one below.', edit_ex_name: 'Edit exercise name:', ex_name_ph: 'e.g. Cable Fly', add_btn: 'ADD',
     no_copy_ex: 'No exercises to copy.', no_copy_ex_sub: 'They appear here as you add exercises to other days.',
@@ -10477,6 +10485,92 @@ function ThemePicker({ onThemeChange }) {
         [t.accent, t.dark, t.light].map((c, i) => /*#__PURE__*/React.createElement("span", { key: i, style: { width: 13, height: 13, borderRadius: 4, background: c } }))))));
 }
 
+// Hesap yönetimi: şifre değiştir + hesap sil (Firebase reauth gerektirir)
+function AccountModal({ mode, authUser, onClose }) {
+  const [curPass, setCurPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const reauth = async () => {
+    const cred = firebase.auth.EmailAuthProvider.credential(authUser.email, curPass);
+    await authUser.reauthenticateWithCredential(cred);
+  };
+
+  const changePassword = async () => {
+    setError('');
+    if (!curPass) { setError(t('err_enter_cur_pass')); return; }
+    if (!newPass || newPass.length < 6) { setError(t('err_pass_short')); return; }
+    setBusy(true);
+    try {
+      await reauth();
+      await authUser.updatePassword(newPass);
+      setDone(true); setBusy(false);
+    } catch (e) {
+      setError(e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' ? t('err_wrong_cur_pass') : t('err_generic'));
+      setBusy(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    setError('');
+    if (!curPass) { setError(t('err_enter_pass')); return; }
+    setBusy(true);
+    try {
+      await reauth();
+      const uid = authUser.uid;
+      // Firestore kullanıcı verisini temizle (best-effort)
+      try {
+        if (window.APEX_DB) {
+          await window.APEX_DB.collection('users').doc(uid).delete();
+        }
+      } catch (e) {}
+      // Auth hesabını sil
+      await authUser.delete();
+      // Yerel veriyi temizle
+      try {
+        ['apex-guest'].forEach(k => localStorage.removeItem(k));
+      } catch (e) {}
+      // onAuthStateChanged otomatik giriş ekranına döndürür
+    } catch (e) {
+      setError(e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' ? t('err_wrong_cur_pass') : t('err_generic'));
+      setBusy(false);
+    }
+  };
+
+  const inputBox = { width: '100%', background: '#161616', border: '1px solid #2a2a2a', borderRadius: 9, padding: 12, color: '#fff', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 10 };
+  const isDelete = mode === 'delete';
+
+  return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: onClose },
+    /*#__PURE__*/React.createElement("div", { style: { ...S.modalCard }, onClick: e => e.stopPropagation() },
+      done ?
+        /*#__PURE__*/React.createElement(React.Fragment, null,
+          /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', padding: '10px 0 4px' } },
+            /*#__PURE__*/React.createElement(ApexIcon, { name: 'check', size: 40, color: '#4CAF50', strokeWidth: 2.4, style: { marginBottom: 12 } }),
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 6 } }, t('pass_changed')),
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, color: '#999' } }, t('pass_changed_desc'))),
+          /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.authSubmit, marginTop: 16 } }, t('done'))) :
+        /*#__PURE__*/React.createElement(React.Fragment, null,
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 6 } }, isDelete ? t('delete_account') : t('change_password')),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 12.5, color: isDelete ? '#FF8A80' : '#999', lineHeight: 1.5, marginBottom: 16 } }, isDelete ? t('delete_account_warn') : t('change_pass_desc')),
+          /*#__PURE__*/React.createElement("input", {
+            type: 'password', value: curPass, onChange: e => setCurPass(e.target.value),
+            placeholder: t('current_password'), style: inputBox
+          }),
+          !isDelete && /*#__PURE__*/React.createElement("input", {
+            type: 'password', value: newPass, onChange: e => setNewPass(e.target.value),
+            placeholder: t('new_password'), style: inputBox
+          }),
+          error && /*#__PURE__*/React.createElement("div", { style: { color: '#FF5252', fontSize: 12.5, marginBottom: 10, textAlign: 'center' } }, error),
+          /*#__PURE__*/React.createElement("button", {
+            onClick: isDelete ? deleteAccount : changePassword,
+            disabled: busy,
+            style: { width: '100%', padding: 13, borderRadius: 11, border: 'none', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, cursor: 'pointer', marginBottom: 8, opacity: busy ? 0.6 : 1, background: isDelete ? '#FF3B30' : 'linear-gradient(135deg,var(--accent),var(--accent-dark))', color: '#fff' }
+          }, busy ? '...' : isDelete ? t('delete_account_confirm') : t('save')),
+          /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel } }, t('cancel')))));
+}
+
 function MenuModal({
   onClose,
   onExport,
@@ -10503,6 +10597,12 @@ function MenuModal({
         await window.APEX_AUTH.signOut();
       } catch (e) {}
     }
+  };
+  const [accountView, setAccountView] = useState(null); // null | 'password' | 'delete'
+  const emailVerified = authUser && authUser.emailVerified;
+  const [verifySent, setVerifySent] = useState(false);
+  const sendVerify = async () => {
+    try { await authUser.sendEmailVerification(); setVerifySent(true); } catch (e) {}
   };
   const pickPhoto = () => fileRef.current && fileRef.current.click();
   const handleFile = async e => {
@@ -10626,7 +10726,22 @@ function MenuModal({
   }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'export' }), t('export_backup')), /*#__PURE__*/React.createElement("button", {
     onClick: onImport,
     style: { ...S.menuItem, display: 'flex', alignItems: 'center', gap: 10 }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'import' }), t('import_backup')), authUser && /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'import' }), t('import_backup')),
+  authUser && /*#__PURE__*/React.createElement("div", { style: { ...S.modalTitle, marginTop: 6 } }, t('account_section')),
+  authUser && !emailVerified && /*#__PURE__*/React.createElement("button", {
+    onClick: sendVerify,
+    disabled: verifySent,
+    style: { ...S.menuItem, display: 'flex', alignItems: 'center', gap: 10, opacity: verifySent ? 0.6 : 1 }
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'mail', color: '#FFB74D' }), verifySent ? t('verify_sent') : t('verify_email')),
+  authUser && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAccountView('password'),
+    style: { ...S.menuItem, display: 'flex', alignItems: 'center', gap: 10 }
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'lock' }), t('change_password')),
+  authUser && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAccountView('delete'),
+    style: { ...S.menuItem, color: '#FF5252', display: 'flex', alignItems: 'center', gap: 10 }
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'trash', color: '#FF5252' }), t('delete_account')),
+  authUser && /*#__PURE__*/React.createElement("button", {
     onClick: logout,
     style: {
       ...S.menuItem,
@@ -10638,14 +10753,19 @@ function MenuModal({
       ...S.modalCancel,
       marginTop: 8
     }
-  }, "KAPAT"), /*#__PURE__*/React.createElement("div", {
+  }, t('close')), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
       color: '#444',
       fontSize: 11,
       marginTop: 14
     }
-  }, "APEX v", APP_VERSION)));
+  }, "APEX v", APP_VERSION)),
+  accountView && /*#__PURE__*/React.createElement(AccountModal, {
+    mode: accountView,
+    authUser: authUser,
+    onClose: () => setAccountView(null)
+  }));
 }
 function DayEditorModal({
   editingDay,
