@@ -1129,7 +1129,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.46'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.47'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1457,7 +1457,7 @@ const I18N = {
     err_email_pass: 'E-posta veya şifre hatalı',
     err_email_used: 'Bu e-posta zaten kayıtlı',
     err_pass_short: 'Şifre en az 6 karakter olmalı',
-    err_enter_pass: 'Şifre girin',
+    err_enter_pass: 'Şifre girin', err_enter_email: 'E-posta girin', email: 'E-posta', signup_btn: 'KAYIT OL', forgot_pass_q: 'Şifremi unuttum', reset_pass_title: 'Şifreni sıfırla', reset_sent: 'Sıfırlama bağlantısı e-postana gönderildi. Gelen kutunu kontrol et.', send_reset: 'SIFIRLAMA GÖNDER', back_to_login: 'Girişe dön', or_word: 'VEYA', continue_guest: 'Misafir olarak devam et', guest_friends_title: 'Arkadaşlarınla yarış', guest_friends_desc: 'Arkadaş eklemek, liderlik tablosu ve antrenman akışı için ücretsiz bir hesap oluştur. Verilerin buluta taşınır.', guest_create_account: 'Hesap Oluştur',
     err_no_internet: 'İnternet bağlantısı yok',
     err_too_many: 'Çok fazla deneme, biraz bekle',
     err_generic: 'Bir hata oluştu, tekrar dene',
@@ -1696,7 +1696,7 @@ const I18N = {
     err_email_pass: 'Wrong email or password',
     err_email_used: 'This email is already registered',
     err_pass_short: 'Password must be at least 6 characters',
-    err_enter_pass: 'Enter password',
+    err_enter_pass: 'Enter password', err_enter_email: 'Enter email', email: 'Email', signup_btn: 'SIGN UP', forgot_pass_q: 'Forgot password', reset_pass_title: 'Reset your password', reset_sent: 'Reset link sent to your email. Check your inbox.', send_reset: 'SEND RESET LINK', back_to_login: 'Back to login', or_word: 'OR', continue_guest: 'Continue as guest', guest_friends_title: 'Compete with friends', guest_friends_desc: 'Create a free account to add friends, see the leaderboard and activity feed. Your data moves to the cloud.', guest_create_account: 'Create Account',
     err_no_internet: 'No internet connection',
     err_too_many: 'Too many attempts, wait a bit',
     err_generic: 'An error occurred, try again',
@@ -6773,6 +6773,9 @@ function App() {
   const [gyms, setGyms] = useState(loadGyms);
   const [activeGymId, setActiveGymId] = useState(loadActiveGymId);
   const [showGymPicker, setShowGymPicker] = useState(false);
+  const [guestMode, setGuestMode] = useState(() => { try { return localStorage.getItem('apex-guest') === '1'; } catch (e) { return false; } });
+  const enterGuest = () => { try { localStorage.setItem('apex-guest', '1'); } catch (e) {} setGuestMode(true); };
+  const exitGuest = () => { try { localStorage.removeItem('apex-guest'); } catch (e) {} setGuestMode(false); };
   useEffect(() => {
     if (!window.APEX_FIREBASE_OK || !window.APEX_AUTH) {
       // Firebase yüklenemediyse offline modda devam et (eski davranış)
@@ -6781,6 +6784,8 @@ function App() {
     }
     const unsub = window.APEX_AUTH.onAuthStateChanged(user => {
       setAuthUser(user || null);
+      // Kullanıcı giriş yaptıysa misafir modundan çık
+      if (user) { try { localStorage.removeItem('apex-guest'); } catch (e) {} setGuestMode(false); }
     });
     return () => unsub && unsub();
   }, []);
@@ -6864,9 +6869,11 @@ function App() {
     return /*#__PURE__*/React.createElement(LoadingScreen, null);
   }
 
-  // Giriş yapılmamış → giriş ekranı (Firebase varsa)
-  if (authUser === null && window.APEX_FIREBASE_OK) {
-    return /*#__PURE__*/React.createElement(AuthScreen, null);
+  // Giriş yapılmamış → giriş ekranı (Firebase varsa VE misafir modu değilse)
+  if (authUser === null && window.APEX_FIREBASE_OK && !guestMode) {
+    return /*#__PURE__*/React.createElement(AuthScreen, {
+      onGuest: enterGuest
+    });
   }
 
   // Giriş var ama kullanıcı adı durumu daha yükleniyor (Firebase modunda)
@@ -6914,7 +6921,9 @@ function App() {
     appLang: lang,
     appUnit: unit,
     themeVersion: themeVersion
-  }), tab === 'friends' && /*#__PURE__*/React.createElement(FriendsTab, {
+  }), tab === 'friends' && (guestMode || !authUser ? /*#__PURE__*/React.createElement(GuestFriendsLock, {
+    onExitGuest: exitGuest
+  }) : /*#__PURE__*/React.createElement(FriendsTab, {
     authUser: authUser,
     myUsername: myUsername,
     resetSignal: resetSignals.friends,
@@ -6922,7 +6931,7 @@ function App() {
       setPendingProgram({ dayName, fromName, exercises });
       setTab('workout');
     }
-  })), /*#__PURE__*/React.createElement(BottomTabs, {
+  }))), /*#__PURE__*/React.createElement(BottomTabs, {
     tab: tab,
     onChange: handleTabPress
   }), showOnboarding && /*#__PURE__*/React.createElement(WelcomeOnboarding, {
@@ -7107,13 +7116,30 @@ function ApexLogo({
     fill: "#0a0a0a"
   }));
 }
-function AuthScreen() {
+// Misafir modunda Arkadaşlar sekmesi kilidi
+function GuestFriendsLock({ onExitGuest }) {
+  return /*#__PURE__*/React.createElement("div", { style: S.screen },
+    /*#__PURE__*/React.createElement("div", { style: { ...S.header } },
+      /*#__PURE__*/React.createElement("div", { style: S.topBarTitle }, t('tab_friends'))),
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '60px 30px', minHeight: '55vh' } },
+      /*#__PURE__*/React.createElement("div", { style: { width: 72, height: 72, borderRadius: 20, background: 'rgba(var(--accent-rgb),0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 } },
+        /*#__PURE__*/React.createElement(ApexIcon, { name: 'users', size: 34, color: 'var(--accent-light)', strokeWidth: 2 })),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, color: '#fff', marginBottom: 10 } }, t('guest_friends_title')),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 13.5, color: '#999', lineHeight: 1.5, marginBottom: 26, maxWidth: 280 } }, t('guest_friends_desc')),
+      /*#__PURE__*/React.createElement("button", {
+        onClick: onExitGuest,
+        style: { width: '100%', maxWidth: 300, padding: 15, borderRadius: 13, background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', border: 'none', color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 800, cursor: 'pointer' }
+      }, t('guest_create_account'))));
+}
+
+function AuthScreen({ onGuest }) {
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const trError = code => {
     const map = {
       'auth/invalid-email': t('err_invalid_email'),
@@ -7131,7 +7157,21 @@ function AuthScreen() {
   const submit = async () => {
     setError('');
     if (!email.trim()) {
-      setError('E-posta girin');
+      setError(t('err_enter_email'));
+      return;
+    }
+    // Şifre sıfırlama modu
+    if (mode === 'forgot') {
+      setBusy(true);
+      try {
+        await window.APEX_AUTH.sendPasswordResetEmail(email.trim());
+        setError('');
+        setResetSent(true);
+        setBusy(false);
+      } catch (e) {
+        setError(trError(e.code));
+        setBusy(false);
+      }
       return;
     }
     if (!password) {
@@ -7183,7 +7223,7 @@ function AuthScreen() {
     style: S.authTitle
   }, "APEX"), /*#__PURE__*/React.createElement("div", {
     style: S.authSubtitle
-  }, mode === 'login' ? t('welcome_back') : t('create_account')), mode === 'signup' && /*#__PURE__*/React.createElement("input", {
+  }, mode === 'login' ? t('welcome_back') : mode === 'forgot' ? t('reset_pass_title') : t('create_account')), mode === 'signup' && /*#__PURE__*/React.createElement("input", {
     style: S.authInput,
     placeholder: t('your_name'),
     value: name,
@@ -7195,19 +7235,24 @@ function AuthScreen() {
   }), /*#__PURE__*/React.createElement("input", {
     style: S.authInput,
     type: "email",
-    placeholder: "E-posta",
+    placeholder: t('email'),
     value: email,
     onChange: e => setEmail(e.target.value),
     autoCapitalize: "none",
     autoCorrect: "off"
-  }), /*#__PURE__*/React.createElement("input", {
+  }), mode !== 'forgot' && /*#__PURE__*/React.createElement("input", {
     style: S.authInput,
     type: "password",
     placeholder: t('password'),
     value: password,
     onChange: e => setPassword(e.target.value),
     onKeyDown: e => e.key === 'Enter' && submit()
-  }), error && /*#__PURE__*/React.createElement("div", {
+  }), mode === 'login' && /*#__PURE__*/React.createElement("button", {
+    onClick: () => { setMode('forgot'); setError(''); setResetSent(false); },
+    style: { background: 'none', border: 'none', color: '#888', fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer', alignSelf: 'flex-end', padding: '2px 2px 8px', marginTop: -4 }
+  }, t('forgot_pass_q')), resetSent && /*#__PURE__*/React.createElement("div", {
+    style: { background: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: 10, padding: 12, color: '#4CAF50', fontSize: 12.5, lineHeight: 1.4, marginBottom: 4, textAlign: 'center' }
+  }, t('reset_sent')), error && /*#__PURE__*/React.createElement("div", {
     style: S.authError
   }, error), /*#__PURE__*/React.createElement("button", {
     onClick: submit,
@@ -7216,13 +7261,21 @@ function AuthScreen() {
       ...S.authSubmit,
       opacity: busy ? 0.6 : 1
     }
-  }, busy ? '...' : mode === 'login' ? t('login_btn') : 'KAYIT OL'), /*#__PURE__*/React.createElement("button", {
+  }, busy ? '...' : mode === 'login' ? t('login_btn') : mode === 'forgot' ? t('send_reset') : t('signup_btn')), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      setMode(mode === 'login' ? 'signup' : 'login');
-      setError('');
+      if (mode === 'forgot') { setMode('login'); setError(''); setResetSent(false); }
+      else { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }
     },
     style: S.authSwitch
-  }, mode === 'login' ? t('no_account_q') : t('have_account_q'))));
+  }, mode === 'login' ? t('no_account_q') : mode === 'forgot' ? t('back_to_login') : t('have_account_q')), onGuest && mode !== 'forgot' && /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0 4px', width: '100%' }
+  }, /*#__PURE__*/React.createElement("div", { style: { flex: 1, height: 1, background: '#2a2a2a' } }),
+     /*#__PURE__*/React.createElement("span", { style: { color: '#555', fontSize: 11, fontWeight: 700, letterSpacing: 1 } }, t('or_word')),
+     /*#__PURE__*/React.createElement("div", { style: { flex: 1, height: 1, background: '#2a2a2a' } })),
+  onGuest && mode !== 'forgot' && /*#__PURE__*/React.createElement("button", {
+    onClick: onGuest,
+    style: { width: '100%', padding: 14, borderRadius: 12, background: '#161616', border: '1px solid #2a2a2a', color: '#ccc', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 4 }
+  }, t('continue_guest'))));
 }
 function BottomTabs({
   tab,
