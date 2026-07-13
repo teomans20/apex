@@ -1089,9 +1089,78 @@ const STORAGE_KEY = 'heavy-gym-data-v1';
 const GYMS_KEY = 'apex-gyms-v1'; // salon listesi
 const ACTIVE_GYM_KEY = 'apex-active-gym'; // aktif salon id
 
+// ————— KASA (kimliğe göre veri izolasyonu) —————
+// Her kimlik (kullanıcı / misafir / legacy) kendi kasasında saklanır.
+// legacy-unassigned = mevcut ÇIPLAK anahtarlar (eski sürümden gelen veri burada durur, asla silinmez).
+// u_{uid} / guest kasaları: base + '::' + kasaId.  Dil/tema/birim asla kasalanmaz (cihaz geneli).
+let CURRENT_VAULT = 'legacy-unassigned';
+try { if (localStorage.getItem('apex-guest') === '1') CURRENT_VAULT = 'guest'; } catch (e) {}
+function computeVaultId(uid, guest) {
+  if (uid) return 'u_' + uid;
+  if (guest) return 'guest';
+  return 'legacy-unassigned';
+}
+function setCurrentVault(id) { CURRENT_VAULT = id || 'legacy-unassigned'; }
+// Kasa anahtarı: legacy ise çıplak base (geri uyumluluk), değilse base::kasaId
+function vk(base) {
+  return CURRENT_VAULT === 'legacy-unassigned' ? base : base + '::' + CURRENT_VAULT;
+}
+// Bir kasadan diğerine tüm veri anahtarlarını KOPYALA (asla silme). Hedef doluysa dokunma.
+const VAULT_BASE_KEYS = [GYMS_KEY, ACTIVE_GYM_KEY, 'apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise'];
+function _keyForVault(base, vaultId) {
+  return vaultId === 'legacy-unassigned' ? base : base + '::' + vaultId;
+}
+function copyVault(fromVault, toVault) {
+  if (fromVault === toVault) return;
+  try {
+    // Kopyalanacak base anahtarları topla (salon verisi dahil: STORAGE_KEY + STORAGE_KEY__*)
+    const bases = VAULT_BASE_KEYS.slice();
+    const suffix = fromVault === 'legacy-unassigned' ? '' : '::' + fromVault;
+    // Kaynak kasadaki tüm salon-veri anahtarlarını bul
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      let bare = k;
+      if (suffix) {
+        if (!k.endsWith(suffix)) continue;
+        bare = k.slice(0, -suffix.length);
+      } else if (k.indexOf('::') !== -1) {
+        continue; // legacy kaynakta kasalı anahtarları atla
+      }
+      if (bare === STORAGE_KEY || bare.startsWith(STORAGE_KEY + '__')) {
+        if (bases.indexOf(bare) === -1) bases.push(bare);
+      }
+    }
+    // Şimdi kopyala (indeks kaymasını önlemek için önce topladık)
+    bases.forEach(bare => {
+      const src = _keyForVault(bare, fromVault);
+      const dst = _keyForVault(bare, toVault);
+      if (src === dst) return;
+      const val = localStorage.getItem(src);
+      if (val === null) return;
+      if (localStorage.getItem(dst) !== null) return; // hedef dolu → ezme
+      localStorage.setItem(dst, val);
+    });
+  } catch (e) {}
+}
+// Legacy veriyi ilk giriş yapan kullanıcı BİR KEZ sahiplenir (senin + arkadaşlarının verisi korunur)
+function claimLegacyForUser(uid) {
+  try {
+    if (!uid) return;
+    if (localStorage.getItem('apex-legacy-claimed')) return;
+    copyVault('legacy-unassigned', 'u_' + uid);
+    localStorage.setItem('apex-legacy-claimed', uid);
+  } catch (e) {}
+}
+// Misafir kasasını yeni hesaba taşı (guest→signup). Kaynak silinmez.
+function migrateGuestToUser(uid) {
+  try { if (uid) copyVault('guest', 'u_' + uid); } catch (e) {}
+}
+
 // Bir salonun veri anahtarı (localStorage). İlk salon eski anahtarı kullanır (geriye uyumluluk)
 function gymStorageKey(gymId) {
-  return gymId === 'default' ? STORAGE_KEY : `${STORAGE_KEY}__${gymId}`;
+  const bare = gymId === 'default' ? STORAGE_KEY : `${STORAGE_KEY}__${gymId}`;
+  return vk(bare);
 }
 // Firestore doküman adı
 function gymDocName(gymId) {
@@ -1100,7 +1169,7 @@ function gymDocName(gymId) {
 // Salon listesini oku (yoksa varsayılan tek salon oluştur)
 function loadGyms() {
   try {
-    const raw = localStorage.getItem(GYMS_KEY);
+    const raw = localStorage.getItem(vk(GYMS_KEY));
     if (raw) {
       const arr = JSON.parse(raw);
       if (Array.isArray(arr) && arr.length) return arr;
@@ -1114,22 +1183,22 @@ function loadGyms() {
 }
 function saveGyms(gyms) {
   try {
-    localStorage.setItem(GYMS_KEY, JSON.stringify(gyms));
+    localStorage.setItem(vk(GYMS_KEY), JSON.stringify(gyms));
   } catch (e) {}
 }
 function loadActiveGymId() {
   try {
-    return localStorage.getItem(ACTIVE_GYM_KEY) || 'default';
+    return localStorage.getItem(vk(ACTIVE_GYM_KEY)) || 'default';
   } catch (e) {
     return 'default';
   }
 }
 function saveActiveGymId(id) {
   try {
-    localStorage.setItem(ACTIVE_GYM_KEY, id);
+    localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.49'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.50'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1745,27 +1814,27 @@ const TIMER_SETTINGS_KEY = 'apex-timer-settings';
 const TIMER_PEREX_KEY = 'apex-timer-per-exercise';
 function loadTimerSettings() {
   try {
-    const raw = localStorage.getItem(TIMER_SETTINGS_KEY);
+    const raw = localStorage.getItem(vk(TIMER_SETTINGS_KEY));
     if (raw) { const s = JSON.parse(raw); return { enabled: s.enabled !== false, defaultSec: s.defaultSec || 90, vibrate: s.vibrate !== false }; }
   } catch (e) {}
   return { enabled: true, defaultSec: 90, vibrate: true };
 }
 function saveTimerSettings(s) {
-  try { localStorage.setItem(TIMER_SETTINGS_KEY, JSON.stringify(s)); } catch (e) {}
+  try { localStorage.setItem(vk(TIMER_SETTINGS_KEY), JSON.stringify(s)); } catch (e) {}
 }
 function loadTimerPerExercise() {
-  try { const raw = localStorage.getItem(TIMER_PEREX_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+  try { const raw = localStorage.getItem(vk(TIMER_PEREX_KEY)); if (raw) return JSON.parse(raw); } catch (e) {}
   return {};
 }
 function saveTimerPerExercise(map) {
-  try { localStorage.setItem(TIMER_PEREX_KEY, JSON.stringify(map)); } catch (e) {}
+  try { localStorage.setItem(vk(TIMER_PEREX_KEY), JSON.stringify(map)); } catch (e) {}
 }
 
 // ————— EGZERSİZ NOTLARI (o güne + egzersize özel) —————
 // localStorage: apex-exercise-notes = { "2026-07-11|Bench Press": "not...", ... }
 const EX_NOTES_KEY = 'apex-exercise-notes';
 function loadExerciseNotes() {
-  try { const raw = localStorage.getItem(EX_NOTES_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+  try { const raw = localStorage.getItem(vk(EX_NOTES_KEY)); if (raw) return JSON.parse(raw); } catch (e) {}
   return {};
 }
 function noteKey(dayKey, name) { return dayKey + '|' + name; }
@@ -1778,7 +1847,7 @@ function saveExerciseNote(dayKey, name, text) {
   const k = noteKey(dayKey, name);
   if (text && text.trim()) notes[k] = text.trim();
   else delete notes[k];
-  try { localStorage.setItem(EX_NOTES_KEY, JSON.stringify(notes)); } catch (e) {}
+  try { localStorage.setItem(vk(EX_NOTES_KEY), JSON.stringify(notes)); } catch (e) {}
 }
 
 // ————— VÜCUT ÖLÇÜLERİ —————
@@ -1798,7 +1867,7 @@ const MEAS_FIELDS = {
   calf:     { tr: 'Baldır', unit: 'cm', core: false, dual: true }
 };
 function loadMeasurements() {
-  try { const raw = localStorage.getItem(MEAS_KEY); if (raw) { const a = JSON.parse(raw); if (Array.isArray(a)) return a.sort((x, y) => x.date < y.date ? -1 : 1); } } catch (e) {}
+  try { const raw = localStorage.getItem(vk(MEAS_KEY)); if (raw) { const a = JSON.parse(raw); if (Array.isArray(a)) return a.sort((x, y) => x.date < y.date ? -1 : 1); } } catch (e) {}
   return [];
 }
 function saveMeasurement(entry) {
@@ -1807,12 +1876,12 @@ function saveMeasurement(entry) {
   const idx = all.findIndex(m => m.date === entry.date);
   if (idx >= 0) all[idx] = { ...all[idx], ...entry };
   else all.push(entry);
-  try { localStorage.setItem(MEAS_KEY, JSON.stringify(all)); } catch (e) {}
+  try { localStorage.setItem(vk(MEAS_KEY), JSON.stringify(all)); } catch (e) {}
   return all.sort((x, y) => x.date < y.date ? -1 : 1);
 }
 function deleteMeasurement(date) {
   const all = loadMeasurements().filter(m => m.date !== date);
-  try { localStorage.setItem(MEAS_KEY, JSON.stringify(all)); } catch (e) {}
+  try { localStorage.setItem(vk(MEAS_KEY), JSON.stringify(all)); } catch (e) {}
   return all;
 }
 // Bir alan için: son değer + 30 gün önceye göre değişim
@@ -6782,21 +6851,37 @@ function App() {
   const [activeGymId, setActiveGymId] = useState(loadActiveGymId);
   const [showGymPicker, setShowGymPicker] = useState(false);
   const [guestMode, setGuestMode] = useState(() => { try { return localStorage.getItem('apex-guest') === '1'; } catch (e) { return false; } });
-  const enterGuest = () => { try { localStorage.setItem('apex-guest', '1'); } catch (e) {} setGuestMode(true); };
-  const exitGuest = () => { try { localStorage.removeItem('apex-guest'); } catch (e) {} setGuestMode(false); };
+  const [vaultVersion, setVaultVersion] = useState(0); // kimlik değişince alt ağacı remount eder
+  const bumpVault = () => setVaultVersion(v => v + 1);
+  const enterGuest = () => { try { localStorage.setItem('apex-guest', '1'); } catch (e) {} setCurrentVault('guest'); setGuestMode(true); bumpVault(); };
+  const exitGuest = () => { try { localStorage.removeItem('apex-guest'); } catch (e) {} setCurrentVault(authUser ? 'u_' + authUser.uid : 'legacy-unassigned'); setGuestMode(false); bumpVault(); };
   useEffect(() => {
     if (!window.APEX_FIREBASE_OK || !window.APEX_AUTH) {
       // Firebase yüklenemediyse offline modda devam et (eski davranış)
+      setCurrentVault(guestMode ? 'guest' : 'legacy-unassigned');
       setAuthUser(null);
       return;
     }
     const unsub = window.APEX_AUTH.onAuthStateChanged(user => {
+      if (user) {
+        // Girişli kullanıcı: legacy veriyi bir kez sahiplen, sonra kasasını aç
+        claimLegacyForUser(user.uid);
+        setCurrentVault('u_' + user.uid);
+        try { localStorage.removeItem('apex-guest'); } catch (e) {} setGuestMode(false);
+      } else {
+        setCurrentVault(guestMode ? 'guest' : 'legacy-unassigned');
+      }
       setAuthUser(user || null);
-      // Kullanıcı giriş yaptıysa misafir modundan çık
-      if (user) { try { localStorage.removeItem('apex-guest'); } catch (e) {} setGuestMode(false); }
+      bumpVault();
     });
     return () => unsub && unsub();
   }, []);
+
+  // Kimlik (kasa) değişince App'in kendi state'lerini taze kasadan oku
+  useEffect(() => {
+    setGyms(loadGyms());
+    setActiveGymId(loadActiveGymId());
+  }, [vaultVersion]);
 
   // Giriş yapınca kullanıcı adını kontrol et (yoksa seçtireceğiz)
   useEffect(() => {
@@ -6905,7 +6990,7 @@ function App() {
     key: tab,
     style: { ...S.content, animation: 'apexPageIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)' }
   }, tab === 'workout' && /*#__PURE__*/React.createElement(WorkoutTab, {
-    key: activeGymId,
+    key: activeGymId + '::' + vaultVersion,
     authUser: authUser,
     activeGym: activeGym,
     myUsername: myUsername,
@@ -6921,7 +7006,7 @@ function App() {
     onChangeUnit: changeUnit,
     onThemeChange: bumpTheme
   }), tab === 'progress' && /*#__PURE__*/React.createElement(ProgressTab, {
-    key: activeGymId,
+    key: activeGymId + '::' + vaultVersion,
     authUser: authUser,
     activeGym: activeGym,
     resetSignal: resetSignals.progress,
@@ -7197,6 +7282,8 @@ function AuthScreen({ onGuest }) {
       } else {
         // Hesabı oluştur (kullanıcı adı sonraki ekranda — UsernameSetup — seçilir)
         const cred = await window.APEX_AUTH.createUserWithEmailAndPassword(email.trim(), password);
+        // Misafir verisini yeni hesaba taşı (guest→signup). Kaynak silinmez.
+        if (cred.user) { try { migrateGuestToUser(cred.user.uid); } catch (e) {} }
         // İsmi profile + Firestore'a yaz
         if (cred.user) {
           try {
@@ -8481,15 +8568,15 @@ function RestTimerFullscreen({ timer, onAdjust, onSkip, onCollapse }) {
 const GOALS_KEY = 'apex-goals';
 function loadGoals(gymId) {
   try {
-    const all = JSON.parse(localStorage.getItem(GOALS_KEY) || '{}');
+    const all = JSON.parse(localStorage.getItem(vk(GOALS_KEY)) || '{}');
     return all[gymId || 'default'] || [];
   } catch (e) { return []; }
 }
 function saveGoals(gymId, goals) {
   try {
-    const all = JSON.parse(localStorage.getItem(GOALS_KEY) || '{}');
+    const all = JSON.parse(localStorage.getItem(vk(GOALS_KEY)) || '{}');
     all[gymId || 'default'] = goals;
-    localStorage.setItem(GOALS_KEY, JSON.stringify(all));
+    localStorage.setItem(vk(GOALS_KEY), JSON.stringify(all));
   } catch (e) {}
 }
 // Bir hedefin şu anki ilerlemesini otomatik hesaplar → { current, target, pct, done }
@@ -11525,7 +11612,7 @@ function MeasurementDetailModal({ field, onClose, onChanged }) {
       delete rec[subfield];
       const hasOther = Object.keys(rec).some(k => k !== 'date' && rec[k] != null);
       const next = hasOther ? all.map(m => m.date === date ? rec : m) : all.filter(m => m.date !== date);
-      try { localStorage.setItem(MEAS_KEY, JSON.stringify(next)); } catch (e) {}
+      try { localStorage.setItem(vk(MEAS_KEY), JSON.stringify(next)); } catch (e) {}
     }
     const ns = measurementStat(field);
     if (!ns) { onChanged(); onClose(); } else { setStat(ns); onChanged(); }
