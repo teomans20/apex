@@ -1129,7 +1129,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.38'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.39'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1240,6 +1240,13 @@ const I18N = {
     ob4_h: 'Arkadaşlarınla|yarış', ob4_p: 'Arkadaş ekle, akışta antrenmanlarını gör, birbirinizi dürtün ve liderlik tablosunda rekabet edin.',
     ob4_c1: 'Liderlik', ob4_c2: 'Akış',
     show_intro: 'Tanıtımı Tekrar Göster', add_btn: '＋ Ekle', settings_title: 'Ayarlar', records_label: 'REKOR', workouts_label: 'antrenman', detail_arrow: 'Detay ›',
+    prog_fb3_name: 'Full Body 3 Gün', prog_fb3_desc: 'Haftada 3 gün tüm vücut. Yeni başlayanlar için ideal, hızlı gelişim.',
+    prog_ppl_desc: 'Klasik 6 günlük split. Kas kütlesi için ideal, hacim odaklı.',
+    prog_ul_desc: '4 günlük üst-alt bölünmesi. Dengeli, sürdürülebilir, zaman verimli.',
+    prog_ss_desc: 'Güç odaklı. Bileşik hareketler, düşük tekrar, ağır yük. Temel güç için.',
+    prog_arnold_desc: '6 günlük klasik. Göğüs-sırt, omuz-kol, bacak ikişer kez. Yüksek hacim.',
+    pd_gunA: 'GÜN A', pd_gunB: 'GÜN B', pd_gunC: 'GÜN C', pd_upper: 'Üst Vücut', pd_lower: 'Alt Vücut', pd_guc: 'Güç',
+    sub_chest_sh_tri: 'Göğüs · Omuz · Triceps', sub_back_bi: 'Sırt · Biceps', sub_leg_glute: 'Bacak · Kalça', sub_chest_back: 'Göğüs · Sırt',
     same_lower: 'aynı', notifications_title: 'Bildirimler', reacted_to_record: 'rekoruna tepki verdi', clap_for_record: '{ex} {w}kg rekorun için', clap_for_plato: 'plato kartı', refresh: '↻ Yenile', refreshing: '↻ Yenileniyor...', ready_q: 'HAZIR MISIN?', workout_active: 'ANTRENMAN', month_workouts: 'BU AY ANTRENMAN', est_1rm_lower: 'tahmini 1RM ~{n}kg', weeks_stuck: '⏳ {n} haftadır takılı', volume_lower: 'hacim', vs_prev_day: '% önceki {day} gününe göre', imbalance_msg: '{a}, {b} kasından ~{x}x fazla çalışılmış',
     program_sent_to: ' arkadaşına ', program_went: ' programı gitti', exercises_will_send: ' egzersiz gönderilecek. Ağırlıkların gitmez — arkadaşın kendi verilerini girer.', day_prefix: 'Bu günde "', ex_exists: '" adlı bir egzersiz zaten var.',
     poked_excl: 'Dürtüldü!',
@@ -1464,6 +1471,13 @@ const I18N = {
     ob4_h: 'Compete with|friends', ob4_p: 'Add friends, see their workouts in the feed, poke each other and compete on the leaderboard.',
     ob4_c1: 'Leaderboard', ob4_c2: 'Feed',
     show_intro: 'Show Intro Again', add_btn: '＋ Add', settings_title: 'Settings', records_label: 'RECORDS', workouts_label: 'workouts', detail_arrow: 'Details ›',
+    prog_fb3_name: 'Full Body 3-Day', prog_fb3_desc: 'Full body 3 days a week. Ideal for beginners, fast progress.',
+    prog_ppl_desc: 'Classic 6-day split. Ideal for muscle mass, volume-focused.',
+    prog_ul_desc: '4-day upper-lower split. Balanced, sustainable, time-efficient.',
+    prog_ss_desc: 'Strength-focused. Compound lifts, low reps, heavy load. For base strength.',
+    prog_arnold_desc: 'Classic 6-day. Chest-back, shoulder-arms, legs twice each. High volume.',
+    pd_gunA: 'DAY A', pd_gunB: 'DAY B', pd_gunC: 'DAY C', pd_upper: 'Upper Body', pd_lower: 'Lower Body', pd_guc: 'Strength',
+    sub_chest_sh_tri: 'Chest · Shoulder · Triceps', sub_back_bi: 'Back · Biceps', sub_leg_glute: 'Legs · Glutes', sub_chest_back: 'Chest · Back',
     same_lower: 'same', notifications_title: 'Notifications', reacted_to_record: 'reacted to your record', clap_for_record: 'for {ex} {w}kg record', clap_for_plato: 'plateau card', refresh: '↻ Refresh', refreshing: '↻ Refreshing...', ready_q: 'READY?', workout_active: 'WORKOUT', month_workouts: 'WORKOUTS THIS MONTH', est_1rm_lower: 'est. 1RM ~{n}kg', weeks_stuck: '⏳ stuck for {n} weeks', volume_lower: 'volume', vs_prev_day: '% vs previous {day} day', imbalance_msg: '{a} worked ~{x}x more than {b}',
     program_sent_to: ' to ', program_went: ' program sent', exercises_will_send: " exercises will be sent. Your weights won't go — your friend enters their own.", day_prefix: 'An exercise named "', ex_exists: '" already exists.',
     poked_excl: 'Poked!',
