@@ -1157,6 +1157,70 @@ function migrateGuestToUser(uid) {
   try { if (uid) copyVault('guest', 'u_' + uid); } catch (e) {}
 }
 
+// ————— BULUT YEDEK: yerel-özel veriler (local_profile_v1) —————
+// Ölçü, hedef, egzersiz notları, timer tercihleri → users/{uid}/data/local_profile_v1
+// Push: mutasyon sonrası (debounced). Restore: login sonrası tek sefer.
+// Restore ASLA dolu kasa slotunu ezmez (copyVault ile aynı felsefe).
+const LOCAL_PROFILE_KEYS = ['apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise'];
+function _readVaultProfile() {
+  const out = {};
+  LOCAL_PROFILE_KEYS.forEach(base => {
+    try {
+      const raw = localStorage.getItem(vk(base));
+      if (raw !== null) out[base] = raw;
+    } catch (e) {}
+  });
+  return out;
+}
+let _pushTimer = null;
+function pushLocalProfile() {
+  // Yalnızca girişli kullanıcı + Firebase varsa; kimlik yoksa sessiz atla
+  if (_pushTimer) { clearTimeout(_pushTimer); _pushTimer = null; }
+  _pushTimer = setTimeout(() => {
+    _pushTimer = null;
+    try {
+      const uid = window.APEX_CURRENT_UID;
+      if (!uid || !window.APEX_DB) return;
+      const snap = _readVaultProfile();
+      if (Object.keys(snap).length === 0) return; // yazacak bir şey yok
+      snap.savedAt = Date.now();
+      window.APEX_DB.collection('users').doc(uid).collection('data').doc('local_profile_v1')
+        .set(snap).catch(() => {}); // hata sessiz — bir sonraki mutasyon tekrar dener
+    } catch (e) {}
+  }, 1200);
+}
+// Login sonrası: buluttan çek, kasadaki BOŞ slotları doldur (dolu olanı ezme).
+// Bulutta yoksa AMA yerelde varsa (ör. yeni signup + guest göçü) → hemen buluta itele.
+function restoreLocalProfile(uid, onDone) {
+  try {
+    if (!uid || !window.APEX_DB) { if (onDone) onDone(false); return; }
+    window.APEX_DB.collection('users').doc(uid).collection('data').doc('local_profile_v1').get()
+      .then(snap => {
+        let filled = false;
+        if (snap.exists) {
+          const d = snap.data() || {};
+          LOCAL_PROFILE_KEYS.forEach(base => {
+            const val = d[base];
+            if (val == null || val === '') return;
+            try {
+              const cur = localStorage.getItem(vk(base));
+              if (cur === null || cur === '' || cur === '{}' || cur === '[]') {
+                localStorage.setItem(vk(base), val);
+                filled = true;
+              }
+            } catch (e) {}
+          });
+        } else {
+          // Bulutta yok — yerelde varsa (guest göçü sonrası) hemen buluta itele
+          const cur = _readVaultProfile();
+          if (Object.keys(cur).length > 0) pushLocalProfile();
+        }
+        if (onDone) onDone(filled);
+      })
+      .catch(() => { if (onDone) onDone(false); });
+  } catch (e) { if (onDone) onDone(false); }
+}
+
 // Bir salonun veri anahtarı (localStorage). İlk salon eski anahtarı kullanır (geriye uyumluluk)
 function gymStorageKey(gymId) {
   const bare = gymId === 'default' ? STORAGE_KEY : `${STORAGE_KEY}__${gymId}`;
@@ -1198,7 +1262,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.50'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.51'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1821,6 +1885,7 @@ function loadTimerSettings() {
 }
 function saveTimerSettings(s) {
   try { localStorage.setItem(vk(TIMER_SETTINGS_KEY), JSON.stringify(s)); } catch (e) {}
+  try { pushLocalProfile(); } catch (e) {}
 }
 function loadTimerPerExercise() {
   try { const raw = localStorage.getItem(vk(TIMER_PEREX_KEY)); if (raw) return JSON.parse(raw); } catch (e) {}
@@ -1828,6 +1893,7 @@ function loadTimerPerExercise() {
 }
 function saveTimerPerExercise(map) {
   try { localStorage.setItem(vk(TIMER_PEREX_KEY), JSON.stringify(map)); } catch (e) {}
+  try { pushLocalProfile(); } catch (e) {}
 }
 
 // ————— EGZERSİZ NOTLARI (o güne + egzersize özel) —————
@@ -1848,6 +1914,7 @@ function saveExerciseNote(dayKey, name, text) {
   if (text && text.trim()) notes[k] = text.trim();
   else delete notes[k];
   try { localStorage.setItem(vk(EX_NOTES_KEY), JSON.stringify(notes)); } catch (e) {}
+  try { pushLocalProfile(); } catch (e) {}
 }
 
 // ————— VÜCUT ÖLÇÜLERİ —————
@@ -1877,11 +1944,13 @@ function saveMeasurement(entry) {
   if (idx >= 0) all[idx] = { ...all[idx], ...entry };
   else all.push(entry);
   try { localStorage.setItem(vk(MEAS_KEY), JSON.stringify(all)); } catch (e) {}
+  try { pushLocalProfile(); } catch (e) {}
   return all.sort((x, y) => x.date < y.date ? -1 : 1);
 }
 function deleteMeasurement(date) {
   const all = loadMeasurements().filter(m => m.date !== date);
   try { localStorage.setItem(vk(MEAS_KEY), JSON.stringify(all)); } catch (e) {}
+  try { pushLocalProfile(); } catch (e) {}
   return all;
 }
 // Bir alan için: son değer + 30 gün önceye göre değişim
@@ -6867,9 +6936,13 @@ function App() {
         // Girişli kullanıcı: legacy veriyi bir kez sahiplen, sonra kasasını aç
         claimLegacyForUser(user.uid);
         setCurrentVault('u_' + user.uid);
+        try { window.APEX_CURRENT_UID = user.uid; } catch (e) {}
         try { localStorage.removeItem('apex-guest'); } catch (e) {} setGuestMode(false);
+        // Buluttan yerel-özel yedeği çek (yalnızca boş slotları doldurur; yoksa yereldeki veriyi buluta iter)
+        try { restoreLocalProfile(user.uid, (filled) => { if (filled) bumpVault(); }); } catch (e) {}
       } else {
         setCurrentVault(guestMode ? 'guest' : 'legacy-unassigned');
+        try { window.APEX_CURRENT_UID = null; } catch (e) {}
       }
       setAuthUser(user || null);
       bumpVault();
@@ -8577,6 +8650,7 @@ function saveGoals(gymId, goals) {
     const all = JSON.parse(localStorage.getItem(vk(GOALS_KEY)) || '{}');
     all[gymId || 'default'] = goals;
     localStorage.setItem(vk(GOALS_KEY), JSON.stringify(all));
+    try { pushLocalProfile(); } catch (e) {}
   } catch (e) {}
 }
 // Bir hedefin şu anki ilerlemesini otomatik hesaplar → { current, target, pct, done }
@@ -11613,6 +11687,7 @@ function MeasurementDetailModal({ field, onClose, onChanged }) {
       const hasOther = Object.keys(rec).some(k => k !== 'date' && rec[k] != null);
       const next = hasOther ? all.map(m => m.date === date ? rec : m) : all.filter(m => m.date !== date);
       try { localStorage.setItem(vk(MEAS_KEY), JSON.stringify(next)); } catch (e) {}
+      try { pushLocalProfile(); } catch (e) {}
     }
     const ns = measurementStat(field);
     if (!ns) { onChanged(); onClose(); } else { setStat(ns); onChanged(); }
