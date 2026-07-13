@@ -1092,7 +1092,7 @@ function loadGyms() {
   // İlk kez: mevcut veriyi "1. Salon" olarak tanımla (veri kaybı yok)
   return [{
     id: 'default',
-    name: 'Salonum'
+    name: (typeof t === 'function' ? t('my_gym') : 'Salonum')
   }];
 }
 function saveGyms(gyms) {
@@ -1112,7 +1112,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.31'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.34'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1149,7 +1149,7 @@ const I18N = {
     tab_workout: 'ANTRENMAN', tab_progress: 'İLERLEME', tab_friends: 'ARKADAŞLAR',
     // Ana ekran
     greeting_night: 'İyi geceler', greeting_morning: 'Günaydın', greeting_afternoon: 'İyi günler', greeting_evening: 'İyi akşamlar',
-    stat_today_sets: 'BUGÜN SET', stat_workouts: 'ANTRENMAN', stat_volume: 'TOPLAM HACİM',
+    stat_today_sets: 'BUGÜN SET', stat_workouts: 'ANTRENMAN', stat_volume: 'HACİM',
     programs_title: 'Hazır Programlar', programs_sub: 'Uzman programları · tek dokunuşla uygula',
     which_today: 'BUGÜN HANGİSİ?', add_day: 'Gün Ekle',
     next_up: 'Sıradaki', last_done: 'Son', days_ago: '{n} gün önce', today_lower: 'bugün', yesterday_lower: 'dün',
@@ -1210,7 +1210,171 @@ const I18N = {
     sci_target: ' · bilimsel hedef: haftada 10-20 set', this_week: 'BU HAFTA', this_month: 'BU AY', md_sets: 'SETS', md_volume: 'VOLUME', md_days: 'GÜN',
     md_exercises: 'EGZERSİZLER · düzenlemek için dokun', md_days_header: 'GÜNLER', unknown_exercises: 'TANINMAYAN EGZERSİZLER',
     journal_empty: 'Henüz kayıtlı antrenman yok', journal_empty_sub: 'İlk antrenmanını kaydet, burada görünsün',
-    balance_warning: '⚠ DENGE UYARISI'
+    balance_warning: '⚠ DENGE UYARISI',
+    same_lower: 'aynı', vs_prev_day: '% önceki {day} gününe göre', imbalance_msg: '{a}, {b} kasından ~{x}x fazla çalışılmış',
+    program_sent_to: ' arkadaşına ', program_went: ' programı gitti', exercises_will_send: ' egzersiz gönderilecek. Ağırlıkların gitmez — arkadaşın kendi verilerini girer.', day_prefix: 'Bu günde "', ex_exists: '" adlı bir egzersiz zaten var.',
+    poked_excl: 'Dürtüldü!',
+    notif_will_see: ' bildirimini görecek',
+    poking: ' dürtülüyor',
+    sent_program_to: ' programını gönderdi',
+    send_paren: 'Gönder (',
+    select_friend: 'Arkadaş seç',
+    past_day: '· Geçmiş gün',
+    future_date: '· İleri tarih',
+    friend_word: 'Arkadaşın',
+    week_better_lot: '🔥 Rekor haftası! Geçen haftayı ezdin geçtin',
+    week_better: '🔥 Geçen haftadan daha iyisin, devam!',
+    week_worse: '👊 Bu hafta biraz düştü, gelecek hafta toparlarız',
+    week_same: '💪 Aynı tempo, istikrar da güçtür',
+    friends_title: 'ARKADAŞLAR',
+    in_gym_status: 'şu an salonda',
+    broke_plato: ' haftalık platoyu kırdı! ⚡',
+    stuck_long: ' · uzun süredir takılıydı',
+    completed_day: ' günü tamamladı · ',
+    prog_added_toast: 'programı eklendi!',
+    prog_added_toast2: 'programın eklendi!',
+    weekly_ready: 'Haftalık özetin hazır!',
+    weekly_ready_sub: 'Bu haftayı görmek için dokun · ',
+    new_top_pr: 'YENİ TOP REKOR!',
+    new_backoff_pr: 'YENİ BACK-OFF REKOR!',
+    tap_to_continue: 'Devam etmek için dokun',
+    weekly_summary: 'HAFTALIK ÖZET',
+    chinese_proverb: '— Çin atasözü',
+    workout_days_your: 'ANTRENMAN GÜNLERİN',
+    duration_cap: 'SÜRE',
+    same_eq: '= aynı',
+    this_week_muscle_dist: 'BU HAFTA KAS DAĞILIMI',
+    days_suffix: ' gün',
+    best_pr_week: 'HAFTANIN EN İYİ REKORU',
+    muscle_group_dist: 'KAS GRUBU DAĞILIMI',
+    first_record: '✦ İLK KAYIT',
+    double_badge: '🏆⭐ ÇİFT',
+    first_badge: '✦ İLK',
+    preparing: '⏳ Hazırlanıyor…',
+    share: 'Paylaş',
+    journal_title: 'GÜNLÜK',
+    weekly_streak: ' haftalık seri 🔥',
+    week_streak_short: 'HAFTA SERİ',
+    week_summaries: 'Hafta Özetleri',
+    muscle_group_dist2: 'Kas Grubu Dağılımı',
+    vs_last: 'Geçen ',
+    vs_suffix: 'a göre',
+    tap_detail: '✦ Detay için dokun ✦',
+    apex_week_summary: 'APEX Hafta Özeti',
+    workout_days_your2: 'Antrenman Günlerin',
+    duration_c: 'Süre',
+    this_week_muscle2: 'Bu Hafta Kas Dağılımı',
+    most_worked: 'En Çok Çalışılan',
+    day_streak_label: 'Gün Serisi',
+    best_record_week: 'Haftanın En İyi Rekoru',
+    poke_notif_hint: 'Bir mesaj seç, ona bildirim gitsin:',
+    clear_all: 'Tümünü temizle',
+    in_workout_status: 'şu an antrenmanda 🏋️',
+    poked_you_msg: 'seni dürttü',
+    sent_excl: 'Gönderildi!',
+    send_program: '📤 Programı Gönder',
+    loading3: 'Yükleniyor...',
+    no_friends_yet: 'Henüz arkadaşın yok.',
+    sending: 'Gönderiliyor...',
+    apex_user: 'APEX kullanıcısı',
+    username_rule: 'Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _)',
+    username_taken: 'Bu kullanıcı adı alınmış, başka dene',
+    username_check_fail: 'Kullanıcı adı kontrol edilemedi, tekrar dene',
+    choose_username: 'KULLANICI ADI SEÇ',
+    username_desc1: 'Arkadaşların seni bu adla bulacak.',
+    username_desc2: 'Sonra değiştiremezsin, dikkatli seç.',
+    checking: 'KONTROL EDİLİYOR...',
+    applauded_you_msg: 'seni alkışladı',
+    friends_flow: 'AKIŞ',
+    friends_leader: 'LİDER',
+    friends_users: 'ARKADAŞ',
+    incoming_requests: 'GELEN İSTEKLER',
+    accept_error: 'Kabul hatası: ',
+    accept: 'Kabul',
+    incoming_programs: '📥 GELEN PROGRAMLAR',
+    added_excl: '✓ Ekle',
+    your_friends: 'ARKADAŞLARIN',
+    add_via_username: '＋ Ekle ile @kullanıcı adından ekle 🔥',
+    poked_check: '✓ Dürtüldü',
+    poke: '👊 Dürt',
+    remove: 'Çıkar',
+    sent_label: 'GÖNDERİLEN',
+    are_friends: 'Arkadaş oldunuz ✓',
+    request_sent: 'İstek gönderildi ✓',
+    add_friend_prompt: 'Arkadaşının @kullanıcı adını yaz, istek at. Kabul edince arkadaş olursunuz.',
+    this_is_you: 'Bu sensin 🙂',
+    is_friend: '✓ Arkadaş',
+    accept_full: 'Kabul Et',
+    send_request: 'İstek At',
+    time_just_now: 'az önce',
+    feed_loading: 'Akış yükleniyor...',
+    feed_empty: 'Akış boş 🌱',
+    feed_empty_sub: 'Arkadaş ekle, aktiviteleri burada gör',
+    feed_empty_sub2: 'Sen veya arkadaşların antrenman yapınca burada görünecek',
+    plato_broken: '⚡ PLATO KIRILDI',
+    pr_full: 'Yeni kişisel rekor 🔥',
+    pr_badge: '🏆 YENİ REKOR',
+    emoji_hold_hint: '💡 emojiye basılı tut, kimlerin verdiğini gör',
+    this_week_progress: 'Bu Hafta Gelişim',
+    total_progress: 'Toplam Rekor',
+    total_workouts_stat: 'Toplam Antrenman',
+    prof_progress: '📈 GELİŞİM',
+    prof_record: '🏆 REKOR',
+    prof_workout: '🔥 ANTRENMAN',
+    no_data_seed: 'Henüz veri yok 🌱',
+    no_data_seed_sub: 'Arkadaşların antrenman yaptıkça dolacak',
+    progress_stat: 'Gelişim',
+    lb_desc: ' en adil sıralama — kim ne kaldırırsa kaldırsın, bu hafta ne kadar ilerlediğine bakar.',
+    back_arrow: '‹ Geri',
+    friend_no_data: 'Bu arkadaşın paylaştığı veri yok 🤔',
+    friend_no_data_sub: 'Antrenman yapıp paylaşınca görünecek',
+    most_worked_muscle: 'En Çok Çalıştığı Kas',
+    best_records: 'EN İYİ REKORLARI',
+    prof_gym_only: '💡 Sadece bu arkadaşın paylaştığı salonun özeti görünür. Detaylı logları gizli.',
+    loading_cap: 'YÜKLENİYOR',
+    gym_new: 'Yeni Salon',
+    gym_select: 'SALON SEÇ',
+    gym_desc: 'Her salonun kendi egzersizleri ve rekorları ayrıdır. 🌐 = arkadaşlar görür, 🔒 = gizli',
+    gym_share: 'Paylaşım',
+    gym_name_ph: 'Salon adı (örn: Çorlu Gym)',
+    gym_add: '+ Yeni Salon Ekle',
+    err_invalid_email: 'Geçersiz e-posta adresi',
+    err_no_account: 'Bu e-posta ile kayıt yok',
+    err_wrong_pass: 'Hatalı şifre',
+    err_email_pass: 'E-posta veya şifre hatalı',
+    err_email_used: 'Bu e-posta zaten kayıtlı',
+    err_pass_short: 'Şifre en az 6 karakter olmalı',
+    err_enter_pass: 'Şifre girin',
+    err_no_internet: 'İnternet bağlantısı yok',
+    err_too_many: 'Çok fazla deneme, biraz bekle',
+    err_generic: 'Bir hata oluştu, tekrar dene',
+    err_enter_name: 'İsim girin',
+    welcome_back: 'Tekrar hoş geldin',
+    create_account: 'Hesap oluştur',
+    your_name: 'İsmin',
+    password: 'Şifre',
+    login_btn: 'GİRİŞ YAP',
+    no_account_q: 'Hesabın yok mu? Kayıt ol',
+    have_account_q: 'Zaten hesabın var mı? Giriş yap',
+    shared_program: 'paylaşılan program',
+    backup_loaded: 'Yedek yüklendi!',
+    file_read_err: 'Dosya okunamadı.',
+    workout_day_cap: 'ANTRENMAN GÜNÜ',
+    total_duration_cap: 'TOPLAM SÜRE',
+    send_to_friend: '📤 Bu Programı Arkadaşa Gönder',
+    send_cancel: 'İptal',
+    top_set_explain: 'İlk setin senin ana setin. Bunu yendiğin anda back-off hedefine geçeriz.',
+    backoff_won: '✓ BACK-OFF YENDİN',
+    best_backoff_today: 'Bugün en iyi back-off: ',
+    do_backoff_now: 'Şimdi back-off set\'i yap, geçen seferki seviyeyi geç',
+    first_backoff: 'İLK BACK-OFF',
+    no_backoff_last: 'Geçen sefer back-off set yapmamışsın. Bugün referansı sen oluştur.',
+    first_time: 'İLK SEFER',
+    first_workout_ex: 'Bu egzersiz için ilk antrenmanın. Bugün referansı sen oluştur.',
+    new_short: 'YENİ',
+    now_kg: 'ŞU AN (KG)',
+    all_time: 'TÜM ZAMAN',
+    all_short: 'TÜM'
   },
   en: {
     tab_workout: 'WORKOUT', tab_progress: 'PROGRESS', tab_friends: 'FRIENDS',
@@ -1260,7 +1424,171 @@ const I18N = {
     sci_target: ' · science target: 10-20 sets/week', this_week: 'THIS WEEK', this_month: 'THIS MONTH', md_sets: 'SETS', md_volume: 'VOLUME', md_days: 'DAYS',
     md_exercises: 'EXERCISES · tap to edit', md_days_header: 'DAYS', unknown_exercises: 'UNRECOGNIZED EXERCISES',
     journal_empty: 'No saved workouts yet', journal_empty_sub: 'Log your first workout, it will appear here',
-    balance_warning: '⚠ BALANCE WARNING'
+    balance_warning: '⚠ BALANCE WARNING',
+    same_lower: 'same', vs_prev_day: '% vs previous {day} day', imbalance_msg: '{a} worked ~{x}x more than {b}',
+    program_sent_to: ' to ', program_went: ' program sent', exercises_will_send: " exercises will be sent. Your weights won't go — your friend enters their own.", day_prefix: 'An exercise named "', ex_exists: '" already exists.',
+    poked_excl: 'Poked!',
+    notif_will_see: ' will get the notification',
+    poking: ' being poked',
+    sent_program_to: ' sent a program',
+    send_paren: 'Send (',
+    select_friend: 'Select friend',
+    past_day: '· Past day',
+    future_date: '· Future date',
+    friend_word: 'Your friend',
+    week_better_lot: '🔥 Record week! You crushed last week',
+    week_better: '🔥 Better than last week, keep going!',
+    week_worse: '👊 Dipped a bit this week, we\'ll bounce back next week',
+    week_same: '💪 Same pace, consistency is strength too',
+    friends_title: 'FRIENDS',
+    in_gym_status: 'at the gym now',
+    broke_plato: ' broke a weekly plateau! ⚡',
+    stuck_long: ' · stuck for a long time',
+    completed_day: ' completed · ',
+    prog_added_toast: 'program added!',
+    prog_added_toast2: 'program added!',
+    weekly_ready: 'Your weekly summary is ready!',
+    weekly_ready_sub: 'Tap to see this week · ',
+    new_top_pr: 'NEW TOP RECORD!',
+    new_backoff_pr: 'NEW BACK-OFF RECORD!',
+    tap_to_continue: 'Tap to continue',
+    weekly_summary: 'WEEKLY SUMMARY',
+    chinese_proverb: '— Chinese proverb',
+    workout_days_your: 'YOUR WORKOUT DAYS',
+    duration_cap: 'DURATION',
+    same_eq: '= same',
+    this_week_muscle_dist: 'THIS WEEK MUSCLE DISTRIBUTION',
+    days_suffix: ' days',
+    best_pr_week: 'BEST RECORD OF THE WEEK',
+    muscle_group_dist: 'MUSCLE GROUP DISTRIBUTION',
+    first_record: '✦ FIRST RECORD',
+    double_badge: '🏆⭐ DOUBLE',
+    first_badge: '✦ FIRST',
+    preparing: '⏳ Preparing…',
+    share: 'Share',
+    journal_title: 'JOURNAL',
+    weekly_streak: ' week streak 🔥',
+    week_streak_short: 'WEEK STREAK',
+    week_summaries: 'Week Summaries',
+    muscle_group_dist2: 'Muscle Group Distribution',
+    vs_last: 'vs last ',
+    vs_suffix: '',
+    tap_detail: '✦ Tap for details ✦',
+    apex_week_summary: 'APEX Week Summary',
+    workout_days_your2: 'Your Workout Days',
+    duration_c: 'Duration',
+    this_week_muscle2: 'This Week Muscle Distribution',
+    most_worked: 'Most Worked',
+    day_streak_label: 'Day Streak',
+    best_record_week: 'Best Record of the Week',
+    poke_notif_hint: 'Pick a message, a notification will be sent:',
+    clear_all: 'Clear all',
+    in_workout_status: 'working out now 🏋️',
+    poked_you_msg: 'poked you',
+    sent_excl: 'Sent!',
+    send_program: '📤 Send Program',
+    loading3: 'Loading...',
+    no_friends_yet: 'No friends yet.',
+    sending: 'Sending...',
+    apex_user: 'APEX user',
+    username_rule: 'Username must be 3-20 characters (letters, numbers, _)',
+    username_taken: 'This username is taken, try another',
+    username_check_fail: 'Could not check username, try again',
+    choose_username: 'CHOOSE A USERNAME',
+    username_desc1: 'Friends will find you by this name.',
+    username_desc2: 'You can\'t change it later, choose carefully.',
+    checking: 'CHECKING...',
+    applauded_you_msg: 'applauded you',
+    friends_flow: 'FEED',
+    friends_leader: 'LEADER',
+    friends_users: 'FRIENDS',
+    incoming_requests: 'INCOMING REQUESTS',
+    accept_error: 'Accept error: ',
+    accept: 'Accept',
+    incoming_programs: '📥 INCOMING PROGRAMS',
+    added_excl: '✓ Add',
+    your_friends: 'YOUR FRIENDS',
+    add_via_username: '＋ Add by @username 🔥',
+    poked_check: '✓ Poked',
+    poke: '👊 Poke',
+    remove: 'Remove',
+    sent_label: 'SENT',
+    are_friends: 'You\'re now friends ✓',
+    request_sent: 'Request sent ✓',
+    add_friend_prompt: 'Type your friend\'s @username and send a request. Once accepted, you\'ll be friends.',
+    this_is_you: 'That\'s you 🙂',
+    is_friend: '✓ Friend',
+    accept_full: 'Accept',
+    send_request: 'Send Request',
+    time_just_now: 'just now',
+    feed_loading: 'Loading feed...',
+    feed_empty: 'Feed is empty 🌱',
+    feed_empty_sub: 'Add friends to see their activity here',
+    feed_empty_sub2: 'Appears here when you or your friends work out',
+    plato_broken: '⚡ PLATEAU BROKEN',
+    pr_full: 'New personal record 🔥',
+    pr_badge: '🏆 NEW RECORD',
+    emoji_hold_hint: '💡 hold an emoji to see who reacted',
+    this_week_progress: 'This Week Progress',
+    total_progress: 'Total Records',
+    total_workouts_stat: 'Total Workouts',
+    prof_progress: '📈 PROGRESS',
+    prof_record: '🏆 RECORDS',
+    prof_workout: '🔥 WORKOUTS',
+    no_data_seed: 'No data yet 🌱',
+    no_data_seed_sub: 'Fills up as your friends work out',
+    progress_stat: 'Progress',
+    lb_desc: ' the fairest ranking — no matter what anyone lifts, it looks at how much you improved this week.',
+    back_arrow: '‹ Back',
+    friend_no_data: 'This friend hasn\'t shared any data 🤔',
+    friend_no_data_sub: 'Appears when they work out and share',
+    most_worked_muscle: 'Most Worked Muscle',
+    best_records: 'BEST RECORDS',
+    prof_gym_only: '💡 Only this friend\'s shared gym summary is shown. Their detailed logs are private.',
+    loading_cap: 'LOADING',
+    gym_new: 'New Gym',
+    gym_select: 'SELECT GYM',
+    gym_desc: 'Each gym has its own exercises and records. 🌐 = friends can see, 🔒 = private',
+    gym_share: 'Sharing',
+    gym_name_ph: 'Gym name (e.g. Downtown Gym)',
+    gym_add: '+ Add New Gym',
+    err_invalid_email: 'Invalid email address',
+    err_no_account: 'No account with this email',
+    err_wrong_pass: 'Wrong password',
+    err_email_pass: 'Wrong email or password',
+    err_email_used: 'This email is already registered',
+    err_pass_short: 'Password must be at least 6 characters',
+    err_enter_pass: 'Enter password',
+    err_no_internet: 'No internet connection',
+    err_too_many: 'Too many attempts, wait a bit',
+    err_generic: 'An error occurred, try again',
+    err_enter_name: 'Enter your name',
+    welcome_back: 'Welcome back',
+    create_account: 'Create account',
+    your_name: 'Your name',
+    password: 'Password',
+    login_btn: 'LOG IN',
+    no_account_q: 'Don\'t have an account? Sign up',
+    have_account_q: 'Already have an account? Log in',
+    shared_program: 'shared program',
+    backup_loaded: 'Backup loaded!',
+    file_read_err: 'Could not read file.',
+    workout_day_cap: 'WORKOUT DAY',
+    total_duration_cap: 'TOTAL DURATION',
+    send_to_friend: '📤 Send This Program to a Friend',
+    send_cancel: 'Cancel',
+    top_set_explain: 'Your first set is your main set. Once you beat it, we move to the back-off target.',
+    backoff_won: '✓ BACK-OFF BEATEN',
+    best_backoff_today: 'Today\'s best back-off: ',
+    do_backoff_now: 'Now do a back-off set, beat last time',
+    first_backoff: 'FIRST BACK-OFF',
+    no_backoff_last: 'You didn\'t do a back-off set last time. Set the reference today.',
+    first_time: 'FIRST TIME',
+    first_workout_ex: 'Your first workout for this exercise. Set the reference today.',
+    new_short: 'NEW',
+    now_kg: 'NOW (KG)',
+    all_time: 'ALL TIME',
+    all_short: 'ALL'
   }
 };
 
@@ -1995,7 +2323,7 @@ function PRCelebration({
     return () => clearTimeout(t);
   }, [onClose]);
   const isTop = type === 'top';
-  const title = isTop ? 'YENİ TOP REKOR!' : 'YENİ BACK-OFF REKOR!';
+  const title = isTop ? t('new_top_pr') : t('new_backoff_pr');
   return /*#__PURE__*/React.createElement("div", {
     className: "pr-overlay",
     onClick: onClose,
@@ -2013,7 +2341,7 @@ function PRCelebration({
     style: S.prValue
   }, weight, "kg × ", reps), /*#__PURE__*/React.createElement("div", {
     style: S.prHint
-  }, "Devam etmek için dokun")));
+  }, t('tap_to_continue'))));
 }
 
 // ═══════════════════════════════════════════
@@ -2246,7 +2574,7 @@ function generateWeeklyImage(s, myUsername) {
     // başlık
     ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
     ctx.font = '900 ' + S(34) + "px 'Big Shoulders Display',sans-serif";
-    ctx.fillText('HAFTALIK ÖZET', PAD, y + S(16)); y += S(38);
+    ctx.fillText(t('weekly_summary'), PAD, y + S(16)); y += S(38);
 
     // atasözü kutusu
     const provLines = [];
@@ -2265,7 +2593,7 @@ function generateWeeklyImage(s, myUsername) {
     ctx.fillStyle = '#d5c9f5'; ctx.font = 'italic 600 ' + S(13) + "px Manrope,sans-serif";
     provLines.forEach((l, i) => ctx.fillText(l, PAD + S(15), y + S(16) + i * S(18)));
     ctx.fillStyle = '#8b7fb8'; ctx.font = '700 ' + S(10) + "px Manrope,sans-serif";
-    ctx.fillText('— Çin atasözü', PAD + S(15), y + provH - S(9));
+    ctx.fillText(t('chinese_proverb'), PAD + S(15), y + provH - S(9));
     y += provH + S(10);
 
     // günler şeridi
@@ -2274,7 +2602,7 @@ function generateWeeklyImage(s, myUsername) {
     ctx.strokeStyle = '#1c1c1c'; ctx.lineWidth = S(1); rr(PAD, y, boxW, daysH, S(12)); ctx.stroke();
     ctx.fillStyle = '#888'; ctx.textAlign = 'left';
     ctx.font = '800 ' + S(9) + "px Manrope,sans-serif";
-    ctx.fillText('ANTRENMAN GÜNLERİN', PAD + S(14), y + S(13));
+    ctx.fillText(t('workout_days_your'), PAD + S(14), y + S(13));
     const dayLabels = (_CAL[CURRENT_LANG] || _CAL.tr).daysLong;
     const dInset = S(16);
     const dw = (boxW - dInset * 2) / 7;
@@ -2297,7 +2625,7 @@ function generateWeeklyImage(s, myUsername) {
     const stats = [
       { l: 'ANTRENMAN', v: '' + s.workoutCount, c: s.workoutCmp, sfx: '', gold: false },
       { l: 'REKOR', v: '' + s.prCount, c: s.prCmp, sfx: '', gold: true },
-      { l: 'SÜRE', v: s.totalHours + 'sa', c: s.hoursCmp, sfx: 'sa', gold: false }
+      { l: t('duration_cap'), v: s.totalHours + 'sa', c: s.hoursCmp, sfx: 'sa', gold: false }
     ];
     const sGap = S(9), sW = (boxW - sGap * 2) / 3, sH = S(74);
     stats.forEach((st, i) => {
@@ -2316,7 +2644,7 @@ function generateWeeklyImage(s, myUsername) {
         const col = c.dir === 'up' ? '#4CAF50' : c.dir === 'down' ? '#FF6B6B' : '#999';
         const bgc = c.dir === 'up' ? 'rgba(76,175,80,0.15)' : c.dir === 'down' ? 'rgba(255,61,61,0.12)' : 'rgba(150,150,150,0.12)';
         const ar = c.dir === 'up' ? '▲' : c.dir === 'down' ? '▼' : '=';
-        const txt = c.dir === 'same' ? '= aynı' : ar + ' ' + (c.dir === 'up' ? '+' : '') + c.diff + st.sfx;
+        const txt = c.dir === 'same' ? t('same_eq') : ar + ' ' + (c.dir === 'up' ? '+' : '') + c.diff + st.sfx;
         ctx.font = '800 ' + S(9.5) + "px Manrope,sans-serif";
         const tw = ctx.measureText(txt).width + S(12);
         ctx.fillStyle = bgc; rr(sx + sW / 2 - tw / 2, y + S(50), tw, S(16), S(8)); ctx.fill();
@@ -2332,7 +2660,7 @@ function generateWeeklyImage(s, myUsername) {
       ctx.strokeStyle = '#1c1c1c'; ctx.lineWidth = S(1); rr(PAD, y, boxW, mH, S(12)); ctx.stroke();
       ctx.fillStyle = '#888'; ctx.textAlign = 'left';
       ctx.font = '800 ' + S(9) + "px Manrope,sans-serif";
-      ctx.fillText('BU HAFTA KAS DAĞILIMI', PAD + S(14), y + S(13));
+      ctx.fillText(t('this_week_muscle_dist'), PAD + S(14), y + S(13));
       const barY = y + S(23), barX = PAD + S(14), barW = boxW - S(28), barH = S(10);
       let cx = barX;
       s.muscleDist.forEach((m, i) => {
@@ -2376,7 +2704,7 @@ function generateWeeklyImage(s, myUsername) {
       ctx.fillText(val, x + S(42), y + S(35));
     };
     drawMini(PAD, '💪', 'EN ÇOK ÇALIŞILAN', s.topMuscle || '-', '#fff');
-    drawMini(PAD + twoW + twoGap, '🔥', 'GÜN SERİSİ', s.maxStreak + ' gün', '#FFB74D');
+    drawMini(PAD + twoW + twoGap, '🔥', 'GÜN SERİSİ', s.maxStreak + t('days_suffix'), '#FFB74D');
     y += twoH + S(10);
 
     // en iyi rekor
@@ -2387,7 +2715,7 @@ function generateWeeklyImage(s, myUsername) {
       ctx.textAlign = 'left'; ctx.font = S(22) + "px sans-serif";
       ctx.fillText('🏆', PAD + S(14), y + pH / 2);
       ctx.fillStyle = '#FFB74D'; ctx.font = '800 ' + S(9) + "px Manrope,sans-serif";
-      ctx.fillText('HAFTANIN EN İYİ REKORU', PAD + S(48), y + S(20));
+      ctx.fillText(t('best_pr_week'), PAD + S(48), y + S(20));
       ctx.fillStyle = '#fff'; ctx.font = '800 ' + S(14) + "px Manrope,sans-serif";
       // isim + değer, gerekirse kısalt
       let prText = s.bestPR.name + ' · ' + s.bestPR.weight + 'kg×' + s.bestPR.reps;
@@ -2502,7 +2830,7 @@ function generateStoryImage(entry) {
 
     // ——— İSTATİSTİK KUTULARI (Süre/Set/Rekor) ———
     const stats = [];
-    if (entry.durationMin) stats.push({ v: entry.durationMin, u: 'dk', l: 'SÜRE' });
+    if (entry.durationMin) stats.push({ v: entry.durationMin, u: 'dk', l: t('duration_cap') });
     stats.push({ v: entry.totalSets, u: '', l: 'SET' });
     stats.push({ v: entry.prCount, u: '🏆', l: 'REKOR', gold: true });
     const sGap = S(7);
@@ -2579,7 +2907,7 @@ function generateStoryImage(entry) {
       ctx.textAlign = 'left';
       ctx.fillStyle = '#888';
       ctx.font = '800 ' + S(8.5) + "px Manrope, sans-serif";
-      ctx.fillText('KAS GRUBU DAĞILIMI', PAD + S(13), y + S(12));
+      ctx.fillText(t('muscle_group_dist'), PAD + S(13), y + S(12));
       // bar
       const barY = y + S(22), barH = S(9);
       let cx = barX;
@@ -2770,7 +3098,7 @@ function JournalDetailView({ entry, onBack }) {
     // karşılaştırma
     s.firstEver ? /*#__PURE__*/React.createElement("div", {
       style: { marginTop: 8, paddingTop: 8, borderTop: '1px solid #1a1a1a' }
-    }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#4CAF50', fontWeight: 800 } }, '✦ İLK KAYIT'))
+    }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#4CAF50', fontWeight: 800 } }, t('first_record')))
     : s.prev ? /*#__PURE__*/React.createElement("div", {
       style: { marginTop: 8, paddingTop: 8, borderTop: '1px solid #1a1a1a' }
     },
@@ -2781,7 +3109,7 @@ function JournalDetailView({ entry, onBack }) {
     s.delta && s.delta.dir === 'same' ? /*#__PURE__*/React.createElement("span", { style: { color: '#666' } }, '=') : /*#__PURE__*/React.createElement("span", { style: { fontWeight: 800, color: s.delta && s.delta.dir === 'down' ? '#FF5252' : '#4CAF50' } }, '→'),
     /*#__PURE__*/React.createElement("span", {
       style: { fontWeight: 800, color: s.delta && s.delta.dir === 'same' ? '#888' : isPRback ? '#4A90E2' : (s.delta && s.delta.dir === 'down' ? '#fff' : '#FFB74D') }
-    }, s.delta && s.delta.dir === 'same' ? 'aynı' : s.weight + '×' + s.reps)),
+    }, s.delta && s.delta.dir === 'same' ? t('same_lower') : s.weight + '×' + s.reps)),
     (s.delta && s.delta.dir !== 'same') && /*#__PURE__*/React.createElement("div", { style: { marginTop: 4 } }, gt(s.delta, s.prType)))
     : null);
   };
@@ -2809,7 +3137,7 @@ function JournalDetailView({ entry, onBack }) {
   /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginBottom: 18 } },
     entry.durationMin && /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '12px 6px', textAlign: 'center' } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.durationMin, /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: '#888', fontFamily: "'Manrope'" } }, 'dk')),
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, 'SÜRE')),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, t('duration_cap'))),
     /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '12px 6px', textAlign: 'center' } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.totalSets),
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, 'SET')),
@@ -2821,8 +3149,8 @@ function JournalDetailView({ entry, onBack }) {
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, 'REKOR'))),
   // egzersiz kartları
   ...entry.exercises.map((ex, i) => {
-    const chip = ex.topPR && !ex.topPR.firstEver && ex.backoffPR ? { txt: '🏆⭐ ÇİFT', bg: 'linear-gradient(135deg,rgba(255,183,77,0.15),rgba(74,144,226,0.15))', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
-      : ex.topPR && ex.topPR.firstEver ? { txt: '✦ İLK', bg: 'rgba(255,183,77,0.15)', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
+    const chip = ex.topPR && !ex.topPR.firstEver && ex.backoffPR ? { txt: t('double_badge'), bg: 'linear-gradient(135deg,rgba(255,183,77,0.15),rgba(74,144,226,0.15))', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
+      : ex.topPR && ex.topPR.firstEver ? { txt: t('first_badge'), bg: 'rgba(255,183,77,0.15)', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
       : ex.topPR ? { txt: '🏆 PR', bg: 'rgba(255,183,77,0.15)', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
       : ex.backoffPR ? { txt: '⭐ PR', bg: 'rgba(74,144,226,0.15)', c: '#4A90E2', bc: 'rgba(74,144,226,0.3)' }
       : null;
@@ -2857,12 +3185,12 @@ function JournalDetailView({ entry, onBack }) {
       boxShadow: '0 6px 24px rgba(var(--accent-rgb),0.4)',
       zIndex: 200
     }
-  }, sharing ? /*#__PURE__*/React.createElement("span", null, '⏳ Hazırlanıyor…') : /*#__PURE__*/React.createElement(React.Fragment, null,
+  }, sharing ? /*#__PURE__*/React.createElement("span", null, t('preparing')) : /*#__PURE__*/React.createElement(React.Fragment, null,
     /*#__PURE__*/React.createElement("svg", { width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none', stroke: '#fff', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
       /*#__PURE__*/React.createElement("path", { d: 'M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8' }),
       /*#__PURE__*/React.createElement("polyline", { points: '16 6 12 2 8 6' }),
       /*#__PURE__*/React.createElement("line", { x1: 12, y1: 2, x2: 12, y2: 15 })),
-    'Paylaş')), document.body));
+    t('share'))), document.body));
 }
 
 // ————— GÜNLÜK: ANA LİSTE —————
@@ -2931,8 +3259,8 @@ function JournalModal({ data, myUsername, onClose }) {
         /*#__PURE__*/React.createElement("path", { d: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20' }),
         /*#__PURE__*/React.createElement("path", { d: 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' }))),
     /*#__PURE__*/React.createElement("div", { style: { flex: 1 } },
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 30, fontWeight: 800, letterSpacing: 0.5, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, 'GÜNLÜK'),
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 3 } }, totalWorkouts + ' antrenman' + (weekStreak > 1 ? ' · ' + weekStreak + ' haftalık seri 🔥' : ''))),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 30, fontWeight: 800, letterSpacing: 0.5, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, t('journal_title')),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 3 } }, totalWorkouts + ' antrenman' + (weekStreak > 1 ? ' · ' + weekStreak + t('weekly_streak') : ''))),
     /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { width: 36, height: 36, borderRadius: 11, background: '#141414', border: '1px solid #262626', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', cursor: 'pointer' } }, '✕')),
   // summary strip
   /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 10, margin: '20px 0 22px' } },
@@ -2944,12 +3272,12 @@ function JournalModal({ data, myUsername, onClose }) {
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.6, marginTop: 5 } }, 'REKOR')),
     /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: 'linear-gradient(180deg,#0f0f0f,#0a0a0a)', border: '1px solid #1c1c1c', borderRadius: 14, padding: '13px 10px', textAlign: 'center' } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 24, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, weekStreak),
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.6, marginTop: 5 } }, 'HAFTA SERİ'))),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.6, marginTop: 5 } }, t('week_streak_short')))),
   // HAFTA ÖZETLERİ (yatay kaydırmalı kartlar)
   weekSummaries.length > 0 && /*#__PURE__*/React.createElement("div", { style: { marginBottom: 22 } },
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 11 } },
       /*#__PURE__*/React.createElement(ApexIcon, { name: 'chart', size: 16, color: 'var(--accent-light)' }),
-      /*#__PURE__*/React.createElement("span", { style: { fontSize: 13, fontWeight: 800, letterSpacing: 0.3 } }, 'Hafta Özetleri')),
+      /*#__PURE__*/React.createElement("span", { style: { fontSize: 13, fontWeight: 800, letterSpacing: 0.3 } }, t('week_summaries'))),
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' } },
       weekSummaries.map((w, i) => /*#__PURE__*/React.createElement("button", {
         key: w._weekId,
@@ -2995,7 +3323,7 @@ function JournalModal({ data, myUsername, onClose }) {
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', background: '#0c0c0c', border: '1px solid #181818', borderRadius: 13, padding: '12px 0', marginBottom: e.muscleDist.length ? 14 : (e.volCompare ? 14 : 4) } },
         e.durationMin && /*#__PURE__*/React.createElement("div", { style: { flex: 1, textAlign: 'center', borderRight: '1px solid #1e1e1e' } },
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, e.durationMin, /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#888', fontFamily: "'Manrope'" } }, 'dk')),
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.5, marginTop: 5 } }, 'SÜRE')),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.5, marginTop: 5 } }, t('duration_cap'))),
         /*#__PURE__*/React.createElement("div", { style: { flex: 1, textAlign: 'center', borderRight: '1px solid #1e1e1e' } },
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, e.totalSets),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.5, marginTop: 5 } }, 'SET')),
@@ -3004,7 +3332,7 @@ function JournalModal({ data, myUsername, onClose }) {
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.5, marginTop: 5 } }, 'TEKRAR'))),
       // kas dağılımı
       e.muscleDist.length > 0 && /*#__PURE__*/React.createElement("div", { style: { marginBottom: e.volCompare ? 14 : 0 } },
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, fontWeight: 800, letterSpacing: 1, color: '#666', marginBottom: 8, textTransform: 'uppercase' } }, 'Kas Grubu Dağılımı'),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, fontWeight: 800, letterSpacing: 1, color: '#666', marginBottom: 8, textTransform: 'uppercase' } }, t('muscle_group_dist2')),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', height: 8, borderRadius: 5, overflow: 'hidden', gap: 2 } },
           ...e.muscleDist.map((m, mmi) => /*#__PURE__*/React.createElement("div", { key: mmi, style: { width: m.pct + '%', height: '100%', borderRadius: 2, background: MUSCLE_COLORS[mmi % MUSCLE_COLORS.length] } }))),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 9 } },
@@ -3015,10 +3343,10 @@ function JournalModal({ data, myUsername, onClose }) {
       e.volCompare && e.volCompare.dir !== 'same' && /*#__PURE__*/React.createElement("div", {
         style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: e.volCompare.dir === 'up' ? 'rgba(76,175,80,0.06)' : 'rgba(var(--accent-rgb),0.06)', border: '1px solid ' + (e.volCompare.dir === 'up' ? 'rgba(76,175,80,0.18)' : 'rgba(var(--accent-rgb),0.18)'), borderRadius: 11, padding: '10px 13px' }
       },
-        /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#aaa' } }, 'Geçen ' + (e.dayName || '') + '\'a göre'),
+        /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#aaa' } }, t('vs_last') + (e.dayName || '') + t('vs_suffix')),
         /*#__PURE__*/React.createElement("span", { style: { fontSize: 13, fontWeight: 800, color: e.volCompare.dir === 'up' ? '#4CAF50' : '#FF5252' } }, (e.volCompare.dir === 'up' ? '↑ +' : '↓ ') + e.volCompare.diff + 't')),
       // tap hint
-      /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', fontSize: 10, color: '#4a4a4a', marginTop: 12, letterSpacing: 1, textTransform: 'uppercase' } }, '✦ Detay için dokun ✦'))))))));
+      /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', fontSize: 10, color: '#4a4a4a', marginTop: 12, letterSpacing: 1, textTransform: 'uppercase' } }, t('tap_detail')))))))));
 }
 
 // ————— HAFTA ÖZETİ MODALI —————
@@ -3033,10 +3361,10 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
     const cls = c.dir === 'up' ? { bg: 'rgba(76,175,80,0.15)', col: '#4CAF50', ar: '▲' }
       : c.dir === 'down' ? { bg: 'rgba(var(--accent-rgb),0.12)', col: 'var(--accent-light)', ar: '▼' }
       : { bg: 'rgba(150,150,150,0.12)', col: '#999', ar: '=' };
-    const txt = c.dir === 'same' ? 'aynı' : c.ar + ' ' + (c.dir === 'up' ? '+' : '') + c.diff + (suffix || '');
+    const txt = c.dir === 'same' ? t('same_lower') : c.ar + ' ' + (c.dir === 'up' ? '+' : '') + c.diff + (suffix || '');
     return /*#__PURE__*/React.createElement("span", {
       style: { display: 'inline-block', fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 8, marginTop: 6, background: cls.bg, color: cls.col }
-    }, cls.ar + (c.dir === 'same' ? ' aynı' : ' ' + (c.dir === 'up' ? '+' : '') + c.diff + (suffix || '')));
+    }, cls.ar + (c.dir === 'same' ? ' ' + t('same_lower') : ' ' + (c.dir === 'up' ? '+' : '') + c.diff + (suffix || '')));
   };
 
   const handleShare = async () => {
@@ -3049,7 +3377,7 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
       const fileName = 'apex-hafta-' + s.rangeText.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.png';
       const file = new File([blob], fileName, { type: 'image/png' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try { await navigator.share({ files: [file], title: 'APEX Hafta Özeti' }); setSharing(false); return; }
+        try { await navigator.share({ files: [file], title: t('apex_week_summary') }); setSharing(false); return; }
         catch (e) { if (e && e.name === 'AbortError') { setSharing(false); return; } }
       }
       const url = URL.createObjectURL(blob);
@@ -3076,14 +3404,14 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
       /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { background: '#141414', border: '1px solid #262626', borderRadius: 10, color: '#ccc', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: '8px 14px' } }, '‹ Kapat'),
       /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#888' } }, s.rangeText)),
-    /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 32, lineHeight: 0.95 } }, 'HAFTALIK ÖZET'),
+    /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 32, lineHeight: 0.95 } }, t('weekly_summary')),
     // atasözü
     /*#__PURE__*/React.createElement("div", { style: { background: 'linear-gradient(135deg,rgba(167,139,250,0.1),rgba(167,139,250,0.02))', border: '1px solid rgba(167,139,250,0.22)', borderLeft: '3px solid #A78BFA', borderRadius: 12, padding: '12px 15px' } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, fontStyle: 'italic', color: '#d5c9f5', lineHeight: 1.5 } }, '"' + s.proverb + '"'),
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#8b7fb8', marginTop: 5, fontWeight: 700 } }, '— Çin atasözü')),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#8b7fb8', marginTop: 5, fontWeight: 700 } }, t('chinese_proverb'))),
     // günler şeridi
     /*#__PURE__*/React.createElement("div", { style: { ...box, padding: '13px 14px' } },
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 800, marginBottom: 10 } }, 'Antrenman Günlerin'),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 800, marginBottom: 10 } }, t('workout_days_your2')),
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', gap: 5 } },
         s.dayFlags.map((on, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 } },
           /*#__PURE__*/React.createElement("div", { style: { width: 28, height: 28, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: on ? 'linear-gradient(135deg,var(--accent),var(--accent-deep))' : '#161616', border: on ? 'none' : '1px solid #242424', color: on ? '#fff' : '#444' } }, on ? '✓' : '·'),
@@ -3092,14 +3420,14 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
     /*#__PURE__*/React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 9 } },
       [{ l: 'Antrenman', v: s.workoutCount, u: '', c: s.workoutCmp, sfx: '', gold: false },
        { l: 'Rekor', v: s.prCount, u: '', c: s.prCmp, sfx: '', gold: true },
-       { l: 'Süre', v: s.totalHours, u: 'sa', c: s.hoursCmp, sfx: 'sa', gold: false }].map((st, i) =>
+       { l: t('duration_c'), v: s.totalHours, u: 'sa', c: s.hoursCmp, sfx: 'sa', gold: false }].map((st, i) =>
         /*#__PURE__*/React.createElement("div", { key: i, style: { ...box, padding: '13px 10px', textAlign: 'center' } },
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', letterSpacing: 0.3, textTransform: 'uppercase', fontWeight: 800 } }, st.l),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 27, fontWeight: 900, lineHeight: 1, marginTop: 5, fontFamily: "'Big Shoulders Display',sans-serif", color: st.gold ? '#FFB74D' : '#fff' } }, st.v, st.u ? /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#888' } }, st.u) : null),
           cmpBadge(st.c, st.sfx)))),
     // kas dağılımı
     s.muscleDist && s.muscleDist.length > 0 && /*#__PURE__*/React.createElement("div", { style: { ...box, padding: '13px 15px' } },
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 800, marginBottom: 10 } }, 'Bu Hafta Kas Dağılımı'),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 800, marginBottom: 10 } }, t('this_week_muscle2')),
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', gap: 2, marginBottom: 10 } },
         s.muscleDist.map((m, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { width: m.pct + '%', background: COLORS[i % COLORS.length] } }))),
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: '7px 12px' } },
@@ -3111,18 +3439,18 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
       /*#__PURE__*/React.createElement("div", { style: { ...box, flex: 1, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 9 } },
         /*#__PURE__*/React.createElement(ApexIcon, { name: 'muscle', size: 20, strokeWidth: 2.5, color: 'var(--accent-light)' }),
         /*#__PURE__*/React.createElement("div", null,
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 800 } }, 'En Çok Çalışılan'),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 800 } }, t('most_worked')),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, marginTop: 1 } }, s.topMuscle || '-'))),
       /*#__PURE__*/React.createElement("div", { style: { ...box, flex: 1, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 9 } },
         /*#__PURE__*/React.createElement(ApexIcon, { name: 'flame', size: 20, strokeWidth: 2.4, color: 'var(--accent-light)' }),
         /*#__PURE__*/React.createElement("div", null,
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 800 } }, 'Gün Serisi'),
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, marginTop: 1, color: '#FFB74D' } }, s.maxStreak + ' gün')))),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#888', textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 800 } }, t('day_streak_label')),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, marginTop: 1, color: '#FFB74D' } }, s.maxStreak + t('days_suffix'))))),
     // en iyi rekor
     s.bestPR && /*#__PURE__*/React.createElement("div", { style: { background: 'linear-gradient(135deg,rgba(255,183,77,0.12),rgba(230,126,0,0.02))', border: '1px solid rgba(255,183,77,0.28)', borderRadius: 14, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12 } },
       /*#__PURE__*/React.createElement(ApexIcon, { name: 'medal', size: 22, color: '#FFB74D' }),
       /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#FFB74D', textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 800 } }, 'Haftanın En İyi Rekoru'),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#FFB74D', textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 800 } }, t('best_record_week')),
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 800, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.bestPR.name + ' · ' + s.bestPR.weight + 'kg×' + s.bestPR.reps)),
       s.bestPR.gain > 0 && /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: '#4CAF50', background: 'rgba(76,175,80,0.15)', padding: '3px 9px', borderRadius: 9, flexShrink: 0 } }, '+' + s.bestPR.gain + 'kg')),
     // motivasyon mesajı
@@ -3131,12 +3459,12 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
     /*#__PURE__*/React.createElement("button", {
       onClick: handleShare, disabled: sharing,
       style: { marginTop: 4, padding: '14px', borderRadius: 14, border: 'none', background: sharing ? '#333' : 'linear-gradient(135deg,var(--accent),var(--accent-dark))', color: '#fff', fontSize: 15, fontWeight: 800, fontFamily: 'inherit', cursor: sharing ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
-    }, sharing ? '⏳ Hazırlanıyor…' : /*#__PURE__*/React.createElement(React.Fragment, null,
+    }, sharing ? t('preparing') : /*#__PURE__*/React.createElement(React.Fragment, null,
       /*#__PURE__*/React.createElement("svg", { width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none', stroke: '#fff', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
         /*#__PURE__*/React.createElement("path", { d: 'M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8' }),
         /*#__PURE__*/React.createElement("polyline", { points: '16 6 12 2 8 6' }),
         /*#__PURE__*/React.createElement("line", { x1: 12, y1: 2, x2: 12, y2: 15 })),
-      'Paylaş')))));
+      t('share'))))));
 }
 
 function PokeModal({
@@ -3162,9 +3490,9 @@ function PokeModal({
     onClick: e => e.stopPropagation()
   }, done ? /*#__PURE__*/React.createElement("div", {
     style: { textAlign: 'center', padding: '24px 10px' }
-  }, /*#__PURE__*/React.createElement("div", { style: { fontSize: 40, marginBottom: 8 } }, "👊"), /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800 } }, "Dürtüldü!"), /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, color: '#888', marginTop: 4 } }, (friend.name || friend.username) + " bildirimini görecek")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", { style: { fontSize: 40, marginBottom: 8 } }, "👊"), /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800 } }, t('poked_excl')), /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, color: '#888', marginTop: 4 } }, (friend.name || friend.username) + t('notif_will_see'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 17, fontWeight: 800, marginBottom: 4 }
-  }, "👊 " + (friend.name || friend.username) + " dürtülüyor"), /*#__PURE__*/React.createElement("div", {
+  }, "👊 " + (friend.name || friend.username) + t('poking')), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 13, color: '#888', marginBottom: 16 }
   }, t('poke_notif_hint')), POKE_MESSAGES.slice(0, 3).map((msg, i) => /*#__PURE__*/React.createElement("button", {
     key: i,
@@ -3174,7 +3502,7 @@ function PokeModal({
   }, msg)), /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     style: { width: '100%', padding: '13px', marginTop: 4, background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 12, color: '#aaa', fontSize: 14, fontWeight: 700, cursor: 'pointer' }
-  }, "İptal"))));
+  }, t('send_cancel')))));
 }
 // Bildirim paneli — dürtme, alkış, program istekleri (ana ekran zilinden açılır)
 function NotificationPanel({
@@ -3227,7 +3555,7 @@ function NotificationPanel({
     style: { flex: 1, minWidth: 0 }
   }, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 13.5, lineHeight: 1.4 }
-  }, /*#__PURE__*/React.createElement("b", null, pr.fromName), " sana \"" + pr.dayName + "\" programını gönderdi"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", null, pr.fromName), " " + t('sent_program_to')), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 11, color: '#666', marginTop: 3 }
   }, (pr.exercises || []).length + " egzersiz")), /*#__PURE__*/React.createElement("button", {
     onClick: () => { onAcceptProgram(pr.dayName, pr.fromName, pr.exercises); onDismissProgram(pr.id); },
@@ -3245,7 +3573,7 @@ function NotificationPanel({
     style: { flex: 1, minWidth: 0 }
   }, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 13.5, lineHeight: 1.4 }
-  }, /*#__PURE__*/React.createElement("b", null, n.fromName), " ", n.type === 'clap' ? 'rekoruna tepki verdi' : n.type === 'gym' ? 'şu an antrenmanda 🏋️' : 'seni dürttü', n.message && n.type === 'poke' ? ': "' + n.message + '"' : n.message && n.type === 'clap' ? ' · ' + n.message : ''), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", null, n.fromName), " ", n.type === 'clap' ? 'rekoruna tepki verdi' : n.type === 'gym' ? t('in_workout_status') : t('poked_you_msg'), n.message && n.type === 'poke' ? ': "' + n.message + '"' : n.message && n.type === 'clap' ? ' · ' + n.message : ''), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 11, color: '#666', marginTop: 3 }
   }, feedTimeAgo(n.createdAt))), /*#__PURE__*/React.createElement("button", {
     onClick: () => onDismissOne(n.id),
@@ -3292,11 +3620,11 @@ function ShareProgramModal({
     style: { fontSize: 16, fontWeight: 800, color: '#fff' }
   }, t('sent_excl')), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 13, color: '#888', marginTop: 4 }
-  }, selectedUids.length + " arkadaşına " + dayName + " programı gitti")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, selectedUids.length + t('program_sent_to') + dayName + t('program_went'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 17, fontWeight: 800, color: '#fff', marginBottom: 4 }
   }, t('send_program')), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 13, color: '#888', marginBottom: 16 }
-  }, "\"" + dayName + "\" günündeki " + exercises.length + " egzersiz gönderilecek. Ağırlıkların gitmez — arkadaşın kendi verilerini girer."), friends === null ? /*#__PURE__*/React.createElement("div", {
+  }, '"' + dayName + '" ' + exercises.length + t('exercises_will_send')), friends === null ? /*#__PURE__*/React.createElement("div", {
     style: { textAlign: 'center', color: '#555', padding: '20px 0', fontSize: 13 }
   }, t('loading3')) : friends.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: { textAlign: 'center', color: '#555', padding: '20px 0', fontSize: 13 }
@@ -3336,11 +3664,11 @@ function ShareProgramModal({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     style: { flex: 1, padding: '13px', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 12, color: '#aaa', fontSize: 14, fontWeight: 700, cursor: 'pointer' }
-  }, "İptal"), /*#__PURE__*/React.createElement("button", {
+  }, t('send_cancel')), /*#__PURE__*/React.createElement("button", {
     onClick: handleSend,
     disabled: selectedUids.length === 0 || sending,
     style: { flex: 2, padding: '13px', background: selectedUids.length > 0 ? '#4a9eff' : '#1a1a1a', border: 'none', borderRadius: 12, color: selectedUids.length > 0 ? '#fff' : '#555', fontSize: 14, fontWeight: 800, cursor: selectedUids.length > 0 ? 'pointer' : 'default' }
-  }, sending ? t('sending') : selectedUids.length > 0 ? "Gönder (" + selectedUids.length + ")" : "Arkadaş seç")))));
+  }, sending ? t('sending') : selectedUids.length > 0 ? t('send_paren') + selectedUids.length + ")" : t('select_friend'))))));
 }
 function DayDetailModal({
   targetDateKey,
@@ -3461,7 +3789,7 @@ function DayDetailModal({
       targetsTotal
     };
   };
-  const weekday = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'][date.getDay()];
+  const weekday = (CURRENT_LANG === 'en' ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] : ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'])[date.getDay()];
   const todayKey = dateKey(Date.now());
   const isPast = targetDateKey !== todayKey && new Date(date).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0);
   const isFuture = new Date(date).setHours(0, 0, 0, 0) > new Date().setHours(0, 0, 0, 0);
@@ -3486,12 +3814,12 @@ function DayDetailModal({
       color: '#888',
       marginLeft: 8
     }
-  }, "· Geçmiş gün"), isFuture && /*#__PURE__*/React.createElement("span", {
+  }, t('past_day')), isFuture && /*#__PURE__*/React.createElement("span", {
     style: {
       color: '#888',
       marginLeft: 8
     }
-  }, "· İleri tarih"))), Object.entries(workouts).map(([dayType, w]) => {
+  }, t('future_date')))), Object.entries(workouts).map(([dayType, w]) => {
     const cfg = dayConfig[dayType] || BUILTIN_DAYS.push;
     const duration = w.session?.endTime ? w.session.endTime - w.session.startTime : null;
     const volume = w.logs.reduce((s, l) => s + l.weight * l.reps, 0);
@@ -3521,7 +3849,7 @@ function DayDetailModal({
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => onEditWorkout(targetDateKey, dayType),
       style: { background: 'rgba(0,0,0,0.25)', border: 'none', borderRadius: 9, padding: '7px 13px', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', letterSpacing: 0.5 }
-    }, "✏️ DÜZENLE"), /*#__PURE__*/React.createElement("button", {
+    }, t('edit_cap')), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         if (confirm(`${cfg.name} antrenmanını tamamen silmek istiyor musun?`)) onDeleteWorkout(targetDateKey, dayType);
       },
@@ -3534,7 +3862,7 @@ function DayDetailModal({
       style: S.dayStatVal
     }, duration ? formatDurationLong(duration) : '—'), /*#__PURE__*/React.createElement("div", {
       style: S.dayStatLbl
-    }, "SÜRE")), /*#__PURE__*/React.createElement("div", {
+    }, t('duration_cap'))), /*#__PURE__*/React.createElement("div", {
       style: S.dayStatBox
     }, /*#__PURE__*/React.createElement("div", {
       style: S.dayStatVal
@@ -3628,7 +3956,7 @@ function DayDetailModal({
     style: S.addWorkoutSection
   }, /*#__PURE__*/React.createElement("div", {
     style: S.addWorkoutLabel
-  }, hasWorkouts ? 'YENİ ANTRENMAN EKLE' : 'BU GÜNE ANTRENMAN EKLE'), /*#__PURE__*/React.createElement("div", {
+  }, hasWorkouts ? t('new_workout_add') : t('add_to_this_day')), /*#__PURE__*/React.createElement("div", {
     style: S.addWorkoutGrid
   }, Object.entries(dayConfig).map(([key, cfg]) => /*#__PURE__*/React.createElement("button", {
     key: key,
@@ -3720,7 +4048,7 @@ async function findUserByUsername(username) {
     return {
       uid: uid,
       username: u,
-      name: d.name || 'APEX kullanıcısı'
+      name: d.name || t('apex_user')
     };
   } catch (e) {
     return null;
@@ -3848,7 +4176,7 @@ function UsernameSetup({
       marginTop: 20,
       cursor: 'pointer'
     }
-  }, busy ? 'KONTROL EDİLİYOR...' : 'DEVAM ET')));
+  }, busy ? t('checking') : 'DEVAM ET')));
 }
 
 // ═══════════════════════════════════════════
@@ -4013,13 +4341,32 @@ async function dismissProgramRequest(uid, reqId) {
 // ————— BİLDİRİMLER (dürtme + alkış) —————
 // Model: users/{alıcı}/notifications/{id} → { type, fromUid, fromName, message, createdAt, read }
 // Hazır dürtme mesajları (profesyonel + motive)
-const POKE_MESSAGES = [
+const POKE_MESSAGES_ALL = {
+  tr: [
   'Hadi kalk, salon seni bekliyor 💪',
   'Kaç gün oldu? Vakit geldi, toparlan 🔥',
   'Bugün antrenman günü — bahane yok! ⚡',
   'Ben gidiyorum, sen de gel 🏋️',
   'Serini bozma, hadi harekete geç 🚀'
-];
+  ],
+  en: [
+  'Get up, the gym is waiting 💪',
+  'How many days has it been? Time to get back 🔥',
+  "Today's a workout day — no excuses! ⚡",
+  "I'm heading out, you come too 🏋️",
+  "Don't break your streak, get moving 🚀"
+  ]
+};
+const POKE_MESSAGES = new Proxy([], {
+  get(target, prop) {
+    const arr = POKE_MESSAGES_ALL[CURRENT_LANG] || POKE_MESSAGES_ALL.tr;
+    if (prop === 'length') return arr.length;
+    if (prop === Symbol.iterator) return arr[Symbol.iterator].bind(arr);
+    if (typeof prop === 'string' && /^\d+$/.test(prop)) return arr[+prop];
+    const v = arr[prop];
+    return typeof v === 'function' ? v.bind(arr) : v;
+  }
+});
 // Dürt: arkadaşın notifications'ına yaz
 async function sendPoke(fromUid, fromName, toUid, message) {
   if (!window.APEX_DB) return;
@@ -4044,7 +4391,7 @@ async function sendClap(fromUid, fromName, toUid, detail) {
       type: 'clap',
       fromUid: fromUid,
       fromName: fromName || 'Biri',
-      message: detail || 'seni alkışladı',
+      message: detail || t('applauded_you_msg'),
       createdAt: Date.now(),
       read: false
     });
@@ -4066,8 +4413,8 @@ async function broadcastGymEntry(fromUid, fromName) {
       window.APEX_DB.collection('users').doc(fr.uid).collection('notifications').doc(id).set({
         type: 'gym',
         fromUid: fromUid,
-        fromName: fromName || 'Arkadaşın',
-        message: 'şu an antrenmanda 🏋️',
+        fromName: fromName || t('friend_word'),
+        message: t('in_workout_status'),
         createdAt: Date.now(),
         read: false
       }).catch(() => {})
@@ -4132,7 +4479,8 @@ async function loadLiveStatus(uid) {
 // Kas dağılımı bar renkleri (sırayla)
 // ————— HAFTA ÖZETİ —————
 // Bilge atasözü havuzu (gaza getiren, azim/sabır/güç temalı)
-const WEEKLY_PROVERBS = [
+const WEEKLY_PROVERBS_ALL = {
+  tr: [
   'Bin millik yol, tek bir adımla başlar.',
   'Dağı yerinden oynatan biri, küçük taşlarını taşımakla başlar.',
   'Yavaş gitmekten korkma, öylece durmaktan kork.',
@@ -4153,7 +4501,40 @@ const WEEKLY_PROVERBS = [
   'Roma bir günde kurulmadı.',
   'Pratik yapmak, mükemmele ulaştırır.',
   'Bir adım geriye gitmek, bazen bin adım ileri gitmek demektir.'
-];
+  ],
+  en: [
+  'A journey of a thousand miles begins with a single step.',
+  'One who moves a mountain begins by carrying away small stones.',
+  "Don't fear going slow, fear standing still.",
+  'No pain, no gain.',
+  'Failure teaches more than success.',
+  'A little progress each day leads to big change in the end.',
+  'However tall a tree grows, its roots go as deep.',
+  'Success comes from effort.',
+  'Patience is the best remedy.',
+  'Perseverance is victory itself.',
+  'The waves of the river wear down even the mountain before them.',
+  'When faith, wisdom and will unite, no mountain is unconquerable.',
+  'Pearls are not found on the shore; to want one, you must dive for it.',
+  'One who does not climb mountains cannot see the distance.',
+  'The arrow that flies farthest is drawn from the most tightly pulled bow.',
+  "If you don't have to fight an outer enemy, fight the one within.",
+  "If you can't be patient with small matters, you can't achieve big plans.",
+  'Rome was not built in a day.',
+  'Practice makes perfect.',
+  'Taking one step back sometimes means going a thousand steps forward.'
+  ]
+};
+const WEEKLY_PROVERBS = new Proxy([], {
+  get(target, prop) {
+    const arr = WEEKLY_PROVERBS_ALL[CURRENT_LANG] || WEEKLY_PROVERBS_ALL.tr;
+    if (prop === 'length') return arr.length;
+    if (prop === Symbol.iterator) return arr[Symbol.iterator].bind(arr);
+    if (typeof prop === 'string' && /^\d+$/.test(prop)) return arr[+prop];
+    const v = arr[prop];
+    return typeof v === 'function' ? v.bind(arr) : v;
+  }
+});
 
 // Bir tarihin ait olduğu haftanın Pazartesi 00:00'ını döndürür (Pzt–Paz, Pazar dahil)
 function weekMondayStart(ts) {
@@ -4291,10 +4672,10 @@ function computeWeekSummary(data, mondayTs) {
   let msg;
   const better = (workoutCount > prevWorkoutCount) || (prCount > prevPrCount);
   const worse = (workoutCount < prevWorkoutCount) && (prCount <= prevPrCount);
-  if (prCount >= 5) msg = '🔥 Rekor haftası! Geçen haftayı ezdin geçtin';
-  else if (better) msg = '🔥 Geçen haftadan daha iyisin, devam!';
-  else if (worse) msg = '👊 Bu hafta biraz düştü, gelecek hafta toparlarız';
-  else msg = '💪 Aynı tempo, istikrar da güçtür';
+  if (prCount >= 5) msg = t('week_better_lot');
+  else if (better) msg = t('week_better');
+  else if (worse) msg = t('week_worse');
+  else msg = t('week_same');
 
   return {
     rangeText, dayFlags,
@@ -4656,7 +5037,7 @@ function FriendsTab({
       }
     }), /*#__PURE__*/React.createElement("div", {
       style: S.topBarTitle
-    }, "ARKADAŞLAR"), /*#__PURE__*/React.createElement("div", {
+    }, t('friends_title')), /*#__PURE__*/React.createElement("div", {
       style: {
         width: 40
       }
@@ -4743,7 +5124,7 @@ function FriendsTab({
         await acceptFriendRequest(me, r.uid, r);
         refresh();
       } catch (e) {
-        setActionError('Kabul hatası: ' + ((e && e.code) || (e && e.message) || 'bilinmeyen'));
+        setActionError(t('accept_error') + ((e && e.code) || (e && e.message) || 'bilinmeyen'));
       }
     },
     style: S.btnAccept
@@ -4769,7 +5150,7 @@ function FriendsTab({
     style: { fontSize: 14, fontWeight: 700, color: '#fff' }
   }, pr.fromName), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 12.5, color: '#4a9eff', fontWeight: 600 }
-  }, "\"" + pr.dayName + "\" programını gönderdi"))), /*#__PURE__*/React.createElement("div", {
+  }, t('sent_program_to')))), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 12, color: '#999', marginBottom: 10, lineHeight: 1.5 }
   }, (pr.exercises || []).slice(0, 6).join(' · '), (pr.exercises || []).length > 6 ? ' +' + ((pr.exercises || []).length - 6) : '', /*#__PURE__*/React.createElement("span", { style: { color: '#666' } }, "  (" + (pr.exercises || []).length + " egzersiz)")), /*#__PURE__*/React.createElement("div", {
     style: { display: 'flex', gap: 8 }
@@ -4816,7 +5197,7 @@ function FriendsTab({
     if (st && st.training) {
       return /*#__PURE__*/React.createElement("div", {
         style: { fontSize: 12, color: '#4CAF50', fontWeight: 700, marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }
-      }, /*#__PURE__*/React.createElement("span", { style: { width: 7, height: 7, borderRadius: '50%', background: '#4CAF50', boxShadow: '0 0 6px #4CAF50', display: 'inline-block' } }), "şu an salonda" + (st.dayName ? ' · ' + st.dayName : ''));
+      }, /*#__PURE__*/React.createElement("span", { style: { width: 7, height: 7, borderRadius: '50%', background: '#4CAF50', boxShadow: '0 0 6px #4CAF50', display: 'inline-block' } }), t('in_gym_status') + (st.dayName ? ' · ' + st.dayName : ''));
     }
     return /*#__PURE__*/React.createElement("div", {
       style: S.friendUser
@@ -4872,7 +5253,7 @@ function FriendsTab({
       refresh();
     },
     style: S.btnReject
-  }, "İptal")))), pokeTarget && /*#__PURE__*/React.createElement(PokeModal, {
+  }, t('send_cancel'))))), pokeTarget && /*#__PURE__*/React.createElement(PokeModal, {
     friend: pokeTarget,
     myName: (authUser.displayName || 'Biri'),
     onClose: () => setPokeTarget(null),
@@ -5449,11 +5830,11 @@ function FeedCard({
     style: S.feedGymChip
   }, "📍 ", item.gymName)), item.type === 'plateau' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.feedBody
-  }, item.weeksStuck, " haftalık platoyu kırdı! ⚡"), /*#__PURE__*/React.createElement("div", {
+  }, item.weeksStuck, t('broke_plato')), /*#__PURE__*/React.createElement("div", {
     style: S.feedPlato
   }, /*#__PURE__*/React.createElement("div", {
     style: S.feedExLabel
-  }, item.exerciseName, " · uzun süredir takılıydı"), /*#__PURE__*/React.createElement("div", {
+  }, item.exerciseName, t('stuck_long')), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.feedBigVal,
       color: '#FFA726'
@@ -5479,7 +5860,7 @@ function FeedCard({
     style: S.feedTag
   }, t('pr_badge'), item.delta ? ` · +${item.delta}kg` : ''))), item.type === 'workout' && /*#__PURE__*/React.createElement("div", {
     style: S.feedBody
-  }, "💪 ", item.dayName, " günü tamamladı · ", item.setCount, " set", item.volume ? ` · ${(item.volume / 1000).toFixed(1)}t hacim` : ''), showWho && /*#__PURE__*/React.createElement("div", {
+  }, "💪 ", item.dayName, t('completed_day'), item.setCount, " set", item.volume ? ` · ${(item.volume / 1000).toFixed(1)}t hacim` : ''), showWho && /*#__PURE__*/React.createElement("div", {
     style: S.whoPopup,
     onClick: () => setShowWho(null)
   }, /*#__PURE__*/React.createElement("span", {
@@ -6073,7 +6454,7 @@ function LoadingScreen({
       letterSpacing: 2.5,
       fontWeight: 700
     }
-  }, label || 'YÜKLENİYOR')));
+  }, label || t('loading_cap'))));
 }
 
 function App() {
@@ -6190,7 +6571,7 @@ function App() {
     const id = 'g' + Date.now();
     const newGyms = [...gyms, {
       id,
-      name: name.trim() || 'Yeni Salon'
+      name: name.trim() || t('gym_new')
     }];
     persistGyms(newGyms);
     selectGym(id);
@@ -6326,13 +6707,13 @@ function GymPickerModal({
     onClick: e => e.stopPropagation()
   }, /*#__PURE__*/React.createElement("div", {
     style: S.modalTitle
-  }, "SALON SEÇ"), /*#__PURE__*/React.createElement("div", {
+  }, t('gym_select')), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: '#777',
       marginBottom: 16
     }
-  }, "Her salonun kendi egzersizleri ve rekorları ayrıdır. 🌐 = arkadaşlar görür, 🔒 = gizli"), gyms.map(g => /*#__PURE__*/React.createElement("div", {
+  }, t('gym_desc')), gyms.map(g => /*#__PURE__*/React.createElement("div", {
     key: g.id,
     style: {
       ...S.gymItem,
@@ -6358,7 +6739,7 @@ function GymPickerModal({
     }
   }, "📍"), /*#__PURE__*/React.createElement("span", {
     style: S.gymItemName
-  }, g.name), g.id === activeGymId && /*#__PURE__*/React.createElement("span", {
+  }, g.id === 'default' ? t('my_gym') : g.name), g.id === activeGymId && /*#__PURE__*/React.createElement("span", {
     style: {
       color: 'var(--accent)',
       fontSize: 15,
@@ -6367,7 +6748,7 @@ function GymPickerModal({
   }, "✓")), /*#__PURE__*/React.createElement("button", {
     onClick: () => onToggleShare(g.id),
     style: S.gymMiniBtn,
-    title: "Paylaşım"
+    title: t('gym_share')
   }, g.shared === false ? '🔒' : '🌐'), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setEditId(g.id);
@@ -6376,7 +6757,7 @@ function GymPickerModal({
     style: S.gymMiniBtn
   }, "✎"), gyms.length > 1 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      if (confirm(`"${g.name}" salonu ve tüm verisi silinsin mi?`)) onDelete(g.id);
+      if (confirm('"' + (g.id === 'default' ? t('my_gym') : g.name) + '" - ' + t('delete') + '?')) onDelete(g.id);
     },
     style: {
       ...S.gymMiniBtn,
@@ -6390,7 +6771,7 @@ function GymPickerModal({
     autoFocus: true,
     value: newName,
     onChange: e => setNewName(e.target.value),
-    placeholder: "Salon adı (örn: Çorlu Gym)",
+    placeholder: t('gym_name_ph'),
     style: S.gymEditInput,
     autoCapitalize: "sentences",
     autoCorrect: "off",
@@ -6405,7 +6786,7 @@ function GymPickerModal({
   }, "✓")) : /*#__PURE__*/React.createElement("button", {
     onClick: () => setAdding(true),
     style: S.gymAddBtn
-  }, "+ Yeni Salon Ekle"), /*#__PURE__*/React.createElement("button", {
+  }, t('gym_add')), /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     style: {
       ...S.modalCancel,
@@ -6870,7 +7251,7 @@ function WorkoutTab({
       customDays: [...(data.customDays || []), ...newDays],
       exercises: newExercises
     });
-    setToast('✓ "' + program.name + '" programı eklendi!');
+    setToast('✓ "' + program.name + '" ' + t('prog_added_toast'));
   };
 
   // Arkadaştan gelen programı yeni gün olarak ekle (egzersizler boş: sadece isimler)
@@ -6882,7 +7263,7 @@ function WorkoutTab({
     const newDay = {
       id,
       name: dayName,
-      subtitle: 'paylaşılan program',
+      subtitle: t('shared_program'),
       accent: palette.accent,
       dark: palette.dark,
       paletteId: palette.id
@@ -6895,7 +7276,7 @@ function WorkoutTab({
         [id]: (exercises || []).filter(Boolean)
       }
     });
-    setToast('📥 "' + dayName + '" programın eklendi!');
+    setToast('📥 "' + dayName + '" ' + t('prog_added_toast2'));
   };
 
   // Arkadaştan kabul edilen program (App'ten gelen pendingProgram) → yeni gün olarak ekle
@@ -7177,7 +7558,7 @@ function WorkoutTab({
     // Bu günde aynı isim zaten varsa çakışma olmasın
     const dayList = data.exercises[currentDay] || [];
     if (dayList.includes(nn)) {
-      alert('Bu günde "' + nn + '" adlı bir egzersiz zaten var.');
+      alert(t('day_prefix') + nn + t('ex_exists'));
       return;
     }
     // Egzersiz listesinde adı değiştir (sırayı koru)
@@ -7447,10 +7828,10 @@ function WorkoutTab({
               customMuscleMap: imp.customMuscleMap || {},
               hiddenDays: imp.hiddenDays || []
             });
-            alert('Yedek yüklendi!');
+            alert(t('backup_loaded'));
           }
         } catch {
-          alert('Dosya okunamadı.');
+          alert(t('file_read_err'));
         }
       };
       reader.readAsText(file);
@@ -7818,7 +8199,7 @@ function HomeView({
     }
   }, "📍"), /*#__PURE__*/React.createElement("span", {
     style: S.gymSelectorName
-  }, activeGym ? activeGym.name : t('my_gym')), /*#__PURE__*/React.createElement("span", {
+  }, activeGym ? (activeGym.id === 'default' ? t('my_gym') : activeGym.name) : t('my_gym')), /*#__PURE__*/React.createElement("span", {
     style: {
       color: 'var(--accent)',
       fontSize: 11
@@ -7973,9 +8354,9 @@ function HomeView({
     style: { flex: 1 }
   }, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 14, fontWeight: 800, color: '#fff' }
-  }, "Haftalık özetin hazır!"), /*#__PURE__*/React.createElement("div", {
+  }, t('weekly_ready')), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 12, color: '#999', marginTop: 2 }
-  }, "Bu haftayı görmek için dokun · " + (weeklySummaryRange || ''))), /*#__PURE__*/React.createElement("span", {
+  }, t('weekly_ready_sub') + (weeklySummaryRange || ''))), /*#__PURE__*/React.createElement("span", {
     style: { color: 'var(--accent-light)', fontSize: 18, flexShrink: 0 }
   }, "›")), /*#__PURE__*/React.createElement("div", {
     style: S.statsRow
@@ -8198,13 +8579,13 @@ function SixMonthStats({
     style: S.statsDetailVal
   }, selected.days), /*#__PURE__*/React.createElement("div", {
     style: S.statsDetailLbl
-  }, "ANTRENMAN GÜNÜ")), /*#__PURE__*/React.createElement("div", {
+  }, t('workout_day_cap'))), /*#__PURE__*/React.createElement("div", {
     style: S.statsDetailBox
   }, /*#__PURE__*/React.createElement("div", {
     style: S.statsDetailVal
   }, selected.totalMs > 0 ? formatDurationLong(selected.totalMs) : '—'), /*#__PURE__*/React.createElement("div", {
     style: S.statsDetailLbl
-  }, "TOPLAM SÜRE")))) : /*#__PURE__*/React.createElement("div", {
+  }, t('total_duration_cap'))))) : /*#__PURE__*/React.createElement("div", {
     style: S.statsHint
   }, t('tap_month_detail'))));
 }
@@ -8295,7 +8676,7 @@ function MuscleHeatmap({
         vb = acc[b]?.sets || 0;
       if (va + vb < 4) return;
       const ratio = va / (vb || 0.5);
-      if (ratio >= 2) out.push(`${la}, ${lb}'den ~${ratio.toFixed(1)}x fazla çalışılmış`);else if (ratio <= 0.5) out.push(`${lb}, ${la}'den ~${(1 / ratio).toFixed(1)}x fazla çalışılmış`);
+      if (ratio >= 2) out.push(t('imbalance_msg',{a:la,b:lb,x:ratio.toFixed(1)}));else if (ratio <= 0.5) out.push(t('imbalance_msg',{a:lb,b:la,x:(1 / ratio).toFixed(1)}));
     });
     return out;
   }, [acc]);
@@ -8569,7 +8950,7 @@ function MuscleTagModal({
       return next;
     });
   };
-  const labelFor = v => v === 1 ? 'Birincil' : v === 0.5 ? 'İkincil' : '';
+  const labelFor = v => v === 1 ? 'Birincil' : v === 0.5 ? t('secondary') : '';
   const colorFor = v => v === 1 ? 'var(--accent)' : v === 0.5 ? '#FFA726' : '#1f1f1f';
   return /*#__PURE__*/React.createElement("div", {
     style: S.modalOverlay,
@@ -8613,7 +8994,7 @@ function MuscleTagModal({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     style: S.modalCancel
-  }, "İPTAL"), /*#__PURE__*/React.createElement("button", {
+  }, t('cancel_cap')), /*#__PURE__*/React.createElement("button", {
     onClick: () => onSave(muscles),
     style: {
       ...S.modalConfirm,
@@ -8763,7 +9144,7 @@ function DayView({
       onSetEditMode(!editMode);
     },
     style: S.editBtn
-  }, editMode ? 'BİTTİ' : 'DÜZENLE')), isBackdated ? /*#__PURE__*/React.createElement("div", {
+  }, editMode ? t('finish_workout') : t('edit_cap'))), isBackdated ? /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.backdateBanner,
       borderColor: cfg.accent
@@ -8795,14 +9176,14 @@ function DayView({
       background: '#FF5252',
       color: '#fff'
     }
-  }, /*#__PURE__*/React.createElement(Icon.Stop, null), " BİTİR") : /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(Icon.Stop, null), ' ' + t('finish_workout')) : /*#__PURE__*/React.createElement("button", {
     onClick: onStartSession,
     style: {
       ...S.timerBtn,
       background: cfg.gradient,
       color: '#fff'
     }
-  }, /*#__PURE__*/React.createElement(Icon.Play, null), " BAŞLA")), editMode && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(Icon.Play, null), ' ' + t('start_workout'))), editMode && /*#__PURE__*/React.createElement("div", {
     style: S.hintBox
   }, t('reorder_hint')), !editMode && exercises.length > 1 && /*#__PURE__*/React.createElement("div", {
     style: S.hintBoxSmall
@@ -8833,7 +9214,7 @@ function DayView({
           }
           // Tamamlanmış (kilitli) günde, düzenleme kapalıyken → uyar
           if (isCompleted) {
-            alert('Bu antrenmanı tamamladın. Değiştirmek için sağ üstteki DÜZENLE\'ye bas.');
+            alert(t('completed_workout'));
             return;
           }
           onSelectExercise(name);
@@ -8889,7 +9270,7 @@ function DayView({
       marginTop: 16
     },
     className: "add-btn"
-  }, /*#__PURE__*/React.createElement(Icon.Plus, null), " EGZERSİZ EKLE"), editMode && exercises.length > 0 && onShareProgram && /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(Icon.Plus, null), " " + t('add_exercise_btn')), editMode && exercises.length > 0 && onShareProgram && /*#__PURE__*/React.createElement("button", {
     onClick: () => onShareProgram(dayType, cfg.name, exercises),
     style: {
       width: '100%',
@@ -8904,7 +9285,7 @@ function DayView({
       cursor: 'pointer',
       letterSpacing: 0.3
     }
-  }, "📤 Bu Programı Arkadaşa Gönder"));
+  }, t('send_to_friend')));
 }
 function ExerciseView({
   exerciseName,
@@ -9044,7 +9425,7 @@ function ExerciseView({
         value: noteDraft,
         onChange: e => setNoteDraft(e.target.value),
         autoFocus: true,
-        placeholder: 'Bu antrenmana özel not: nasıl hissettin, ne denedin...',
+        placeholder: t('note_placeholder'),
         style: { width: '100%', minHeight: 64, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 9, padding: 10, color: '#fff', fontSize: 13, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.5 }
       }),
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginTop: 9 } },
@@ -9055,7 +9436,7 @@ function ExerciseView({
         /*#__PURE__*/React.createElement("button", {
           onClick: () => setEditingNote(false),
           style: { background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 9, padding: '10px 16px', color: '#999', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }
-        }, 'İptal'))) :
+        }, t('send_cancel')))) :
       note ? /*#__PURE__*/React.createElement("div", {
         style: { background: 'rgba(74,144,226,0.07)', border: '1px solid rgba(74,144,226,0.22)', borderLeft: '3px solid #4A90E2', borderRadius: 9, padding: '11px 13px', marginBottom: 12, display: 'flex', gap: 9, alignItems: 'flex-start' }
       },
@@ -9092,7 +9473,7 @@ function ExerciseView({
     style: S.targetUnit
   }, "kg"), " × ", targetTop.reps), /*#__PURE__*/React.createElement("div", {
     style: S.targetStatus
-  }, "İlk setin senin ana setin. Bunu yendiğin anda back-off hedefine geçeriz.")) : showingBackoff ?
+  }, t('top_set_explain'))) : showingBackoff ?
   /*#__PURE__*/
   // Phase 2+: focus on BACK-OFF, show top status compact
   React.createElement("div", {
@@ -9128,7 +9509,7 @@ function ExerciseView({
       ...S.targetLabel,
       marginTop: 12
     }
-  }, backoffBeaten ? '✓ BACK-OFF YENDİN' : 'BACK-OFF — YENMEN GEREKEN'), /*#__PURE__*/React.createElement("div", {
+  }, backoffBeaten ? t('backoff_won') : 'BACK-OFF — YENMEN GEREKEN'), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.targetValue,
       color: backoffBeaten ? '#4CAF50' : '#FF5252'
@@ -9137,21 +9518,21 @@ function ExerciseView({
     style: S.targetUnit
   }, "kg"), " × ", targetBackoff.reps), backoffBeaten ? /*#__PURE__*/React.createElement("div", {
     style: S.targetStatus
-  }, "Bugün en iyi back-off: ", /*#__PURE__*/React.createElement("span", {
+  }, t('best_backoff_today'), /*#__PURE__*/React.createElement("span", {
     style: {
       color: '#4CAF50',
       fontWeight: 800
     }
   }, todayBestBackoff.weight, "kg × ", todayBestBackoff.reps), " 🔥") : todayBestBackoff ? /*#__PURE__*/React.createElement("div", {
     style: S.targetStatus
-  }, "Bugün en iyi back-off: ", todayBestBackoff.weight, "kg × ", todayBestBackoff.reps) : /*#__PURE__*/React.createElement("div", {
+  }, t('best_backoff_today'), todayBestBackoff.weight, "kg × ", todayBestBackoff.reps) : /*#__PURE__*/React.createElement("div", {
     style: S.targetStatus
-  }, "Şimdi back-off set'i yap, geçen seferki seviyeyi geç")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, t('do_backoff_now'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.targetLabel,
       marginTop: 12
     }
-  }, "İLK BACK-OFF"), /*#__PURE__*/React.createElement("div", {
+  }, t('first_backoff')), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.targetValue,
       color: '#888',
@@ -9159,7 +9540,7 @@ function ExerciseView({
     }
   }, "—"), /*#__PURE__*/React.createElement("div", {
     style: S.targetStatus
-  }, "Geçen sefer back-off set yapmamışsın. Bugün referansı sen oluştur."))) : /*#__PURE__*/React.createElement("div", {
+  }, t('no_backoff_last')))) : /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.targetCard,
       borderColor: '#1f1f1f',
@@ -9167,7 +9548,7 @@ function ExerciseView({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: S.targetLabel
-  }, "İLK SEFER"), /*#__PURE__*/React.createElement("div", {
+  }, t('first_time')), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.targetValue,
       color: '#666',
@@ -9175,7 +9556,7 @@ function ExerciseView({
     }
   }, "—"), /*#__PURE__*/React.createElement("div", {
     style: S.targetStatus
-  }, "Bu egzersiz için ilk antrenmanın. Bugün referansı sen oluştur.")), /*#__PURE__*/React.createElement(ProgressChart, {
+  }, t('first_workout_ex'))), /*#__PURE__*/React.createElement(ProgressChart, {
     history: history,
     color: cfg.accent
   }), /*#__PURE__*/React.createElement("div", {
@@ -9237,7 +9618,7 @@ function ExerciseView({
     className: "submit-btn"
   }, /*#__PURE__*/React.createElement(Icon.Check, null), " KAYDET")), /*#__PURE__*/React.createElement("div", {
     style: S.sectionLabel
-  }, "GEÇMİŞ"), history.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, t('history_cap')), history.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: S.emptyState
   }, t('add_first_set')), /*#__PURE__*/React.createElement("div", {
     style: S.historyList
@@ -9356,6 +9737,20 @@ function LibraryPicker({ cfg, existingExercises, currentDayId, onAdd }) {
 
 // ————— HAZIR PROGRAMLAR EKRANI —————
 function ProgramsModal({ onClose, onApply }) {
+  // Program içeriği çevirisi (TR verisi → dile göre göster)
+  const PROG_TR = {
+    'Full Body 3 Gün': 'prog_fb3_name',
+    'Haftada 3 gün tüm vücut. Yeni başlayanlar için ideal, hızlı gelişim.': 'prog_fb3_desc',
+    'Klasik 6 günlük split. Kas kütlesi için ideal, hacim odaklı.': 'prog_ppl_desc',
+    '4 günlük üst-alt bölünmesi. Dengeli, sürdürülebilir, zaman verimli.': 'prog_ul_desc',
+    'Güç odaklı. Bileşik hareketler, düşük tekrar, ağır yük. Temel güç için.': 'prog_ss_desc',
+    '6 günlük klasik. Göğüs-sırt, omuz-kol, bacak ikişer kez. Yüksek hacim.': 'prog_arnold_desc',
+    'GÜN A': 'pd_gunA', 'GÜN B': 'pd_gunB', 'GÜN C': 'pd_gunC',
+    'Üst Vücut': 'pd_upper', 'Alt Vücut': 'pd_lower', 'Güç': 'pd_guc',
+    'Göğüs · Omuz · Triceps': 'sub_chest_sh_tri', 'Sırt · Biceps': 'sub_back_bi',
+    'Bacak · Kalça': 'sub_leg_glute', 'Göğüs · Sırt': 'sub_chest_back'
+  };
+  const trp = s => PROG_TR[s] ? t(PROG_TR[s]) : s;
   const [level, setLevel] = useState('all');
   const [selected, setSelected] = useState(null); // seçili program (detay)
   const levelInfo = id => PROGRAM_LEVELS.find(l => l.id === id) || { tr: id, color: '#888' };
@@ -9368,19 +9763,19 @@ function ProgramsModal({ onClose, onApply }) {
       /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxHeight: '86vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }, onClick: e => e.stopPropagation() },
         /*#__PURE__*/React.createElement("button", { onClick: () => setSelected(null), style: { background: 'none', border: 'none', color: '#888', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 } },
           /*#__PURE__*/React.createElement("span", { style: { fontSize: 16 } }, "‹"), " " + t('programs_title')),
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 20, fontWeight: 800, marginBottom: 4 } }, selected.name),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 20, fontWeight: 800, marginBottom: 4 } }, trp(selected.name)),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' } },
           /*#__PURE__*/React.createElement("span", { style: { fontSize: 9.5, fontWeight: 800, padding: '3px 9px', borderRadius: 20, background: li.color + '22', color: li.color } }, t('level_'+selected.level).toUpperCase()),
           /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#888', fontWeight: 700 } }, selected.days.length + ' ' + t('prog_days') + ' · ' + totalEx + ' ' + t('prog_exercises'))),
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#aaa', lineHeight: 1.5, marginBottom: 14 } }, selected.desc),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#aaa', lineHeight: 1.5, marginBottom: 14 } }, trp(selected.desc)),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, background: 'rgba(74,144,226,0.07)', border: '1px solid rgba(74,144,226,0.2)', borderRadius: 10, padding: '10px 12px', marginBottom: 14 } },
           /*#__PURE__*/React.createElement("span", { style: { color: '#4A90E2', flexShrink: 0, fontSize: 14, fontWeight: 800 } }, "i"),
           /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#bfd4ee', lineHeight: 1.5 } }, t('prog_suggestion_tip'))),
         selected.days.map((d, di) => /*#__PURE__*/React.createElement("div", { key: di, style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 11, padding: 12, marginBottom: 8 } },
           /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 } },
             /*#__PURE__*/React.createElement("span", { style: { width: 8, height: 8, borderRadius: 3, background: d.accent } }),
-            /*#__PURE__*/React.createElement("span", { style: { fontSize: 13, fontWeight: 800 } }, d.name),
-            /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666', marginLeft: 'auto', fontWeight: 700 } }, d.subtitle)),
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 13, fontWeight: 800 } }, trp(d.name)),
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666', marginLeft: 'auto', fontWeight: 700 } }, trp(d.subtitle))),
           d.exercises.map((ex, ei) => /*#__PURE__*/React.createElement("div", { key: ei, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderTop: ei === 0 ? 'none' : '1px solid #191919' } },
             /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#bbb' } }, ex.n),
             /*#__PURE__*/React.createElement("span", { style: { fontSize: 10.5, color: '#FF8A65', fontWeight: 800, background: 'rgba(255,61,61,0.08)', padding: '2px 7px', borderRadius: 6 } }, t('prog_suggestion') + " " + ex.sets + "×" + ex.reps))))),
@@ -9408,8 +9803,8 @@ function ProgramsModal({ onClose, onApply }) {
           style: { display: 'block', width: '100%', textAlign: 'left', background: 'linear-gradient(135deg,#141414,#0d0d0d)', border: '1px solid #232323', borderRadius: 14, padding: 15, marginBottom: 11, cursor: 'pointer', fontFamily: 'inherit', position: 'relative', overflow: 'hidden' }
         },
           /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 0, right: 0, fontSize: 9, fontWeight: 900, padding: '4px 11px', borderBottomLeftRadius: 10, letterSpacing: 0.4, background: p.pro ? 'linear-gradient(135deg,#FFB74D,#F57C00)' : 'linear-gradient(135deg,#4CAF50,#2e7d32)', color: p.pro ? '#1a1a1a' : '#fff' } }, p.pro ? '🔒 PRO' : t('prog_free')),
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginBottom: 3, color: '#fff' } }, p.name),
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11.5, color: '#999', lineHeight: 1.45, marginBottom: 11, maxWidth: '82%' } }, p.desc),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginBottom: 3, color: '#fff' } }, trp(p.name)),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11.5, color: '#999', lineHeight: 1.45, marginBottom: 11, maxWidth: '82%' } }, trp(p.desc)),
           /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' } },
             /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#aaa', fontWeight: 700 } }, /*#__PURE__*/React.createElement("b", { style: { color: '#FF6B6B' } }, p.days.length), " " + t('prog_days')),
             /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#aaa', fontWeight: 700 } }, /*#__PURE__*/React.createElement("b", { style: { color: '#FF6B6B' } }, totalEx), " " + t('prog_exercises')),
@@ -9496,14 +9891,14 @@ function AddExerciseModal({
     value: name,
     onChange: e => setName(e.target.value),
     onKeyDown: e => e.key === 'Enter' && name.trim() && onAdd(name),
-    placeholder: "Örn. Cable Fly",
+    placeholder: t('ex_name_ph'),
     style: S.modalInput
   }), /*#__PURE__*/React.createElement("div", {
     style: S.modalActions
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     style: S.modalCancel
-  }, "İPTAL"), /*#__PURE__*/React.createElement("button", {
+  }, t('cancel_cap')), /*#__PURE__*/React.createElement("button", {
     onClick: () => name.trim() && onAdd(name),
     style: {
       ...S.modalConfirm,
@@ -9567,7 +9962,7 @@ function ThemePicker() {
       }
     },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, fontWeight: 800, color: '#fff', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 4 } },
-        t.emoji + ' ' + t.name,
+        t.emoji + ' ' + ((I18N[CURRENT_LANG] && I18N[CURRENT_LANG]['theme_'+id]) || t.name),
         sel === id && /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: t.accent } }, '✓')),
       /*#__PURE__*/React.createElement("div", { style: { height: 6, borderRadius: 3, background: 'linear-gradient(90deg,' + t.accent + ',' + t.dark + ')', marginBottom: 5 } }),
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 3 } },
@@ -9648,7 +10043,7 @@ function MenuModal({
     style: { background: 'none', border: 'none', color: '#FF5252', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginTop: 2 }
   }, t('set_photo_remove'))), /*#__PURE__*/React.createElement("div", {
     style: S.menuUserName
-  }, authUser.displayName || 'Kullanıcı', myUsername && /*#__PURE__*/React.createElement("span", {
+  }, authUser.displayName || t('user_label'), myUsername && /*#__PURE__*/React.createElement("span", {
     style: { color: 'var(--accent)', fontSize: 13, fontWeight: 700, marginLeft: 8 }
   }, "@" + myUsername)), /*#__PURE__*/React.createElement("div", {
     style: S.menuUserEmail
@@ -9660,7 +10055,7 @@ function MenuModal({
     // ————— DİL SEÇİCİ —————
     timerSettings && onTimerSettingsChange && onChangeLang && /*#__PURE__*/React.createElement("div", { style: { ...S.modalTitle, marginTop: 0 } }, t('language')),
     timerSettings && onTimerSettingsChange && onChangeLang && /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginBottom: 16 } },
-      [{ id: 'tr', label: 'Türkçe' }, { id: 'en', label: 'English' }].map(l => /*#__PURE__*/React.createElement("button", {
+      [{ id: 'tr', label: t('lang_tr') }, { id: 'en', label: 'English' }].map(l => /*#__PURE__*/React.createElement("button", {
         key: l.id, onClick: () => onChangeLang(l.id),
         style: { flex: 1, padding: '12px', borderRadius: 11, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, background: currentLang === l.id ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#141414', border: '1px solid ' + (currentLang === l.id ? 'transparent' : '#2a2a2a'), color: currentLang === l.id ? '#fff' : '#999' }
       }, l.label))),
@@ -9687,7 +10082,7 @@ function MenuModal({
             style: { padding: '8px 14px', borderRadius: 9, border: '1px solid ' + (timerSettings.defaultSec === sec ? 'var(--accent)' : '#2a2a2a'), background: timerSettings.defaultSec === sec ? 'var(--accent)' : '#1a1a1a', color: timerSettings.defaultSec === sec ? '#fff' : '#aaa', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }
           }, sec)),
           /*#__PURE__*/React.createElement("input", {
-            type: 'number', inputMode: 'numeric', placeholder: 'Özel', value: customDur,
+            type: 'number', inputMode: 'numeric', placeholder: t('timer_custom'), value: customDur,
             onChange: e => setCustomDur(e.target.value),
             onBlur: () => { const v = parseInt(customDur); if (v && v > 0 && v <= 600) onTimerSettingsChange({ ...timerSettings, defaultSec: v }); },
             style: { width: 70, padding: '8px 10px', borderRadius: 9, border: '1px solid ' + (![60, 90, 120, 180].includes(timerSettings.defaultSec) ? 'var(--accent)' : '#2a2a2a'), background: '#1a1a1a', color: '#fff', fontSize: 13, fontWeight: 800, fontFamily: 'inherit', textAlign: 'center', boxSizing: 'border-box' }
@@ -9785,16 +10180,16 @@ function DayEditorModal({
     onClick: e => e.stopPropagation()
   }, /*#__PURE__*/React.createElement("div", {
     style: S.modalTitle
-  }, isEdit ? 'Günü Düzenle' : 'Yeni Gün'), /*#__PURE__*/React.createElement("div", {
+  }, isEdit ? t('edit_day') : t('new_day')), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.dayPreview,
       background: previewGradient
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: S.dayPreviewName
-  }, name.trim() ? name.toUpperCase() : 'GÜN ADI'), /*#__PURE__*/React.createElement("div", {
+  }, name.trim() ? name.toUpperCase() : t('day_name')), /*#__PURE__*/React.createElement("div", {
     style: S.dayPreviewSub
-  }, subtitle.trim() || 'Alt başlık (opsiyonel)')), /*#__PURE__*/React.createElement("div", {
+  }, subtitle.trim() || t('subtitle_opt'))), /*#__PURE__*/React.createElement("div", {
     style: S.inputLabel
   }, t('day_name')), /*#__PURE__*/React.createElement("input", {
     autoFocus: true,
@@ -9837,7 +10232,7 @@ function DayEditorModal({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowCopySection(!showCopySection),
     style: S.copyToggle
-  }, showCopySection ? '▼' : '▶', " Mevcut günlerden egzersiz kopyala ", copiedExercises.length > 0 && `(${copiedExercises.length})`), showCopySection && /*#__PURE__*/React.createElement("div", {
+  }, showCopySection ? '▼' : '▶', t('copy_from_days'), copiedExercises.length > 0 && `(${copiedExercises.length})`), showCopySection && /*#__PURE__*/React.createElement("div", {
     style: {
       maxHeight: '30vh',
       overflowY: 'auto',
@@ -9877,7 +10272,7 @@ function DayEditorModal({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     style: S.modalCancel
-  }, "İPTAL"), /*#__PURE__*/React.createElement("button", {
+  }, t('cancel_cap')), /*#__PURE__*/React.createElement("button", {
     onClick: handleSave,
     disabled: !name.trim(),
     style: {
@@ -9885,7 +10280,7 @@ function DayEditorModal({
       background: name.trim() ? previewGradient : '#2a2a2a',
       color: name.trim() ? '#fff' : '#666'
     }
-  }, isEdit ? 'KAYDET' : 'OLUŞTUR')), isEdit && onDelete && /*#__PURE__*/React.createElement("button", {
+  }, isEdit ? 'KAYDET' : t('create'))), isEdit && onDelete && /*#__PURE__*/React.createElement("button", {
     onClick: onDelete,
     style: S.deleteDayBtn
   }, t('delete_this_day'))));
@@ -9928,12 +10323,12 @@ function SessionSummaryModal({
     style: S.summaryHeroUnit
   }, "t")), /*#__PURE__*/React.createElement("div", {
     style: S.summaryHeroLabel
-  }, "TOPLAM HACİM"), summary.tonnageDiff != null && /*#__PURE__*/React.createElement("div", {
+  }, t('total_volume_cap')), summary.tonnageDiff != null && /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.summaryDiff,
       color: diffPositive ? '#4CAF50' : '#FF5252'
     }
-  }, diffPositive ? '▲' : '▼', " ", Math.abs(summary.tonnageDiff).toFixed(0), "% önceki ", cfg.name, " gününe göre")), /*#__PURE__*/React.createElement("div", {
+  }, diffPositive ? '▲' : '▼', " ", Math.abs(summary.tonnageDiff).toFixed(0), t('vs_prev_day',{day:cfg.name}))), /*#__PURE__*/React.createElement("div", {
     style: S.summaryStatsGrid
   }, /*#__PURE__*/React.createElement("div", {
     style: S.summaryStatBox
@@ -9968,7 +10363,7 @@ function SessionSummaryModal({
     style: S.summaryPRs
   }, /*#__PURE__*/React.createElement("div", {
     style: S.summarySectionLabel
-  }, "YENİ REKORLAR"), summary.prs.map((pr, i) => /*#__PURE__*/React.createElement("div", {
+  }, t('new_records')), summary.prs.map((pr, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: S.summaryPRRow
   }, /*#__PURE__*/React.createElement("span", {
@@ -9989,7 +10384,7 @@ function SessionSummaryModal({
     style: S.summaryWeek
   }, /*#__PURE__*/React.createElement("div", {
     style: S.summarySectionLabel
-  }, "BU HAFTANIN DAĞILIMI"), /*#__PURE__*/React.createElement("div", {
+  }, t('this_week_dist')), /*#__PURE__*/React.createElement("div", {
     style: S.summaryWeekRow
   }, Object.entries(summary.weekDistribution).map(([type, count]) => {
     const tcfg = BUILTIN_DAYS[type] || {
@@ -10287,9 +10682,9 @@ function MeasurementDetailModal({ field, onClose, onChanged }) {
         /*#__PURE__*/React.createElement(React.Fragment, null,
           stat.diff != null ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, fontWeight: 800, marginBottom: 14, color: Math.abs(stat.diff) < 0.25 ? '#4CAF50' : '#FF8A65' } },
             Math.abs(stat.diff) < 0.25 ? t('meas_balanced') : ((stat.diff > 0 ? t('meas_right') : t('meas_left')) + ' +' + Math.abs(stat.diff).toFixed(1) + info.unit)) : null,
-          seriesBlock(stat.right, field + '_r', 'Sağ', '#FF6B6B'),
+          seriesBlock(stat.right, field + '_r', t('meas_right'), '#FF6B6B'),
           /*#__PURE__*/React.createElement("div", { style: { height: 14 } }),
-          seriesBlock(stat.left, field + '_l', 'Sol', '#4A90E2')) :
+          seriesBlock(stat.left, field + '_l', t('meas_left'), '#4A90E2')) :
         /*#__PURE__*/React.createElement(React.Fragment, null,
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 26, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", marginBottom: 16, marginTop: -8 } }, stat.value, /*#__PURE__*/React.createElement("span", { style: { fontSize: 14, color: '#888' } }, " " + info.unit)),
           seriesBlock(stat, field, null, null)),
@@ -10566,7 +10961,7 @@ function ProgressTab({
     }
   }, "📍"), /*#__PURE__*/React.createElement("span", {
     style: S.gymSelectorName
-  }, activeGym ? activeGym.name : t('my_gym')), /*#__PURE__*/React.createElement("span", {
+  }, activeGym ? (activeGym.id === 'default' ? t('my_gym') : activeGym.name) : t('my_gym')), /*#__PURE__*/React.createElement("span", {
     style: {
       color: 'var(--accent)',
       fontSize: 11
@@ -10658,7 +11053,7 @@ function ProgressTab({
       ...S.mpDelta,
       color: m.isNew ? '#4A90E2' : m.pct > 0 ? '#4CAF50' : m.pct < 0 ? '#FF5252' : '#888'
     }
-  }, m.isNew ? 'YENİ' : m.pct > 0 ? `▲ %${m.pct}` : m.pct < 0 ? `▼ %${Math.abs(m.pct)}` : '▬ 0%'))))), /*#__PURE__*/React.createElement("div", {
+  }, m.isNew ? t('new_short') : m.pct > 0 ? `▲ %${m.pct}` : m.pct < 0 ? `▼ %${Math.abs(m.pct)}` : '▬ 0%'))))), /*#__PURE__*/React.createElement("div", {
     style: S.sectionLabel
   }, t('prog_record_dev')), improvingExercises.map((es, i) => /*#__PURE__*/React.createElement("button", {
     key: i,
@@ -10859,7 +11254,7 @@ function ExerciseProgressDetail({
     }
   }, es.weight), /*#__PURE__*/React.createElement("div", {
     style: S.exStatL
-  }, "ŞU AN (KG)")), /*#__PURE__*/React.createElement("div", {
+  }, t('now_kg'))), /*#__PURE__*/React.createElement("div", {
     style: S.exStat
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -10868,7 +11263,7 @@ function ExerciseProgressDetail({
     }
   }, gain >= 0 ? '+' : '', gain), /*#__PURE__*/React.createElement("div", {
     style: S.exStatL
-  }, ({ '1H': '1 HAFTADA', '1A': '1 AYDA', '3A': '3 AYDA', '6A': '6 AYDA', '1Y': '1 YILDA', 'TÜM': 'TÜM ZAMAN' }[period] || '') + " (KG)")), /*#__PURE__*/React.createElement("div", {
+  }, ({ '1H': '1 HAFTADA', '1A': '1 AYDA', '3A': '3 AYDA', '6A': '6 AYDA', '1Y': '1 YILDA', 'TÜM': t('all_time') }[period] || '') + " (KG)")), /*#__PURE__*/React.createElement("div", {
     style: S.exStat
   }, /*#__PURE__*/React.createElement("div", {
     style: S.exStatV
@@ -10886,7 +11281,7 @@ function ExerciseProgressDetail({
       ...S.periodBtn,
       ...(period === p ? S.periodBtnActive : {})
     }
-  }, p))), /*#__PURE__*/React.createElement("div", {
+  }, p === 'TÜM' ? t('all_short') : p))), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.progCard,
       padding: 14
