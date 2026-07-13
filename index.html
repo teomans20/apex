@@ -59,18 +59,7 @@
 <script>
   // Otomatik güncelleme: yeni sürüm yüklendiğinde önbelleği atla
   // Sayfa her açıldığında kendini "taze" çekmeye zorlar (PWA cache sorununu çözer)
-  (function() {
-    try {
-      // Eski (versiyonsuz) cache'leri temizle, sadece apex-v ile başlamayanları sil
-      if (window.caches && caches.keys) {
-        caches.keys().then(function(keys) {
-          keys.forEach(function(k) {
-            if (k.indexOf('apex-v') !== 0) caches.delete(k);
-          });
-        }).catch(function(){});
-      }
-    } catch (e) {}
-  })();
+  // Cache yönetimi tamamen sw.js içindeki 'activate' event'inde yapılır (versiyonlu).
 </script>
 
 <style>
@@ -1149,7 +1138,7 @@ function claimLegacyForUser(uid) {
     localStorage.setItem('apex-legacy-claimed', uid);
   } catch (e) {}
 }
-// Misafir kasasını yeni hesaba taşı (guest→signup). Kopyalama başarılı ise misafir kasasını temizle.
+// Misafir kasasını yeni hesaba taşı (guest→signup). Kopyalama başarılı ise misafir kasası yedeklenip temizlenir.
 function migrateGuestToUser(uid) {
   try {
     if (!uid) return;
