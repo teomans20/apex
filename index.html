@@ -1129,7 +1129,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.43'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.44'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1237,6 +1237,7 @@ const I18N = {
     tab_workout: 'ANTRENMAN', tab_progress: 'İLERLEME', subtab_growth: 'Gelişim', subtab_goals: 'Hedefler', subtab_measure: 'Ölçüler', goals_soon_title: 'Hedefler yakında', goals_soon_desc: 'Kişisel hedefler koyup ilerlemeni takip edebileceksin.', tab_friends: 'ARKADAŞLAR',
     // Ana ekran
     greeting_night: 'İyi geceler', greeting_morning: 'Günaydın', greeting_afternoon: 'İyi günler', greeting_evening: 'İyi akşamlar',
+    insights_title: 'SANA ÖZEL', insight_neglect: '{muscle} {weeks} haftadır geride', insight_fastest: 'En hızlı gelişen: {ex} +{gain}{unit}', insight_dominant: 'En baskın kasın: {muscle} (hacmin %{pct}\u0027i)',
     stat_today_sets: 'BUGÜN SET', stat_workouts: 'ANTRENMAN', stat_volume: 'HACİM',
     programs_title: 'Hazır Programlar', programs_sub: 'Uzman programları · tek dokunuşla uygula',
     which_today: 'BUGÜN HANGİSİ?', add_day: 'Gün Ekle',
@@ -1484,6 +1485,7 @@ const I18N = {
   en: {
     tab_workout: 'WORKOUT', tab_progress: 'PROGRESS', subtab_growth: 'Growth', subtab_goals: 'Goals', subtab_measure: 'Measures', goals_soon_title: 'Goals coming soon', goals_soon_desc: 'Set personal goals and track your progress toward them.', tab_friends: 'FRIENDS',
     greeting_night: 'Good night', greeting_morning: 'Good morning', greeting_afternoon: 'Good afternoon', greeting_evening: 'Good evening',
+    insights_title: 'FOR YOU', insight_neglect: '{muscle} behind for {weeks} weeks', insight_fastest: 'Fastest growing: {ex} +{gain}{unit}', insight_dominant: 'Most dominant: {muscle} ({pct}% of volume)',
     stat_today_sets: "TODAY'S SETS", stat_workouts: 'WORKOUTS', stat_volume: 'TOTAL VOLUME',
     programs_title: 'Ready Programs', programs_sub: 'Expert programs · apply with one tap',
     which_today: "TODAY'S WORKOUT?", add_day: 'Add Day',
@@ -8395,6 +8397,78 @@ function RestTimerFullscreen({ timer, onAdjust, onSkip, onCollapse }) {
       /*#__PURE__*/React.createElement("button", { onClick: () => onAdjust(15), style: { width: 56, height: 56, borderRadius: '50%', background: '#141414', border: '1px solid #262626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#ddd', cursor: 'pointer', fontFamily: 'inherit' } }, '+15')));
 }
 
+// ————— AKILLI İÇGÖRÜLER (ana sayfa) —————
+// data.logs + customMuscleMap'ten otomatik içgörüler üretir. En fazla 3 kart döner.
+function computeInsights(data) {
+  const logs = (data && data.logs) || [];
+  if (logs.length < 5) return []; // yeterli veri yoksa gösterme
+  const now = Date.now();
+  const DAY = 86400000;
+  const insights = [];
+  const mmap = (data && data.customMuscleMap) || {};
+
+  // 1) İHMAL EDİLEN KAS GRUBU: son 21 günde hiç/az çalışılan ana kas
+  const CORE_GROUPS = ['Chest', 'Back', 'Lats', 'Quads', 'Hamstrings', 'Glutes', 'Shoulders', 'Biceps', 'Triceps'];
+  const lastSeen = {}; // kas → en son çalışıldığı gün (gün cinsinden geriye)
+  logs.forEach(l => {
+    const muscles = getExerciseMuscles(l.exerciseName, mmap) || {};
+    Object.keys(muscles).forEach(m => {
+      const daysAgo = (now - l.timestamp) / DAY;
+      if (lastSeen[m] == null || daysAgo < lastSeen[m]) lastSeen[m] = daysAgo;
+    });
+  });
+  // en uzun süredir ihmal edilen, ama daha önce çalışılmış bir kas
+  let neglected = null;
+  Object.keys(lastSeen).forEach(m => {
+    const isLeg = /Quad|Hamstring|Glute|Calf/.test(m);
+    const isCore = CORE_GROUPS.includes(m) || isLeg;
+    if (isCore && lastSeen[m] >= 14) {
+      if (!neglected || lastSeen[m] > neglected.days) neglected = { muscle: m, days: Math.floor(lastSeen[m]) };
+    }
+  });
+  if (neglected) {
+    const nName = neglected.muscle.charAt(0).toUpperCase() + neglected.muscle.slice(1);
+    insights.push({ type: 'warn', icon: '⚠️', key: 'insight_neglect', vars: { muscle: nName, weeks: Math.floor(neglected.days / 7) } });
+  }
+
+  // 2) EN HIZLI GELİŞEN: son 30 günde en çok ağırlık artışı olan egzersiz (rekor bazlı)
+  const byEx = {};
+  logs.forEach(l => { (byEx[l.exerciseName] = byEx[l.exerciseName] || []).push(l); });
+  let fastest = null;
+  Object.keys(byEx).forEach(ex => {
+    const sorted = byEx[ex].slice().sort((a, b) => a.timestamp - b.timestamp);
+    const recent = sorted.filter(l => now - l.timestamp <= 35 * DAY);
+    if (recent.length < 4) return;
+    const oldMax = Math.max(...recent.slice(0, Math.ceil(recent.length / 2)).map(l => l.weight));
+    const newMax = Math.max(...recent.slice(Math.ceil(recent.length / 2)).map(l => l.weight));
+    const gain = newMax - oldMax;
+    if (gain > 0 && (!fastest || gain > fastest.gain)) fastest = { ex, gain };
+  });
+  if (fastest && fastest.gain >= 2.5) {
+    insights.push({ type: 'good', icon: '📈', key: 'insight_fastest', vars: { ex: fastest.ex, gain: wFmt(fastest.gain), unit: wUnit() } });
+  }
+
+  // 3) EN GÜÇLÜ/BASKIN KAS: toplam hacimde en büyük paya sahip kas grubu
+  const vol = {};
+  let totalVol = 0;
+  logs.forEach(l => {
+    const muscles = getExerciseMuscles(l.exerciseName, mmap) || {};
+    const keys = Object.keys(muscles);
+    if (!keys.length) return;
+    const v = (l.weight || 0) * (l.reps || 0);
+    keys.forEach(m => { vol[m] = (vol[m] || 0) + v * (muscles[m] || 1); totalVol += v * (muscles[m] || 1); });
+  });
+  let top = null;
+  Object.keys(vol).forEach(m => { if (!top || vol[m] > top.v) top = { m, v: vol[m] }; });
+  if (top && totalVol > 0) {
+    const pct = Math.round(top.v / totalVol * 100);
+    const mName = top.m.charAt(0).toUpperCase() + top.m.slice(1);
+    if (pct >= 15) insights.push({ type: 'info', icon: '💪', key: 'insight_dominant', vars: { muscle: mName, pct } });
+  }
+
+  return insights.slice(0, 3);
+}
+
 function HomeView({
   onSelectDay,
   data,
@@ -8598,7 +8672,21 @@ function HomeView({
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: '#fff' } }, t('next_label',{name:((cfg && cfg.name) || suggest)})),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 11.5, color: '#999', marginTop: 2 } }, daysAgo == null ? t('never_done') : t('last_label',{n:daysAgo}))),
         /*#__PURE__*/React.createElement("span", { style: { color: (cfg && cfg.accent) || 'var(--accent-light)', fontSize: 18, flexShrink: 0 } }, '›'));
-    })()), weeklyUnseen && /*#__PURE__*/React.createElement("button", {
+    })()), (() => {
+      const insights = computeInsights(data);
+      if (!insights.length) return null;
+      const colors = { warn: { c: '#FFA726', bg: 'rgba(255,167,38,0.07)', bd: 'rgba(255,167,38,0.22)' }, good: { c: '#4CAF50', bg: 'rgba(76,175,80,0.07)', bd: 'rgba(76,175,80,0.22)' }, info: { c: 'var(--accent-light)', bg: 'rgba(var(--accent-rgb),0.07)', bd: 'rgba(var(--accent-rgb),0.22)' } };
+      return /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, letterSpacing: 1, color: '#888', fontWeight: 700, marginBottom: 9, paddingLeft: 2 } }, '💡 ' + t('insights_title')),
+        insights.map((ins, i) => {
+          const col = colors[ins.type] || colors.info;
+          return /*#__PURE__*/React.createElement("div", {
+            key: i,
+            style: { display: 'flex', gap: 9, alignItems: 'center', background: col.bg, border: '1px solid ' + col.bd, borderRadius: 11, padding: '11px 12px', marginBottom: 8 }
+          }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 15, flexShrink: 0 } }, ins.icon),
+             /*#__PURE__*/React.createElement("div", { style: { color: col.c, fontSize: 12.5, fontWeight: 700, lineHeight: 1.35 } }, t(ins.key, ins.vars)));
+        }));
+    })(), weeklyUnseen && /*#__PURE__*/React.createElement("button", {
     onClick: onOpenWeekly,
     style: {
       width: '100%', display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0 14px',
