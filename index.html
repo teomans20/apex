@@ -1129,7 +1129,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.48'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.49'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1237,7 +1237,7 @@ const I18N = {
     tab_workout: 'ANTRENMAN', tab_progress: 'İLERLEME', subtab_growth: 'Gelişim', subtab_goals: 'Hedefler', subtab_measure: 'Ölçüler', goals_soon_title: 'Hedefler yakında', goals_soon_desc: 'Kişisel hedefler koyup ilerlemeni takip edebileceksin.',
     goals_active: 'AKTİF HEDEFLER', goals_new: '＋ Yeni', goals_new_title: 'Yeni Hedef', goals_create: 'Hedefi Oluştur', goals_empty: 'Henüz hedefin yok. İlk hedefini ekle!', goals_completed: 'TAMAMLANAN', goals_auto_note: 'İlerleme otomatik takip edilir — sen antrenman yaptıkça güncellenir.',
     goal_type_label: 'HEDEF TİPİ', goal_type_weight: 'Ağırlık', goal_type_reps: 'Tekrar', goal_type_workouts: 'Antrenman', goal_type_streak: 'Seri', goal_type_measure: 'Ölçü',
-    goal_exercise_label: 'EGZERSİZ', goal_target_weight: 'HEDEF AĞIRLIK', goal_target_reps: 'HEDEF TEKRAR', goal_target_count: 'HEDEF SAYI', goal_target_weeks: 'HEDEF HAFTA', goal_target_value: 'HEDEF DEĞER',
+    goal_exercise_label: 'EGZERSİZ', goal_target_weight: 'HEDEF AĞIRLIK', goal_target_reps: 'HEDEF TEKRAR', goal_target_reps_opt: 'HEDEF TEKRAR (opsiyonel)', goal_target_count: 'HEDEF SAYI', goal_target_weeks: 'HEDEF HAFTA', goal_target_value: 'HEDEF DEĞER',
     goal_period_label: 'PERİYOT', goal_period_week: 'Bu hafta', goal_period_month: 'Bu ay', goal_period_year: 'Bu yıl',
     goal_measure_label: 'ÖLÇÜ', goal_direction_label: 'YÖN', goal_dir_up: 'Çıkış (artır)', goal_dir_down: 'İniş (azalt)',
     goal_remaining: 'kaldı', goal_reached: 'ulaştın', goal_done_ago: 'tamamlandı', goal_of: '/', goal_weeks_unit: 'hafta', goal_reps_unit: 'tekrar', goal_workouts_unit: 'antrenman',
@@ -1497,7 +1497,7 @@ const I18N = {
     tab_workout: 'WORKOUT', tab_progress: 'PROGRESS', subtab_growth: 'Growth', subtab_goals: 'Goals', subtab_measure: 'Measures', goals_soon_title: 'Goals coming soon', goals_soon_desc: 'Set personal goals and track your progress toward them.',
     goals_active: 'ACTIVE GOALS', goals_new: '＋ New', goals_new_title: 'New Goal', goals_create: 'Create Goal', goals_empty: 'No goals yet. Add your first one!', goals_completed: 'COMPLETED', goals_auto_note: 'Progress is tracked automatically — it updates as you train.',
     goal_type_label: 'GOAL TYPE', goal_type_weight: 'Weight', goal_type_reps: 'Reps', goal_type_workouts: 'Workouts', goal_type_streak: 'Streak', goal_type_measure: 'Measure',
-    goal_exercise_label: 'EXERCISE', goal_target_weight: 'TARGET WEIGHT', goal_target_reps: 'TARGET REPS', goal_target_count: 'TARGET COUNT', goal_target_weeks: 'TARGET WEEKS', goal_target_value: 'TARGET VALUE',
+    goal_exercise_label: 'EXERCISE', goal_target_weight: 'TARGET WEIGHT', goal_target_reps: 'TARGET REPS', goal_target_reps_opt: 'TARGET REPS (optional)', goal_target_count: 'TARGET COUNT', goal_target_weeks: 'TARGET WEEKS', goal_target_value: 'TARGET VALUE',
     goal_period_label: 'PERIOD', goal_period_week: 'This week', goal_period_month: 'This month', goal_period_year: 'This year',
     goal_measure_label: 'MEASURE', goal_direction_label: 'DIRECTION', goal_dir_up: 'Increase', goal_dir_down: 'Decrease',
     goal_remaining: 'left', goal_reached: 'reached', goal_done_ago: 'completed', goal_of: '/', goal_weeks_unit: 'weeks', goal_reps_unit: 'reps', goal_workouts_unit: 'workouts',
@@ -8502,11 +8502,17 @@ function computeGoalProgress(goal, data) {
   const target = goal.target;
 
   if (goal.type === 'weight') {
-    // o egzersizde ulaşılan en yüksek ağırlık
+    if (goal.targetReps) {
+      // hedef: o ağırlığı en az targetReps tekrarla yapmak
+      // ilerleme = o ağırlıkta (veya üstünde) ulaşılan en yüksek tekrar
+      let bestReps = 0;
+      logs.filter(l => l.exerciseName === goal.exercise && l.weight >= goal.target).forEach(l => { if (l.reps > bestReps) bestReps = l.reps; });
+      current = bestReps;
+      const pct = goal.targetReps <= 0 ? 0 : Math.max(0, Math.min(100, Math.round(current / goal.targetReps * 100)));
+      return { current, target: goal.targetReps, pct, done: current >= goal.targetReps };
+    }
+    // sadece ağırlık: o egzersizde ulaşılan en yüksek ağırlık
     logs.filter(l => l.exerciseName === goal.exercise).forEach(l => { if (l.weight > current) current = l.weight; });
-  } else if (goal.type === 'reps') {
-    // o egzersizde tek sette ulaşılan en yüksek tekrar
-    logs.filter(l => l.exerciseName === goal.exercise).forEach(l => { if (l.reps > current) current = l.reps; });
   } else if (goal.type === 'workouts') {
     // periyot içindeki tamamlanmış antrenman günü sayısı
     const since = goal.period === 'week' ? now - 7 * DAY : goal.period === 'year' ? now - 365 * DAY : now - 30 * DAY;
@@ -11142,20 +11148,25 @@ function GoalsSection({ data, gymId }) {
 
   // hedef başlığı + birim metni üretici
   const goalTitle = (g) => {
-    if (g.type === 'weight') return g.exercise + ' ' + wFmt(g.target) + ' ' + wUnit();
-    if (g.type === 'reps') return g.exercise + ' ' + g.target + ' ' + t('goal_reps_unit');
+    if (g.type === 'weight') {
+      const base = g.exercise + ' ' + wFmt(g.target) + ' ' + wUnit();
+      return g.targetReps ? base + ' × ' + g.targetReps : base;
+    }
     if (g.type === 'workouts') return t('goal_period_' + (g.period || 'month')) + ' ' + g.target + ' ' + t('goal_workouts_unit');
     if (g.type === 'streak') return g.target + ' ' + t('goal_weeks_unit');
     if (g.type === 'measure') return t('meas_' + g.field) + ' ' + mFmt(g.field, g.target) + ' ' + mUnit(g.field);
     return '';
   };
-  const goalIcon = (type) => ({ weight: 'dumbbell', reps: 'repeat', workouts: 'calendar', streak: 'flame', measure: 'ruler' }[type] || 'target');
+  const goalIcon = (type) => ({ weight: 'dumbbell', workouts: 'calendar', streak: 'flame', measure: 'ruler' }[type] || 'target');
   const subText = (g, p) => {
     if (g.type === 'weight') {
+      if (g.targetReps) {
+        // ağırlık + tekrar hedefi: kaç tekrar yapıldı / hedef tekrar
+        return wFmt(g.target) + ' ' + wUnit() + ' · ' + p.current + ' / ' + g.targetReps + ' ' + t('goal_reps_unit');
+      }
       const rem = Math.max(0, g.target - p.current);
       return t('goal_now') + ' ' + wFmt(p.current) + ' ' + wUnit() + ' · ' + wFmt(rem) + ' ' + wUnit() + ' ' + t('goal_remaining');
     }
-    if (g.type === 'reps') return t('goal_now') + ' ' + p.current + ' · ' + Math.max(0, g.target - p.current) + ' ' + t('goal_remaining');
     if (g.type === 'workouts' || g.type === 'streak') return p.current + ' ' + t('goal_of') + ' ' + g.target;
     if (g.type === 'measure') return t('goal_now') + ' ' + mFmt(g.field, p.current) + ' ' + mUnit(g.field);
     return '';
@@ -11214,6 +11225,7 @@ function AddGoalModal({ data, onClose, onSave }) {
   const [period, setPeriod] = useState('month');
   const [direction, setDirection] = useState('up');
   const [val, setVal] = useState('');
+  const [repsVal, setRepsVal] = useState('');
 
   // kullanıcının gerçekte yaptığı egzersizler (loglardan)
   const exercises = useMemo(() => {
@@ -11228,7 +11240,7 @@ function AddGoalModal({ data, onClose, onSave }) {
   const canSave = () => {
     const v = parseFloat(String(val).replace(',', '.'));
     if (isNaN(v) || v <= 0) return false;
-    if ((type === 'weight' || type === 'reps') && !exercise) return false;
+    if (type === 'weight' && !exercise) return false;
     return true;
   };
 
@@ -11236,8 +11248,12 @@ function AddGoalModal({ data, onClose, onSave }) {
     if (!canSave()) return;
     let v = parseFloat(String(val).replace(',', '.'));
     const goal = { id: 'g_' + Date.now(), type, createdAt: Date.now(), startedAt: Date.now() };
-    if (type === 'weight') { goal.exercise = exercise; goal.target = CURRENT_UNIT === 'imperial' ? +(v / KG_TO_LB).toFixed(2) : v; }
-    else if (type === 'reps') { goal.exercise = exercise; goal.target = Math.round(v); }
+    if (type === 'weight') {
+      goal.exercise = exercise;
+      goal.target = CURRENT_UNIT === 'imperial' ? +(v / KG_TO_LB).toFixed(2) : v;
+      const r = parseFloat(String(repsVal).replace(',', '.'));
+      if (!isNaN(r) && r > 0) goal.targetReps = Math.round(r);
+    }
     else if (type === 'workouts') { goal.target = Math.round(v); goal.period = period; }
     else if (type === 'streak') { goal.target = Math.round(v); }
     else if (type === 'measure') {
@@ -11253,7 +11269,6 @@ function AddGoalModal({ data, onClose, onSave }) {
 
   const types = [
     { id: 'weight', icon: 'dumbbell', label: t('goal_type_weight') },
-    { id: 'reps', icon: 'repeat', label: t('goal_type_reps') },
     { id: 'workouts', icon: 'calendar', label: t('goal_type_workouts') },
     { id: 'streak', icon: 'flame', label: t('goal_type_streak') },
     { id: 'measure', icon: 'ruler', label: t('goal_type_measure') }
@@ -11261,8 +11276,8 @@ function AddGoalModal({ data, onClose, onSave }) {
   const measFields = Object.keys(MEAS_FIELDS);
   const lbl = { fontSize: 10, letterSpacing: 1, color: '#888', fontWeight: 700, margin: '0 0 8px 2px' };
   const inputBox = { width: '100%', background: '#161616', border: '1px solid #2a2a2a', borderRadius: 9, padding: 11, color: '#fff', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' };
-  const targetLabel = type === 'weight' ? t('goal_target_weight') : type === 'reps' ? t('goal_target_reps') : type === 'workouts' ? t('goal_target_count') : type === 'streak' ? t('goal_target_weeks') : t('goal_target_value');
-  const targetUnit = type === 'weight' ? wUnit() : type === 'reps' ? t('goal_reps_unit') : type === 'workouts' ? t('goal_workouts_unit') : type === 'streak' ? t('goal_weeks_unit') : mUnit(field);
+  const targetLabel = type === 'weight' ? t('goal_target_weight') : type === 'workouts' ? t('goal_target_count') : type === 'streak' ? t('goal_target_weeks') : t('goal_target_value');
+  const targetUnit = type === 'weight' ? wUnit() : type === 'workouts' ? t('goal_workouts_unit') : type === 'streak' ? t('goal_weeks_unit') : mUnit(field);
 
   return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: onClose },
     /*#__PURE__*/React.createElement("div", { style: { ...S.modalCard, maxHeight: '88vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }, onClick: e => e.stopPropagation() },
@@ -11273,10 +11288,10 @@ function AddGoalModal({ data, onClose, onSave }) {
         types.map(ty => /*#__PURE__*/React.createElement("button", {
           key: ty.id,
           onClick: () => setType(ty.id),
-          style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px 8px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, border: type === ty.id ? 'none' : '1px solid #2a2a2a', background: type === ty.id ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#161616', color: type === ty.id ? '#fff' : '#999', gridColumn: ty.id === 'measure' ? 'span 2' : 'auto' }
+          style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px 8px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, border: type === ty.id ? 'none' : '1px solid #2a2a2a', background: type === ty.id ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#161616', color: type === ty.id ? '#fff' : '#999' }
         }, /*#__PURE__*/React.createElement(ApexIcon, { name: ty.icon, size: 15, color: type === ty.id ? '#fff' : '#999', strokeWidth: 2.2 }), ty.label))),
-      // egzersiz seçimi (weight/reps)
-      (type === 'weight' || type === 'reps') && /*#__PURE__*/React.createElement(React.Fragment, null,
+      // egzersiz seçimi (weight)
+      type === 'weight' && /*#__PURE__*/React.createElement(React.Fragment, null,
         /*#__PURE__*/React.createElement("div", { style: lbl }, t('goal_exercise_label')),
         exercises.length === 0 ?
           /*#__PURE__*/React.createElement("div", { style: { ...inputBox, color: '#666', marginBottom: 14 } }, t('goal_select_ex')) :
@@ -11310,6 +11325,15 @@ function AddGoalModal({ data, onClose, onSave }) {
           placeholder: '0', style: { ...inputBox, fontSize: 18, fontWeight: 800, textAlign: 'center' }
         }),
         /*#__PURE__*/React.createElement("span", { style: { color: '#888', fontSize: 14, fontWeight: 700, flexShrink: 0, minWidth: 40 } }, targetUnit)),
+      // opsiyonel hedef tekrar (sadece ağırlık tipinde)
+      type === 'weight' && /*#__PURE__*/React.createElement("div", { style: lbl }, t('goal_target_reps_opt')),
+      type === 'weight' && /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 } },
+        /*#__PURE__*/React.createElement("input", {
+          type: 'text', inputMode: 'numeric', value: repsVal,
+          onChange: e => setRepsVal(e.target.value.replace(/[^0-9]/g, '')),
+          placeholder: '—', style: { ...inputBox, fontSize: 18, fontWeight: 800, textAlign: 'center' }
+        }),
+        /*#__PURE__*/React.createElement("span", { style: { color: '#888', fontSize: 14, fontWeight: 700, flexShrink: 0, minWidth: 40 } }, t('goal_reps_unit'))),
       // otomatik takip notu
       /*#__PURE__*/React.createElement("div", { style: { background: 'rgba(var(--accent-rgb),0.08)', border: '1px solid rgba(var(--accent-rgb),0.25)', borderRadius: 10, padding: 10, marginBottom: 16, color: 'var(--accent-light)', fontSize: 11.5, lineHeight: 1.4, display: 'flex', gap: 7 } },
         /*#__PURE__*/React.createElement(ApexIcon, { name: 'info', size: 15, color: 'var(--accent-light)', strokeWidth: 2, style: { flexShrink: 0, marginTop: 1 } }),
