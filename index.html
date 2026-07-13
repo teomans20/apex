@@ -11833,14 +11833,14 @@ function RoutineEditorModal({ routine, onClose, onSave, data }) {
       // Kullanıcının bu günde yaptığı egzersizler (loglardan)
       const loggedEx = [...new Set(logs.filter(l => l.dayType === k).map(l => l.exerciseName))];
       const exercises = loggedEx.length > 0
-        ? loggedEx.map(n => ({ n: n, sets: 3, reps: 10 }))
-        : (DEFAULT_EXERCISES[k] || []).map(n => ({ n: n, sets: 3, reps: 10 }));
+        ? loggedEx.map(n => ({ n: n }))
+        : (DEFAULT_EXERCISES[k] || []).map(n => ({ n: n }));
       list.push({ key: k, name: b.name, subtitle: b.subtitle, accent: b.accent, exercises: exercises });
     });
     // Custom günler
     ((data && data.customDays) || []).forEach(cd => {
       const loggedEx = [...new Set(logs.filter(l => l.dayType === cd.id).map(l => l.exerciseName))];
-      const exercises = loggedEx.map(n => ({ n: n, sets: 3, reps: 10 }));
+      const exercises = loggedEx.map(n => ({ n: n }));
       list.push({ key: cd.id, name: cd.name, subtitle: cd.subtitle || '', accent: cd.accent || '#888', exercises: exercises });
     });
     return list;
@@ -11869,7 +11869,7 @@ function RoutineEditorModal({ routine, onClose, onSave, data }) {
     }
   };
   const updateDay = (idx, key, val) => setDays(p => p.map((d, i) => i === idx ? { ...d, [key]: val } : d));
-  const addExercise = (dayIdx) => setDays(p => p.map((d, i) => i === dayIdx ? { ...d, exercises: [...d.exercises, { n: '', sets: 3, reps: 10 }] } : d));
+  const addExercise = (dayIdx) => setDays(p => p.map((d, i) => i === dayIdx ? { ...d, exercises: [...d.exercises, { n: '' }] } : d));
   const removeExercise = (dayIdx, exIdx) => setDays(p => p.map((d, i) => i === dayIdx ? { ...d, exercises: d.exercises.filter((_, j) => j !== exIdx) } : d));
   const updateExercise = (dayIdx, exIdx, key, val) => setDays(p => p.map((d, i) => i === dayIdx ? { ...d, exercises: d.exercises.map((e, j) => j === exIdx ? { ...e, [key]: val } : e) } : d));
 
@@ -11880,7 +11880,7 @@ function RoutineEditorModal({ routine, onClose, onSave, data }) {
     const r = {
       id: routine ? routine.id : 'r_' + Date.now(),
       name: name.trim(),
-      days: days.map((d, i) => ({ id: d.id || ('d_' + i), name: d.name.trim(), subtitle: (d.subtitle || '').trim(), accent: d.accent || ROUTINE_ACCENTS[i % ROUTINE_ACCENTS.length], exercises: d.exercises.filter(e => e.n.trim()).map(e => ({ n: e.n.trim(), sets: parseInt(e.sets) || 3, reps: parseInt(e.reps) || 10 })) })),
+      days: days.map((d, i) => ({ id: d.id || ('d_' + i), name: d.name.trim(), subtitle: (d.subtitle || '').trim(), accent: d.accent || ROUTINE_ACCENTS[i % ROUTINE_ACCENTS.length], exercises: d.exercises.filter(e => e.n.trim()).map(e => ({ n: e.n.trim() })) })),
       schedule: { mode: schedMode, weekMap: schedMode === 'weekly' ? weekMap : undefined },
       createdAt: routine ? routine.createdAt : Date.now()
     };
@@ -11888,7 +11888,6 @@ function RoutineEditorModal({ routine, onClose, onSave, data }) {
   };
 
   const inputStyle = { width: '100%', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 9, padding: '10px 12px', color: '#fff', fontSize: 13.5, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' };
-  const smallInput = { ...inputStyle, width: 52, padding: '7px 6px', textAlign: 'center', fontSize: 13 };
 
   return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: e => { if (e.target === e.currentTarget) onClose(); } },
     /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' } },
@@ -11912,10 +11911,7 @@ function RoutineEditorModal({ routine, onClose, onSave, data }) {
             // Exercises
             day.exercises.map((ex, ei) => /*#__PURE__*/React.createElement("div", { key: ei, style: { display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 } },
               /*#__PURE__*/React.createElement("input", { value: ex.n, onChange: e => updateExercise(di, ei, 'n', e.target.value), placeholder: t('routine_ex_name_ph'), style: { ...inputStyle, flex: 1 } }),
-              /*#__PURE__*/React.createElement("input", { type: 'number', value: ex.sets, onChange: e => updateExercise(di, ei, 'sets', e.target.value), style: smallInput, min: 1 }),
-              /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666' } }, '×'),
-              /*#__PURE__*/React.createElement("input", { type: 'number', value: ex.reps, onChange: e => updateExercise(di, ei, 'reps', e.target.value), style: smallInput, min: 1 }),
-              /*#__PURE__*/React.createElement("button", { onClick: () => removeExercise(di, ei), style: { background: 'none', border: 'none', color: '#FF5252', fontSize: 16, cursor: 'pointer', padding: '2px 4px' } }, '×'))),
+              /*#__PURE__*/React.createElement("button", { onClick: () => removeExercise(di, ei), style: { background: 'none', border: 'none', color: '#FF5252', fontSize: 16, cursor: 'pointer', padding: '2px 4px', flexShrink: 0 } }, '×'))),
             /*#__PURE__*/React.createElement("button", { onClick: () => addExercise(di), style: { background: 'rgba(var(--accent-rgb),0.1)', border: '1px solid rgba(var(--accent-rgb),0.25)', borderRadius: 8, padding: '8px 12px', color: 'var(--accent-light)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%', marginTop: 4 } }, t('routine_add_ex')),
             /*#__PURE__*/React.createElement("button", { onClick: () => removeDay(di), style: { background: 'none', border: 'none', color: '#FF5252', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginTop: 8, padding: 0 } }, t('routine_delete') + ' ' + (day.name || t('routine_day_name')))));
       }),
