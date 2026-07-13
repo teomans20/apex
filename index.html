@@ -8603,7 +8603,8 @@ function WorkoutTab({
     onClose: () => setShowPrograms(false),
     onApply: applyProgram
   }), showRoutines && /*#__PURE__*/React.createElement(RoutineListModal, {
-    onClose: () => setShowRoutines(false)
+    onClose: () => setShowRoutines(false),
+    data: data
   }));
 }
 
@@ -11813,7 +11814,7 @@ function saveActiveRoutine(obj) {
 const ROUTINE_ACCENTS = ['#FF3D3D','#4A90E2','#34D399','#D4A547','#AB47BC','#FF6B6B','#4DD0E1','#FF8A65'];
 const WEEK_DAYS = ['mon','tue','wed','thu','fri','sat','sun'];
 
-function RoutineEditorModal({ routine, onClose, onSave }) {
+function RoutineEditorModal({ routine, onClose, onSave, data }) {
   const isEdit = !!routine;
   const [name, setName] = useState(routine ? routine.name : '');
   const [days, setDays] = useState(routine ? routine.days.map(d => ({ ...d, exercises: d.exercises.map(e => ({ ...e })) })) : []);
@@ -11822,15 +11823,28 @@ function RoutineEditorModal({ routine, onClose, onSave }) {
   const [expandedDay, setExpandedDay] = useState(null);
   const [showDayPicker, setShowDayPicker] = useState(false);
 
-  // Mevcut günleri topla (builtin + custom)
+  // Mevcut günleri topla: builtin + custom, her birinin loglarından gerçek egzersizleri çek
   const existingDays = useMemo(() => {
+    const logs = (data && data.logs) || [];
     const list = [];
+    // Builtin günler
     Object.keys(BUILTIN_DAYS).forEach(k => {
       const b = BUILTIN_DAYS[k];
-      list.push({ key: k, name: b.name, subtitle: b.subtitle, accent: b.accent, exercises: (DEFAULT_EXERCISES[k] || []).map(n => ({ n: n, sets: 3, reps: 10 })) });
+      // Kullanıcının bu günde yaptığı egzersizler (loglardan)
+      const loggedEx = [...new Set(logs.filter(l => l.dayType === k).map(l => l.exerciseName))];
+      const exercises = loggedEx.length > 0
+        ? loggedEx.map(n => ({ n: n, sets: 3, reps: 10 }))
+        : (DEFAULT_EXERCISES[k] || []).map(n => ({ n: n, sets: 3, reps: 10 }));
+      list.push({ key: k, name: b.name, subtitle: b.subtitle, accent: b.accent, exercises: exercises });
+    });
+    // Custom günler
+    ((data && data.customDays) || []).forEach(cd => {
+      const loggedEx = [...new Set(logs.filter(l => l.dayType === cd.id).map(l => l.exerciseName))];
+      const exercises = loggedEx.map(n => ({ n: n, sets: 3, reps: 10 }));
+      list.push({ key: cd.id, name: cd.name, subtitle: cd.subtitle || '', accent: cd.accent || '#888', exercises: exercises });
     });
     return list;
-  }, []);
+  }, [data]);
 
   const addDayBlank = () => {
     const id = 'd_' + Date.now();
@@ -11933,7 +11947,7 @@ function RoutineEditorModal({ routine, onClose, onSave }) {
       /*#__PURE__*/React.createElement("button", { onClick: onClose, style: S.modalCancel }, t('close'))));
 }
 
-function RoutineListModal({ onClose, onOpenEditor }) {
+function RoutineListModal({ onClose, data }) {
   const [routines, setRoutines] = useState(loadRoutines);
   const [activeRt, setActiveRt] = useState(loadActiveRoutine);
   const [editing, setEditing] = useState(null); // null | 'new' | routine obj
@@ -11969,7 +11983,8 @@ function RoutineListModal({ onClose, onOpenEditor }) {
     return /*#__PURE__*/React.createElement(RoutineEditorModal, {
       routine: editing === 'new' ? null : editing,
       onClose: () => setEditing(null),
-      onSave: handleSave
+      onSave: handleSave,
+      data: data
     });
   }
 
