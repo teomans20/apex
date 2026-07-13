@@ -61,16 +61,12 @@
   // Sayfa her açıldığında kendini "taze" çekmeye zorlar (PWA cache sorununu çözer)
   (function() {
     try {
-      // Service worker varsa temizle (eski PWA önbelleği)
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          regs.forEach(function(r) { r.unregister(); });
-        }).catch(function(){});
-      }
-      // Eski cache'leri temizle
+      // Eski (versiyonsuz) cache'leri temizle, sadece apex-v ile başlamayanları sil
       if (window.caches && caches.keys) {
         caches.keys().then(function(keys) {
-          keys.forEach(function(k) { caches.delete(k); });
+          keys.forEach(function(k) {
+            if (k.indexOf('apex-v') !== 0) caches.delete(k);
+          });
         }).catch(function(){});
       }
     } catch (e) {}
@@ -1107,7 +1103,7 @@ function vk(base) {
   return CURRENT_VAULT === 'legacy-unassigned' ? base : base + '::' + CURRENT_VAULT;
 }
 // Bir kasadan diğerine tüm veri anahtarlarını KOPYALA (asla silme). Hedef doluysa dokunma.
-const VAULT_BASE_KEYS = [GYMS_KEY, ACTIVE_GYM_KEY, 'apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise'];
+const VAULT_BASE_KEYS = [GYMS_KEY, ACTIVE_GYM_KEY, 'apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise', 'apex-routines', 'apex-active-routine'];
 function _keyForVault(base, vaultId) {
   return vaultId === 'legacy-unassigned' ? base : base + '::' + vaultId;
 }
@@ -1153,9 +1149,31 @@ function claimLegacyForUser(uid) {
     localStorage.setItem('apex-legacy-claimed', uid);
   } catch (e) {}
 }
-// Misafir kasasını yeni hesaba taşı (guest→signup). Kaynak silinmez.
+// Misafir kasasını yeni hesaba taşı (guest→signup). Kopyalama başarılı ise misafir kasasını temizle.
 function migrateGuestToUser(uid) {
-  try { if (uid) copyVault('guest', 'u_' + uid); } catch (e) {}
+  try {
+    if (!uid) return;
+    copyVault('guest', 'u_' + uid);
+    // Başarılı kopyalama sonrası misafir kasasını temizle (yedekle + sil)
+    _clearGuestVault();
+  } catch (e) {}
+}
+function _clearGuestVault() {
+  try {
+    const guestSuffix = '::guest';
+    const toRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.endsWith(guestSuffix)) toRemove.push(k);
+    }
+    if (toRemove.length === 0) return;
+    // Güvenlik yedek: guest-migrated-backup-{tarih}
+    const backup = {};
+    toRemove.forEach(k => { backup[k] = localStorage.getItem(k); });
+    try { localStorage.setItem('guest-migrated-backup-' + Date.now(), JSON.stringify(backup)); } catch (e) {}
+    // Sil
+    toRemove.forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
 }
 
 // ————— BULUT YEDEK: yerel-özel veriler (local_profile_v1) —————
@@ -1263,7 +1281,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.54'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.55'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
