@@ -1162,7 +1162,7 @@ function migrateGuestToUser(uid) {
 // Ölçü, hedef, egzersiz notları, timer tercihleri → users/{uid}/data/local_profile_v1
 // Push: mutasyon sonrası (debounced). Restore: login sonrası tek sefer.
 // Restore ASLA dolu kasa slotunu ezmez (copyVault ile aynı felsefe).
-const LOCAL_PROFILE_KEYS = ['apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise'];
+const LOCAL_PROFILE_KEYS = ['apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise', 'apex-routines', 'apex-active-routine'];
 function _readVaultProfile() {
   const out = {};
   LOCAL_PROFILE_KEYS.forEach(base => {
@@ -1263,7 +1263,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.53'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.54'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1625,7 +1625,20 @@ const I18N = {
     new_short: 'YENİ',
     now_kg: 'ŞU AN (KG)',
     all_time: 'TÜM ZAMAN',
-    all_short: 'TÜM'
+    all_short: 'TÜM',
+    routines_title: 'Kendi Rutinini Oluştur', routines_sub: 'Programını kendin kur',
+    routine_list_title: 'RUTİNLERİM', routine_new: '＋ Yeni Rutin', routine_empty: 'Henüz rutin oluşturmadın.', routine_empty_sub: 'Kendi antrenman programını kur, günleri ve hareketleri belirle.',
+    routine_edit: 'Düzenle', routine_delete: 'Sil', routine_activate: 'Etkinleştir', routine_deactivate: 'Devre Dışı', routine_active_badge: 'AKTİF',
+    routine_name: 'Rutin Adı', routine_name_ph: 'örn. Push Pull Legs',
+    routine_days: 'GÜNLER', routine_add_day: '＋ Gün Ekle', routine_day_name: 'Gün Adı', routine_day_name_ph: 'örn. Push',
+    routine_exercises: 'HAREKETLER', routine_add_ex: '＋ Hareket Ekle', routine_ex_name_ph: 'Hareket adı gir',
+    routine_sets: 'Set', routine_reps: 'Tekrar',
+    routine_schedule: 'ZAMANLAMA', routine_mode_cycle: 'Sıralı Döngü', routine_mode_weekly: 'Haftalık',
+    routine_save: 'Kaydet', routine_confirm_delete: 'Bu rutini silmek istediğinden emin misin?',
+    routine_today: 'Bugünkü Rutin', routine_next: 'Sıradaki', routine_start: 'Başla',
+    routine_day_subtitle_ph: 'örn. Göğüs · Omuz · Triceps',
+    routine_pick_ex: 'Hareket Seç',
+    mon: 'Pzt', tue: 'Sal', wed: 'Çar', thu: 'Per', fri: 'Cum', sat: 'Cmt', sun: 'Paz'
   },
   en: {
     tab_workout: 'WORKOUT', tab_progress: 'PROGRESS', subtab_growth: 'Growth', subtab_goals: 'Goals', subtab_measure: 'Measures', goals_soon_title: 'Goals coming soon', goals_soon_desc: 'Set personal goals and track your progress toward them.',
@@ -1868,7 +1881,20 @@ const I18N = {
     new_short: 'NEW',
     now_kg: 'NOW (KG)',
     all_time: 'ALL TIME',
-    all_short: 'ALL'
+    all_short: 'ALL',
+    routines_title: 'Build Your Routine', routines_sub: 'Create your own program',
+    routine_list_title: 'MY ROUTINES', routine_new: '＋ New Routine', routine_empty: 'No routines yet.', routine_empty_sub: 'Build your own workout program with custom days and exercises.',
+    routine_edit: 'Edit', routine_delete: 'Delete', routine_activate: 'Activate', routine_deactivate: 'Deactivate', routine_active_badge: 'ACTIVE',
+    routine_name: 'Routine Name', routine_name_ph: 'e.g. Push Pull Legs',
+    routine_days: 'DAYS', routine_add_day: '＋ Add Day', routine_day_name: 'Day Name', routine_day_name_ph: 'e.g. Push',
+    routine_exercises: 'EXERCISES', routine_add_ex: '＋ Add Exercise', routine_ex_name_ph: 'Enter exercise name',
+    routine_sets: 'Sets', routine_reps: 'Reps',
+    routine_schedule: 'SCHEDULE', routine_mode_cycle: 'Sequential Cycle', routine_mode_weekly: 'Weekly',
+    routine_save: 'Save', routine_confirm_delete: 'Are you sure you want to delete this routine?',
+    routine_today: "Today's Routine", routine_next: 'Next', routine_start: 'Start',
+    routine_day_subtitle_ph: 'e.g. Chest · Shoulders · Triceps',
+    routine_pick_ex: 'Pick Exercise',
+    mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun'
   }
 };
 
@@ -7522,6 +7548,7 @@ function WorkoutTab({
   const [prCelebration, setPrCelebration] = useState(null);
   const [toast, setToast] = useState(null);
   const [showPrograms, setShowPrograms] = useState(false);
+  const [showRoutines, setShowRoutines] = useState(false);
   const [dayDetailKey, setDayDetailKey] = useState(null);
   const [shareProgram, setShareProgram] = useState(null); // {dayType, dayName, exercises} — arkadaşa gönderme modalı
   const [showNotifs, setShowNotifs] = useState(false); // bildirim paneli açık mı
@@ -8380,6 +8407,7 @@ function WorkoutTab({
     notifCount: notifs.filter(n => !n.read).length + notifProgReqs.length,
     onOpenNotifs: () => setShowNotifs(true),
     onOpenPrograms: () => setShowPrograms(true),
+    onOpenRoutines: () => setShowRoutines(true),
     journalUnseen: (() => {
       // Tamamlanmış (endTime'ı olan) antrenmanlardan, bitiş zamanı journalSeenTs'den
       // sonra olanların benzersiz gün sayısı. Böylece antrenman BİTİNCE rozet çıkar
@@ -8574,6 +8602,8 @@ function WorkoutTab({
   }), showPrograms && /*#__PURE__*/React.createElement(ProgramsModal, {
     onClose: () => setShowPrograms(false),
     onApply: applyProgram
+  }), showRoutines && /*#__PURE__*/React.createElement(RoutineListModal, {
+    onClose: () => setShowRoutines(false)
   }));
 }
 
@@ -8812,6 +8842,7 @@ function HomeView({
   notifCount,
   onOpenNotifs,
   onOpenPrograms,
+  onOpenRoutines,
   journalUnseen,
   onOpenJournal,
   weeklyUnseen,
@@ -9051,20 +9082,46 @@ function HomeView({
     style: S.statValue
   }, (totalVolume / 1000).toFixed(1), "t"), /*#__PURE__*/React.createElement("div", {
     style: S.statLabel
-  }, t('stat_volume')))), /*#__PURE__*/React.createElement("button", {
-    onClick: onOpenPrograms,
-    style: { display: 'flex', alignItems: 'center', gap: 11, width: '100%', background: 'linear-gradient(135deg,rgba(255,183,77,0.1),rgba(245,124,0,0.03))', border: '1px solid rgba(255,183,77,0.25)', borderRadius: 13, padding: '13px 15px', marginTop: 18, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: { width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#FFB74D,#F57C00)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'clipboard', size: 19, color: '#1a1a1a', strokeWidth: 2.2 })), /*#__PURE__*/React.createElement("div", {
-    style: { flex: 1 }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: { fontSize: 13.5, fontWeight: 800, color: '#fff' }
-  }, t('programs_title')), /*#__PURE__*/React.createElement("div", {
-    style: { fontSize: 11, color: '#999', marginTop: 1 }
-  }, t('programs_sub'))), /*#__PURE__*/React.createElement("div", {
-    style: { color: '#FFB74D', flexShrink: 0, display: 'flex' }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'chevronRight', size: 18, color: '#FFB74D', strokeWidth: 2.5 }))), /*#__PURE__*/React.createElement("div", {
+  }, t('stat_volume')))),
+  // — Programs + Routines side-by-side —
+  /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginTop: 18 } },
+    /*#__PURE__*/React.createElement("button", {
+      onClick: onOpenPrograms,
+      style: { flex: 1, display: 'flex', alignItems: 'center', gap: 9, background: 'linear-gradient(135deg,rgba(255,183,77,0.1),rgba(245,124,0,0.03))', border: '1px solid rgba(255,183,77,0.25)', borderRadius: 13, padding: '12px 13px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
+    }, /*#__PURE__*/React.createElement("div", { style: { width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg,#FFB74D,#F57C00)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
+      /*#__PURE__*/React.createElement(ApexIcon, { name: 'clipboard', size: 17, color: '#1a1a1a', strokeWidth: 2.2 })),
+      /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 12.5, fontWeight: 800, color: '#fff' } }, t('programs_title')),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#999', marginTop: 1 } }, t('programs_sub')))),
+    /*#__PURE__*/React.createElement("button", {
+      onClick: onOpenRoutines,
+      style: { flex: 1, display: 'flex', alignItems: 'center', gap: 9, background: 'linear-gradient(135deg,rgba(var(--accent-rgb),0.1),rgba(var(--accent-rgb),0.03))', border: '1px solid rgba(var(--accent-rgb),0.25)', borderRadius: 13, padding: '12px 13px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
+    }, /*#__PURE__*/React.createElement("div", { style: { width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
+      /*#__PURE__*/React.createElement(ApexIcon, { name: 'dumbbell', size: 17, color: '#fff', strokeWidth: 2.2 })),
+      /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 12.5, fontWeight: 800, color: '#fff' } }, t('routines_title')),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#999', marginTop: 1 } }, t('routines_sub'))))),
+  // — Active routine banner —
+  (() => {
+    const activeRt = loadActiveRoutine();
+    if (!activeRt) return null;
+    const routines = loadRoutines();
+    const routine = routines.find(r => r.id === activeRt.routineId);
+    if (!routine) return null;
+    const todayDay = getRoutineToday(routine, activeRt);
+    if (!todayDay) return null;
+    return /*#__PURE__*/React.createElement("button", {
+      onClick: () => onSelectDay(todayDay.name.toLowerCase().replace(/\s+/g,'_')),
+      style: { width: '100%', display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, background: 'linear-gradient(135deg,rgba(var(--accent-rgb),0.15),rgba(0,0,0,0.02))', border: '1px solid rgba(var(--accent-rgb),0.35)', borderRadius: 15, padding: '13px 15px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
+    },
+      /*#__PURE__*/React.createElement("div", { style: { width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'dumbbell', size: 22, color: '#fff', strokeWidth: 2.2 })),
+      /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, color: 'var(--accent-light)', letterSpacing: 0.5, textTransform: 'uppercase' } }, t('routine_today')),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 14.5, fontWeight: 800, color: '#fff', marginTop: 2 } }, todayDay.name),
+        todayDay.exercises.length > 0 && /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#999', marginTop: 2 } }, todayDay.exercises.map(e => e.n).join(' · '))),
+      /*#__PURE__*/React.createElement("span", { style: { color: 'var(--accent-light)', fontSize: 11, fontWeight: 700, flexShrink: 0 } }, t('routine_start') + ' ›'));
+  })(),
+  /*#__PURE__*/React.createElement("div", {
     style: S.sectionLabel
   }, t('which_today')), /*#__PURE__*/React.createElement("div", {
     style: S.dayGrid
@@ -11559,7 +11616,7 @@ function MeasurementsSection() {
           else sym = { txt: (stat.diff > 0 ? t('meas_right')+' ' : t('meas_left')+' ') + '+' + mFmt(f, Math.abs(stat.diff)) + mUnit(f), col: '#FF8A65' };
           return /*#__PURE__*/React.createElement("button", {
             key: f, onClick: () => setDetailField(f),
-            style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 13, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }
+            style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 13, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
           },
             /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 } },
               /*#__PURE__*/React.createElement(ApexIcon, { name: 'ruler', size: 14, color: 'var(--accent-light)', strokeWidth: 2 }),
@@ -11580,7 +11637,7 @@ function MeasurementsSection() {
         return /*#__PURE__*/React.createElement("button", {
           key: f,
           onClick: () => setDetailField(f),
-          style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 13, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }
+          style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 13, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
         },
           /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 } },
             /*#__PURE__*/React.createElement(ApexIcon, { name: isWeight ? 'scale' : 'ruler', size: 14, color: 'var(--accent-light)', strokeWidth: 2 }),
@@ -11733,6 +11790,199 @@ function MeasurementDetailModal({ field, onClose, onChanged }) {
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 26, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", marginBottom: 16, marginTop: -8 } }, mFmt(field, stat.value), /*#__PURE__*/React.createElement("span", { style: { fontSize: 14, color: '#888' } }, " " + mUnit(field))),
           seriesBlock(stat, field, null, null)),
       /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel, marginTop: 12 } }, "Kapat")));
+}
+
+// ════════════════════════════════════════════
+// ROUTINE BUILDER
+// ════════════════════════════════════════════
+const ROUTINES_KEY = 'apex-routines';
+const ACTIVE_ROUTINE_KEY = 'apex-active-routine';
+function loadRoutines() {
+  try { return JSON.parse(localStorage.getItem(vk(ROUTINES_KEY)) || '[]'); } catch (e) { return []; }
+}
+function saveRoutines(list) {
+  try { localStorage.setItem(vk(ROUTINES_KEY), JSON.stringify(list)); try { pushLocalProfile(); } catch (e) {} } catch (e) {}
+}
+function loadActiveRoutine() {
+  try { return JSON.parse(localStorage.getItem(vk(ACTIVE_ROUTINE_KEY)) || 'null'); } catch (e) { return null; }
+}
+function saveActiveRoutine(obj) {
+  try { localStorage.setItem(vk(ACTIVE_ROUTINE_KEY), JSON.stringify(obj)); try { pushLocalProfile(); } catch (e) {} } catch (e) {}
+}
+
+const ROUTINE_ACCENTS = ['#FF3D3D','#4A90E2','#34D399','#D4A547','#AB47BC','#FF6B6B','#4DD0E1','#FF8A65'];
+const WEEK_DAYS = ['mon','tue','wed','thu','fri','sat','sun'];
+
+function RoutineEditorModal({ routine, onClose, onSave }) {
+  const isEdit = !!routine;
+  const [name, setName] = useState(routine ? routine.name : '');
+  const [days, setDays] = useState(routine ? routine.days.map(d => ({ ...d, exercises: d.exercises.map(e => ({ ...e })) })) : []);
+  const [schedMode, setSchedMode] = useState(routine && routine.schedule ? routine.schedule.mode : 'cycle');
+  const [weekMap, setWeekMap] = useState(routine && routine.schedule && routine.schedule.weekMap ? { ...routine.schedule.weekMap } : {});
+  const [expandedDay, setExpandedDay] = useState(null);
+
+  const addDay = () => {
+    const id = 'd_' + Date.now();
+    setDays(p => [...p, { id: id, name: '', subtitle: '', accent: ROUTINE_ACCENTS[p.length % ROUTINE_ACCENTS.length], exercises: [] }]);
+    setExpandedDay(id);
+  };
+  const removeDay = (idx) => {
+    const removed = days[idx];
+    setDays(p => p.filter((_, i) => i !== idx));
+    // clean weekMap
+    if (removed) {
+      const nw = { ...weekMap };
+      WEEK_DAYS.forEach(wd => { if (nw[wd] === removed.id) delete nw[wd]; });
+      setWeekMap(nw);
+    }
+  };
+  const updateDay = (idx, key, val) => setDays(p => p.map((d, i) => i === idx ? { ...d, [key]: val } : d));
+  const addExercise = (dayIdx) => setDays(p => p.map((d, i) => i === dayIdx ? { ...d, exercises: [...d.exercises, { n: '', sets: 3, reps: 10 }] } : d));
+  const removeExercise = (dayIdx, exIdx) => setDays(p => p.map((d, i) => i === dayIdx ? { ...d, exercises: d.exercises.filter((_, j) => j !== exIdx) } : d));
+  const updateExercise = (dayIdx, exIdx, key, val) => setDays(p => p.map((d, i) => i === dayIdx ? { ...d, exercises: d.exercises.map((e, j) => j === exIdx ? { ...e, [key]: val } : e) } : d));
+
+  const canSave = name.trim() && days.length > 0 && days.every(d => d.name.trim());
+
+  const doSave = () => {
+    if (!canSave) return;
+    const r = {
+      id: routine ? routine.id : 'r_' + Date.now(),
+      name: name.trim(),
+      days: days.map((d, i) => ({ id: d.id || ('d_' + i), name: d.name.trim(), subtitle: (d.subtitle || '').trim(), accent: d.accent || ROUTINE_ACCENTS[i % ROUTINE_ACCENTS.length], exercises: d.exercises.filter(e => e.n.trim()).map(e => ({ n: e.n.trim(), sets: parseInt(e.sets) || 3, reps: parseInt(e.reps) || 10 })) })),
+      schedule: { mode: schedMode, weekMap: schedMode === 'weekly' ? weekMap : undefined },
+      createdAt: routine ? routine.createdAt : Date.now()
+    };
+    onSave(r);
+  };
+
+  const inputStyle = { width: '100%', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 9, padding: '10px 12px', color: '#fff', fontSize: 13.5, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' };
+  const smallInput = { ...inputStyle, width: 52, padding: '7px 6px', textAlign: 'center', fontSize: 13 };
+
+  return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: e => { if (e.target === e.currentTarget) onClose(); } },
+    /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 18, fontWeight: 900, marginBottom: 18, textAlign: 'center' } }, isEdit ? t('routine_edit') : t('routine_new')),
+      // Routine name
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, color: '#888', letterSpacing: 0.5, marginBottom: 6, textTransform: 'uppercase' } }, t('routine_name')),
+      /*#__PURE__*/React.createElement("input", { value: name, onChange: e => setName(e.target.value), placeholder: t('routine_name_ph'), style: inputStyle }),
+      // Days
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, color: '#888', letterSpacing: 0.5, marginTop: 18, marginBottom: 8, textTransform: 'uppercase' } }, t('routine_days')),
+      days.map((day, di) => {
+        const isExpanded = expandedDay === day.id;
+        return /*#__PURE__*/React.createElement("div", { key: day.id || di, style: { background: '#111', border: '1px solid #222', borderRadius: 11, marginBottom: 8, overflow: 'hidden' } },
+          /*#__PURE__*/React.createElement("button", { onClick: () => setExpandedDay(isExpanded ? null : day.id), style: { width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '11px 12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', color: '#fff' } },
+            /*#__PURE__*/React.createElement("div", { style: { width: 8, height: 8, borderRadius: 4, background: day.accent, flexShrink: 0 } }),
+            /*#__PURE__*/React.createElement("span", { style: { flex: 1, textAlign: 'left', fontSize: 13.5, fontWeight: 700 } }, day.name || (t('routine_day_name') + ' ' + (di + 1))),
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666' } }, day.exercises.length + ' ' + t('routine_exercises').toLowerCase()),
+            /*#__PURE__*/React.createElement("span", { style: { color: '#666', fontSize: 14 } }, isExpanded ? '▾' : '›')),
+          isExpanded && /*#__PURE__*/React.createElement("div", { style: { padding: '0 12px 12px' } },
+            /*#__PURE__*/React.createElement("input", { value: day.name, onChange: e => updateDay(di, 'name', e.target.value), placeholder: t('routine_day_name_ph'), style: { ...inputStyle, marginBottom: 6 } }),
+            /*#__PURE__*/React.createElement("input", { value: day.subtitle || '', onChange: e => updateDay(di, 'subtitle', e.target.value), placeholder: t('routine_day_subtitle_ph'), style: { ...inputStyle, marginBottom: 10, fontSize: 12, color: '#999' } }),
+            // Exercises
+            day.exercises.map((ex, ei) => /*#__PURE__*/React.createElement("div", { key: ei, style: { display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 } },
+              /*#__PURE__*/React.createElement("input", { value: ex.n, onChange: e => updateExercise(di, ei, 'n', e.target.value), placeholder: t('routine_ex_name_ph'), style: { ...inputStyle, flex: 1 } }),
+              /*#__PURE__*/React.createElement("input", { type: 'number', value: ex.sets, onChange: e => updateExercise(di, ei, 'sets', e.target.value), style: smallInput, min: 1 }),
+              /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666' } }, '×'),
+              /*#__PURE__*/React.createElement("input", { type: 'number', value: ex.reps, onChange: e => updateExercise(di, ei, 'reps', e.target.value), style: smallInput, min: 1 }),
+              /*#__PURE__*/React.createElement("button", { onClick: () => removeExercise(di, ei), style: { background: 'none', border: 'none', color: '#FF5252', fontSize: 16, cursor: 'pointer', padding: '2px 4px' } }, '×'))),
+            /*#__PURE__*/React.createElement("button", { onClick: () => addExercise(di), style: { background: 'rgba(var(--accent-rgb),0.1)', border: '1px solid rgba(var(--accent-rgb),0.25)', borderRadius: 8, padding: '8px 12px', color: 'var(--accent-light)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%', marginTop: 4 } }, t('routine_add_ex')),
+            /*#__PURE__*/React.createElement("button", { onClick: () => removeDay(di), style: { background: 'none', border: 'none', color: '#FF5252', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginTop: 8, padding: 0 } }, t('routine_delete') + ' ' + (day.name || t('routine_day_name')))));
+      }),
+      /*#__PURE__*/React.createElement("button", { onClick: addDay, style: { width: '100%', background: '#161616', border: '1px dashed #2a2a2a', borderRadius: 10, padding: '11px 0', color: '#888', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16 } }, t('routine_add_day')),
+      // Schedule mode
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, color: '#888', letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' } }, t('routine_schedule')),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginBottom: schedMode === 'weekly' ? 10 : 16 } },
+        ['cycle', 'weekly'].map(m => /*#__PURE__*/React.createElement("button", { key: m, onClick: () => setSchedMode(m), style: { flex: 1, padding: '9px 4px', borderRadius: 9, border: schedMode === m ? 'none' : '1px solid #2a2a2a', background: schedMode === m ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#161616', color: schedMode === m ? '#fff' : '#888', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' } }, t('routine_mode_' + m)))),
+      // Weekly map
+      schedMode === 'weekly' && days.length > 0 && /*#__PURE__*/React.createElement("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4, marginBottom: 16 } },
+        WEEK_DAYS.map(wd => /*#__PURE__*/React.createElement("div", { key: wd, style: { textAlign: 'center' } },
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#666', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase' } }, t(wd)),
+          /*#__PURE__*/React.createElement("select", { value: weekMap[wd] || '', onChange: e => setWeekMap(p => ({ ...p, [wd]: e.target.value || undefined })), style: { width: '100%', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 6, color: '#fff', fontSize: 10, padding: '6px 2px', fontFamily: 'inherit', textAlign: 'center' } },
+            /*#__PURE__*/React.createElement("option", { value: '' }, '—'),
+            days.map(d => /*#__PURE__*/React.createElement("option", { key: d.id, value: d.id }, d.name || '?')))))),
+      // Save + Cancel
+      /*#__PURE__*/React.createElement("button", { onClick: doSave, disabled: !canSave, style: { width: '100%', padding: '13px 0', borderRadius: 11, border: 'none', background: canSave ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#222', color: canSave ? '#fff' : '#555', fontSize: 14, fontWeight: 800, cursor: canSave ? 'pointer' : 'default', fontFamily: 'inherit', marginBottom: 8 } }, t('routine_save')),
+      /*#__PURE__*/React.createElement("button", { onClick: onClose, style: S.modalCancel }, t('close'))));
+}
+
+function RoutineListModal({ onClose, onOpenEditor }) {
+  const [routines, setRoutines] = useState(loadRoutines);
+  const [activeRt, setActiveRt] = useState(loadActiveRoutine);
+  const [editing, setEditing] = useState(null); // null | 'new' | routine obj
+
+  const refresh = () => { setRoutines(loadRoutines()); setActiveRt(loadActiveRoutine()); };
+
+  const handleSave = (r) => {
+    let list = loadRoutines();
+    const idx = list.findIndex(x => x.id === r.id);
+    if (idx >= 0) list[idx] = r; else list.push(r);
+    saveRoutines(list);
+    setEditing(null);
+    refresh();
+  };
+  const handleDelete = (id) => {
+    if (!confirm(t('routine_confirm_delete'))) return;
+    let list = loadRoutines().filter(r => r.id !== id);
+    saveRoutines(list);
+    const ar = loadActiveRoutine();
+    if (ar && ar.routineId === id) { saveActiveRoutine(null); }
+    refresh();
+  };
+  const handleActivate = (r) => {
+    saveActiveRoutine({ routineId: r.id, cycleIndex: 0, activatedAt: Date.now() });
+    refresh();
+  };
+  const handleDeactivate = () => {
+    saveActiveRoutine(null);
+    refresh();
+  };
+
+  if (editing) {
+    return /*#__PURE__*/React.createElement(RoutineEditorModal, {
+      routine: editing === 'new' ? null : editing,
+      onClose: () => setEditing(null),
+      onSave: handleSave
+    });
+  }
+
+  return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: e => { if (e.target === e.currentTarget) onClose(); } },
+    /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxHeight: '88vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 18, fontWeight: 900, marginBottom: 16, textAlign: 'center' } }, t('routine_list_title')),
+      routines.length === 0 ? /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', padding: '20px 0' } },
+        /*#__PURE__*/React.createElement(ApexIcon, { name: 'clipboard', size: 32, color: '#444', strokeWidth: 1.6 }),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, color: '#888', fontWeight: 600, marginTop: 10 } }, t('routine_empty')),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#555', marginTop: 3 } }, t('routine_empty_sub'))) :
+        routines.map(r => {
+          const isActive = activeRt && activeRt.routineId === r.id;
+          return /*#__PURE__*/React.createElement("div", { key: r.id, style: { background: '#111', border: isActive ? '1px solid var(--accent)' : '1px solid #222', borderRadius: 12, padding: 14, marginBottom: 8 } },
+            /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 } },
+              /*#__PURE__*/React.createElement("span", { style: { fontSize: 14.5, fontWeight: 800, flex: 1 } }, r.name),
+              isActive && /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, fontWeight: 800, background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: 6 } }, t('routine_active_badge'))),
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#888', marginBottom: 10 } }, r.days.map(d => d.name).join(' · ') + (r.schedule && r.schedule.mode === 'weekly' ? ' · ' + t('routine_mode_weekly') : ' · ' + t('routine_mode_cycle'))),
+            /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6 } },
+              /*#__PURE__*/React.createElement("button", { onClick: () => setEditing(r), style: { flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid #2a2a2a', background: '#1a1a1a', color: '#ccc', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' } }, t('routine_edit')),
+              /*#__PURE__*/React.createElement("button", { onClick: () => isActive ? handleDeactivate() : handleActivate(r), style: { flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', background: isActive ? '#2a2a2a' : 'linear-gradient(135deg,var(--accent),var(--accent-dark))', color: '#fff', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' } }, isActive ? t('routine_deactivate') : t('routine_activate')),
+              /*#__PURE__*/React.createElement("button", { onClick: () => handleDelete(r.id), style: { padding: '8px 12px', borderRadius: 8, border: '1px solid #2a2a2a', background: '#1a1a1a', color: '#FF5252', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'trash', size: 14, color: '#FF5252', strokeWidth: 2 }))));
+        }),
+      /*#__PURE__*/React.createElement("button", { onClick: () => setEditing('new'), style: { width: '100%', padding: '12px 0', borderRadius: 11, border: 'none', background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', color: '#fff', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', marginTop: 8 } }, t('routine_new')),
+      /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel, marginTop: 10 } }, t('close'))));
+}
+
+// Aktif rutin: bugün hangi gün? (cycle veya weekly)
+function getRoutineToday(routine, activeInfo) {
+  if (!routine || !activeInfo) return null;
+  const sched = routine.schedule || { mode: 'cycle' };
+  if (sched.mode === 'weekly' && sched.weekMap) {
+    const jsDay = new Date().getDay(); // 0=Sun
+    const wdMap = ['sun','mon','tue','wed','thu','fri','sat'];
+    const wd = wdMap[jsDay];
+    const dayId = sched.weekMap[wd];
+    if (!dayId) return null;
+    return routine.days.find(d => d.id === dayId) || null;
+  }
+  // cycle mode
+  if (routine.days.length === 0) return null;
+  const idx = (activeInfo.cycleIndex || 0) % routine.days.length;
+  return routine.days[idx] || null;
 }
 
 function ProgressTab({
