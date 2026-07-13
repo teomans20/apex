@@ -1129,7 +1129,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.39'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.41'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1154,6 +1154,75 @@ function setLang(lang) {
   try { document.documentElement.lang = lang; } catch (e) {}
 }
 function getLang() { return CURRENT_LANG; }
+
+// ————— BİRİM SİSTEMİ (kg/lbs · cm/inch) —————
+// Veri HER ZAMAN kg + cm olarak saklanır. Sadece gösterim/giriş kullanıcı birimine çevrilir.
+const UNIT_KEY = 'apex-unit';
+function detectUnit() {
+  try {
+    const saved = localStorage.getItem(UNIT_KEY);
+    if (saved === 'metric' || saved === 'imperial') return saved;
+  } catch (e) {}
+  // İngilizce/ABD → imperial, diğer → metric
+  try {
+    const nav = (navigator.language || navigator.userLanguage || 'tr').toLowerCase();
+    if (nav === 'en-us' || nav === 'en-lr' || nav === 'my') return 'imperial';
+  } catch (e) {}
+  return 'metric';
+}
+let CURRENT_UNIT = detectUnit();
+function setUnit(u) {
+  CURRENT_UNIT = u;
+  try { localStorage.setItem(UNIT_KEY, u); } catch (e) {}
+}
+function getUnit() { return CURRENT_UNIT; }
+const KG_TO_LB = 2.2046226218;
+const CM_TO_IN = 0.3937007874;
+// kg (saklanan) → gösterilecek sayı (birim sistemine göre)
+function wOut(kg) {
+  if (kg == null || kg === '') return kg;
+  const n = parseFloat(kg);
+  if (isNaN(n)) return kg;
+  return CURRENT_UNIT === 'imperial' ? n * KG_TO_LB : n;
+}
+// kullanıcının girdiği sayı → kg (saklanacak)
+function wIn(val) {
+  const n = parseFloat(String(val).replace(',', '.'));
+  if (isNaN(n)) return n;
+  return CURRENT_UNIT === 'imperial' ? n / KG_TO_LB : n;
+}
+// cm (saklanan) → gösterilecek uzunluk
+function lOut(cm) {
+  if (cm == null || cm === '') return cm;
+  const n = parseFloat(cm);
+  if (isNaN(n)) return cm;
+  return CURRENT_UNIT === 'imperial' ? n * CM_TO_IN : n;
+}
+// kullanıcının girdiği uzunluk → cm (saklanacak)
+function lIn(val) {
+  const n = parseFloat(String(val).replace(',', '.'));
+  if (isNaN(n)) return n;
+  return CURRENT_UNIT === 'imperial' ? n / CM_TO_IN : n;
+}
+// gösterim için yuvarla (ondalık gereksizse tam sayı)
+function wFmt(kg, dec) {
+  const v = wOut(kg);
+  if (v == null || isNaN(v)) return v;
+  const d = dec == null ? 1 : dec;
+  const r = Math.round(v * Math.pow(10, d)) / Math.pow(10, d);
+  return (r % 1 === 0) ? String(r) : r.toFixed(d).replace(/\.?0+$/, '');
+}
+function lFmt(cm, dec) {
+  const v = lOut(cm);
+  if (v == null || isNaN(v)) return v;
+  const d = dec == null ? 1 : dec;
+  const r = Math.round(v * Math.pow(10, d)) / Math.pow(10, d);
+  return (r % 1 === 0) ? String(r) : r.toFixed(d).replace(/\.?0+$/, '');
+}
+// birim etiketleri
+function wUnit() { return CURRENT_UNIT === 'imperial' ? 'lb' : 'kg'; }
+function lUnit() { return CURRENT_UNIT === 'imperial' ? 'in' : 'cm'; }
+try { window.APEX_UNIT = { wOut, wIn, lOut, lIn, wFmt, lFmt, wUnit, lUnit, getUnit, setUnit }; } catch (e) {}
 // Çeviri fonksiyonu: t('key') veya t('key', {n: 5}) → "5 antrenman"
 function t(key, vars) {
   const dict = I18N[CURRENT_LANG] || I18N.tr;
@@ -1194,7 +1263,7 @@ const I18N = {
     prog_empty: 'Antrenman kaydettikçe ilerlemen burada görünecek 💪', prog_no_data: 'Henüz veri yok.', prog_not_enough: 'Bu dönemde yeterli veri yok.', prog_log_more: 'Daha fazla antrenman kaydet 💪',
     prog_biggest_jump: 'En büyük sıçrama: ', prog_most_improved: 'BU DÖNEM EN ÇOK GELİŞEN', prog_record_this_month: 'Bu ay kırılan rekor', prog_day_streak: 'GÜN SERİSİ',
     prog_muscle_dev: 'KAS GRUBU · BAŞLANGICA GÖRE GELİŞİM', prog_record_dev: 'REKOR GELİŞİMİ · dokun, detayı gör', prog_stuck: '⏳ TAKILDIĞIN HAREKETLER',
-    prog_strength_gain: ' güç/hacim artışı', prog_weeks_ago: ' hafta önce', prog_set_count_hint: '(önceki rekorunu geçtiğin set sayısı)',
+    prog_strength_gain: ' güç/hacim artışı', prog_weeks_ago: ' hafta önce', prog_set_count_hint: '(önceki rekorunu geçtiğin set sayısı)', prog_last_record: 'son rekor', prog_at: 'kaldığın yer', reps_word: 'tekrar', reps_cap: 'TEKRAR', save_cap: 'KAYDET', save_muscle: 'KAYDET', theme_apex: 'APEX', theme_okyanus: 'Okyanus', theme_gece: 'Gece', theme_sampiyon: 'Şampiyon', theme_orman: 'Orman',
     prog_chart_hint: 'Grafiğe dokun, o günkü değeri gör · gerçek seans ağırlıkları', prog_current_top: 'Güncel TOP rekor: ', prog_est_1rm: 'TAHMİNİ 1RM', prog_today: 'bugün',
     prog_plateau: ' haftadır yeni rekor yok. Deload (ağırlığı %10 düşürüp tekrar çıkmak) veya rep aralığını değiştirmek platoyu kırabilir.',
     // Kas grupları
@@ -1239,7 +1308,7 @@ const I18N = {
     ob3_c1: 'Hazır program', ob3_c2: 'Dinlenme timer',
     ob4_h: 'Arkadaşlarınla|yarış', ob4_p: 'Arkadaş ekle, akışta antrenmanlarını gör, birbirinizi dürtün ve liderlik tablosunda rekabet edin.',
     ob4_c1: 'Liderlik', ob4_c2: 'Akış',
-    show_intro: 'Tanıtımı Tekrar Göster', add_btn: '＋ Ekle', settings_title: 'Ayarlar', records_label: 'REKOR', workouts_label: 'antrenman', detail_arrow: 'Detay ›',
+    show_intro: 'Tanıtımı Tekrar Göster', add_btn: '＋ Ekle', settings_title: 'Ayarlar', records_label: 'REKOR', workouts_label: 'antrenman', detail_arrow: 'Detay ›', units: 'Birim', unit_metric: 'kg · cm', unit_imperial: 'lb · inç',
     prog_fb3_name: 'Full Body 3 Gün', prog_fb3_desc: 'Haftada 3 gün tüm vücut. Yeni başlayanlar için ideal, hızlı gelişim.',
     prog_ppl_desc: 'Klasik 6 günlük split. Kas kütlesi için ideal, hacim odaklı.',
     prog_ul_desc: '4 günlük üst-alt bölünmesi. Dengeli, sürdürülebilir, zaman verimli.',
@@ -1433,7 +1502,7 @@ const I18N = {
     prog_empty: 'Your progress will appear here as you log workouts 💪', prog_no_data: 'No data yet.', prog_not_enough: 'Not enough data for this period.', prog_log_more: 'Log more workouts 💪',
     prog_biggest_jump: 'Biggest jump: ', prog_most_improved: 'MOST IMPROVED THIS PERIOD', prog_record_this_month: 'Records this month', prog_day_streak: 'DAY STREAK',
     prog_muscle_dev: 'MUSCLE GROUP · GROWTH SINCE START', prog_record_dev: 'RECORD PROGRESS · tap for details', prog_stuck: '⏳ STUCK EXERCISES',
-    prog_strength_gain: ' strength/volume gain', prog_weeks_ago: ' weeks ago', prog_set_count_hint: '(sets where you beat your previous record)',
+    prog_strength_gain: ' strength/volume gain', prog_weeks_ago: ' weeks ago', prog_set_count_hint: '(sets where you beat your previous record)', prog_last_record: 'last record', prog_at: 'at', reps_word: 'reps', reps_cap: 'REPS', save_cap: 'SAVE', save_muscle: 'SAVE', theme_apex: 'APEX', theme_okyanus: 'Ocean', theme_gece: 'Night', theme_sampiyon: 'Champion', theme_orman: 'Forest',
     prog_chart_hint: "Tap the chart to see that day's value · real session weights", prog_current_top: 'Current TOP record: ', prog_est_1rm: 'ESTIMATED 1RM', prog_today: 'today',
     prog_plateau: ' weeks without a new record. A deload (drop weight 10% and build back up) or changing the rep range can break the plateau.',
     muscle_chest: 'Chest', muscle_frontDelts: 'Front Delts', muscle_sideDelts: 'Side Delts', muscle_rearDelts: 'Rear Delts', muscle_biceps: 'Biceps', muscle_triceps: 'Triceps', muscle_forearms: 'Forearms', muscle_abs: 'Abs', muscle_lats: 'Lats', muscle_traps: 'Traps', muscle_lowerBack: 'Lower Back', muscle_quads: 'Quads', muscle_hamstrings: 'Hamstrings', muscle_glutes: 'Glutes', muscle_calves: 'Calves',
@@ -1470,7 +1539,7 @@ const I18N = {
     ob3_c1: 'Programs', ob3_c2: 'Rest timer',
     ob4_h: 'Compete with|friends', ob4_p: 'Add friends, see their workouts in the feed, poke each other and compete on the leaderboard.',
     ob4_c1: 'Leaderboard', ob4_c2: 'Feed',
-    show_intro: 'Show Intro Again', add_btn: '＋ Add', settings_title: 'Settings', records_label: 'RECORDS', workouts_label: 'workouts', detail_arrow: 'Details ›',
+    show_intro: 'Show Intro Again', add_btn: '＋ Add', settings_title: 'Settings', records_label: 'RECORDS', workouts_label: 'workouts', detail_arrow: 'Details ›', units: 'Units', unit_metric: 'kg · cm', unit_imperial: 'lb · in',
     prog_fb3_name: 'Full Body 3-Day', prog_fb3_desc: 'Full body 3 days a week. Ideal for beginners, fast progress.',
     prog_ppl_desc: 'Classic 6-day split. Ideal for muscle mass, volume-focused.',
     prog_ul_desc: '4-day upper-lower split. Balanced, sustainable, time-efficient.',
@@ -1739,6 +1808,24 @@ function measurementStatRaw(subfield) {
   return { value: latestVal, delta: delta, date: latest.date, history: all.map(m => ({ date: m.date, val: parseFloat(m[subfield]) })) };
 }
 // Alan istatistiği — çift ise { dual:true, right, left, diff }, tek ise düz stat
+// Ölçü birim yardımcıları: weight alanı kg, diğerleri cm. Kullanıcı birimine göre çevrilir.
+function mOut(field, val) {
+  if (val == null || val === '' || isNaN(parseFloat(val))) return val;
+  const info = MEAS_FIELDS[field] || {};
+  return info.unit === 'kg' ? wOut(val) : lOut(val);
+}
+function mIn(field, val) {
+  const info = MEAS_FIELDS[field] || {};
+  return info.unit === 'kg' ? wIn(val) : lIn(val);
+}
+function mFmt(field, val, dec) {
+  const info = MEAS_FIELDS[field] || {};
+  return info.unit === 'kg' ? wFmt(val, dec) : lFmt(val, dec);
+}
+function mUnit(field) {
+  const info = MEAS_FIELDS[field] || {};
+  return info.unit === 'kg' ? wUnit() : lUnit();
+}
 function measurementStat(field) {
   const info = MEAS_FIELDS[field];
   if (info && info.dual) {
@@ -2477,7 +2564,7 @@ function PRCelebration({
     style: S.prExercise
   }, exerciseName), /*#__PURE__*/React.createElement("div", {
     style: S.prValue
-  }, weight, "kg × ", reps), /*#__PURE__*/React.createElement("div", {
+  }, wFmt(weight), wUnit() + " × ", reps), /*#__PURE__*/React.createElement("div", {
     style: S.prHint
   }, t('tap_to_continue'))));
 }
@@ -2520,7 +2607,7 @@ function ProgressChart({
     style: S.chartTitle
   }, t("tab_progress")), /*#__PURE__*/React.createElement("span", {
     style: S.chartRange
-  }, minW, "–", maxW, "kg · ", data.length, " antrenman")), /*#__PURE__*/React.createElement("svg", {
+  }, wFmt(minW), "–", wFmt(maxW), " " + wUnit() + " · ", data.length, " " + t('workouts_label'))), /*#__PURE__*/React.createElement("svg", {
     viewBox: `0 0 ${W} ${H}`,
     style: {
       width: '100%',
@@ -2856,15 +2943,15 @@ function generateWeeklyImage(s, myUsername) {
       ctx.fillText(t('best_pr_week'), PAD + S(48), y + S(20));
       ctx.fillStyle = '#fff'; ctx.font = '800 ' + S(14) + "px Manrope,sans-serif";
       // isim + değer, gerekirse kısalt
-      let prText = s.bestPR.name + ' · ' + s.bestPR.weight + 'kg×' + s.bestPR.reps;
+      let prText = s.bestPR.name + ' · ' + wFmt(s.bestPR.weight) + wUnit() + '×' + s.bestPR.reps;
       const gainW = s.bestPR.gain > 0 ? S(60) : S(10);
       const maxW = boxW - S(48) - gainW - S(14);
       while (ctx.measureText(prText).width > maxW && prText.length > 6) prText = prText.slice(0, -1);
-      if (prText !== s.bestPR.name + ' · ' + s.bestPR.weight + 'kg×' + s.bestPR.reps) prText = prText.trim() + '…';
+      if (prText !== s.bestPR.name + ' · ' + wFmt(s.bestPR.weight) + wUnit() + '×' + s.bestPR.reps) prText = prText.trim() + '…';
       ctx.fillText(prText, PAD + S(48), y + S(37));
       if (s.bestPR.gain > 0) {
         ctx.font = '800 ' + S(11) + "px Manrope,sans-serif";
-        const gt = '+' + s.bestPR.gain + 'kg';
+        const gt = '+' + wFmt(s.bestPR.gain) + wUnit();
         const gw = ctx.measureText(gt).width + S(14);
         ctx.fillStyle = 'rgba(76,175,80,0.15)';
         rr(W - PAD - S(14) - gw, y + pH / 2 - S(11), gw, S(22), S(9)); ctx.fill();
@@ -3113,12 +3200,12 @@ function generateStoryImage(entry) {
         ctx.fillStyle = '#ccc';
         ctx.fillText(icon, PAD + S(13), ry + rowH / 2);
         // sağ blok genişliğini önceden ölç (değer + kazanç)
-        const valTxt = r.weight + 'kg×' + r.reps;
+        const valTxt = wFmt(r.weight) + wUnit() + '×' + r.reps;
         ctx.font = '800 ' + fontSz + "px Manrope, sans-serif";
         const valW = ctx.measureText(valTxt).width;
         let gainTxt = '', gainBlockW = 0;
         if (r.delta && r.delta.dir === 'up') {
-          gainTxt = r.delta.type === 'kg' ? '+' + r.delta.kg + 'kg' : '+' + r.delta.reps + 'tk';
+          gainTxt = r.delta.type === 'kg' ? '+' + wFmt(r.delta.kg) + wUnit() : '+' + r.delta.reps + (CURRENT_LANG==='en'?'r':'tk');
           ctx.font = '800 ' + (fontSz * 0.82) + "px Manrope, sans-serif";
           gainBlockW = ctx.measureText(gainTxt).width + S(10) + S(8);
         }
@@ -3204,7 +3291,7 @@ function JournalDetailView({ entry, onBack }) {
     if (delta.dir === 'same') return null;
     const cls = delta.dir === 'down' ? { bg: 'rgba(var(--accent-rgb),0.15)', c: '#FF5252' } : (prType === 'backoff' ? { bg: 'rgba(74,144,226,0.15)', c: '#4A90E2' } : { bg: 'rgba(76,175,80,0.15)', c: '#4CAF50' });
     const sign = delta.dir === 'down' ? '−' : '+';
-    const txt = delta.type === 'kg' ? sign + delta.kg + 'kg' : sign + delta.reps + ' tekrar';
+    const txt = delta.type === 'kg' ? sign + wFmt(delta.kg) + wUnit() : sign + delta.reps + ' ' + t('reps_word');
     return /*#__PURE__*/React.createElement("span", {
       style: { display: 'inline-block', fontSize: 8.5, fontWeight: 800, padding: '2px 8px', borderRadius: 9, background: cls.bg, color: cls.c }
     }, txt);
@@ -3231,7 +3318,7 @@ function JournalDetailView({ entry, onBack }) {
     isPRback && /*#__PURE__*/React.createElement("span", { style: { position: 'absolute', top: 7, right: 7, fontSize: 11 } }, '⭐'),
     /*#__PURE__*/React.createElement("div", {
       style: { fontSize: 20, fontWeight: 800, marginTop: 6, fontFamily: "'Big Shoulders Display',sans-serif" }
-    }, s.weight, /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: '#888', fontFamily: "'Manrope'" } }, 'kg')),
+    }, wFmt(s.weight), /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: '#888', fontFamily: "'Manrope'" } }, wUnit())),
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#999', marginTop: 2 } }, s.reps, ' tekrar'),
     // karşılaştırma
     s.firstEver ? /*#__PURE__*/React.createElement("div", {
@@ -3589,8 +3676,8 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
       /*#__PURE__*/React.createElement(ApexIcon, { name: 'medal', size: 22, color: '#FFB74D' }),
       /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#FFB74D', textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 800 } }, t('best_record_week')),
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 800, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.bestPR.name + ' · ' + s.bestPR.weight + 'kg×' + s.bestPR.reps)),
-      s.bestPR.gain > 0 && /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: '#4CAF50', background: 'rgba(76,175,80,0.15)', padding: '3px 9px', borderRadius: 9, flexShrink: 0 } }, '+' + s.bestPR.gain + 'kg')),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 800, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.bestPR.name + ' · ' + wFmt(s.bestPR.weight) + wUnit() + '×' + s.bestPR.reps)),
+      s.bestPR.gain > 0 && /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: '#4CAF50', background: 'rgba(76,175,80,0.15)', padding: '3px 9px', borderRadius: 9, flexShrink: 0 } }, '+' + wFmt(s.bestPR.gain) + wUnit())),
     // motivasyon mesajı
     /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', fontSize: 13, fontWeight: 700, padding: 12, borderRadius: 13, background: 'linear-gradient(135deg,rgba(76,175,80,0.1),rgba(76,175,80,0.02))', border: '1px solid rgba(76,175,80,0.2)', color: '#7ed88a' } }, s.msg),
     // paylaş butonu
@@ -4035,7 +4122,7 @@ function DayDetailModal({
         ...S.dayPRExVal,
         color: '#FFD700'
       }
-    }, pr.weight, "kg × ", pr.reps)))), dayStats.backoffPRs.length > 0 && /*#__PURE__*/React.createElement("div", {
+    }, wFmt(pr.weight), wUnit() + " × ", pr.reps)))), dayStats.backoffPRs.length > 0 && /*#__PURE__*/React.createElement("div", {
       style: {
         ...S.dayPRBlock,
         background: 'rgba(192,192,192,0.06)',
@@ -4056,7 +4143,7 @@ function DayDetailModal({
         ...S.dayPRExVal,
         color: '#C0C0C0'
       }
-    }, pr.weight, "kg × ", pr.reps)))), dayStats.targetsTotal > 0 && /*#__PURE__*/React.createElement("div", {
+    }, wFmt(pr.weight), wUnit() + " × ", pr.reps)))), dayStats.targetsTotal > 0 && /*#__PURE__*/React.createElement("div", {
       style: {
         ...S.dayTargetChip,
         background: dayStats.targetsHit === dayStats.targetsTotal ? 'rgba(76,175,80,0.12)' : '#1a1a1a',
@@ -4084,9 +4171,9 @@ function DayDetailModal({
       }
     }, idx === 0 ? 'T' : idx + 1), /*#__PURE__*/React.createElement("span", {
       style: S.dayDetailSetVal
-    }, l.weight, /*#__PURE__*/React.createElement("span", {
+    }, wFmt(l.weight), /*#__PURE__*/React.createElement("span", {
       style: S.dayDetailSetUnit
-    }, "kg"), " × ", l.reps)), /*#__PURE__*/React.createElement("button", {
+    }, wUnit()), " × ", l.reps)), /*#__PURE__*/React.createElement("button", {
       onClick: () => onDeleteLog(l.id),
       style: S.dayDetailSetDel
     }, "×"))))))));
@@ -5977,9 +6064,9 @@ function FeedCard({
       ...S.feedBigVal,
       color: '#FFA726'
     }
-  }, item.weight, /*#__PURE__*/React.createElement("span", {
+  }, wFmt(item.weight), /*#__PURE__*/React.createElement("span", {
     style: S.feedUnit
-  }, " kg × ", item.reps)), /*#__PURE__*/React.createElement("div", {
+  }, " " + wUnit() + " × ", item.reps)), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.feedTag,
       background: '#FFA726'
@@ -5992,11 +6079,11 @@ function FeedCard({
     style: S.feedExLabel
   }, item.exerciseName), /*#__PURE__*/React.createElement("div", {
     style: S.feedBigVal
-  }, item.weight, /*#__PURE__*/React.createElement("span", {
+  }, wFmt(item.weight), /*#__PURE__*/React.createElement("span", {
     style: S.feedUnit
-  }, " kg × ", item.reps)), /*#__PURE__*/React.createElement("div", {
+  }, " " + wUnit() + " × ", item.reps)), /*#__PURE__*/React.createElement("div", {
     style: S.feedTag
-  }, t('pr_badge'), item.delta ? ` · +${item.delta}kg` : ''))), item.type === 'workout' && /*#__PURE__*/React.createElement("div", {
+  }, t('pr_badge'), item.delta ? ` · +${wFmt(item.delta)}${wUnit()}` : ''))), item.type === 'workout' && /*#__PURE__*/React.createElement("div", {
     style: S.feedBody
   }, "💪 ", item.dayName, t('completed_day'), item.setCount, " set", item.volume ? ` · ${(item.volume / 1000).toFixed(1)}t ` + t('volume_lower') : ''), showWho && /*#__PURE__*/React.createElement("div", {
     style: S.whoPopup,
@@ -6531,7 +6618,7 @@ function FriendProfileView({
     style: { ...S.pfPrName, display: 'flex', alignItems: 'center', gap: 8 }
   }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'dumbbell', size: 15, strokeWidth: 2.2, color: 'var(--accent-light)' }), pr.exerciseName), /*#__PURE__*/React.createElement("span", {
     style: S.pfPrW
-  }, pr.weight, " kg", pr.reps ? ` × ${pr.reps}` : '')))), /*#__PURE__*/React.createElement("div", {
+  }, wFmt(pr.weight), " " + wUnit(), pr.reps ? ` × ${pr.reps}` : '')))), /*#__PURE__*/React.createElement("div", {
     style: S.lbNote
   }, t('prof_gym_only'))));
 }
@@ -6599,6 +6686,8 @@ function App() {
   const [tab, setTab] = useState('workout');
   const [lang, setLangState] = useState(getLang());
   const changeLang = (l) => { setLang(l); setLangState(l); };
+  const [unit, setUnitState] = useState(getUnit());
+  const changeUnit = (u) => { setUnit(u); setUnitState(u); };
   // İlk açılışta hoş geldin ekranı (bir kez gösterilir, localStorage'da tutulur)
   const [showOnboarding, setShowOnboarding] = useState(() => {
     try { return !localStorage.getItem('apex-onboarding-seen'); } catch (e) { return false; }
@@ -6794,14 +6883,17 @@ function App() {
     onStartRestTimer: startRestTimer,
     onReopenOnboarding: reopenOnboarding,
     appLang: lang,
-    onChangeLang: changeLang
+    onChangeLang: changeLang,
+    appUnit: unit,
+    onChangeUnit: changeUnit
   }), tab === 'progress' && /*#__PURE__*/React.createElement(ProgressTab, {
     key: activeGymId,
     authUser: authUser,
     activeGym: activeGym,
     resetSignal: resetSignals.progress,
     onOpenGymPicker: () => setShowGymPicker(true),
-    appLang: lang
+    appLang: lang,
+    appUnit: unit
   }), tab === 'friends' && /*#__PURE__*/React.createElement(FriendsTab, {
     authUser: authUser,
     myUsername: myUsername,
@@ -7165,7 +7257,9 @@ function WorkoutTab({
   onStartRestTimer,
   onReopenOnboarding,
   appLang,
-  onChangeLang
+  onChangeLang,
+  appUnit,
+  onChangeUnit
 }) {
   const [view, setView] = useState('home');
   const [currentDay, setCurrentDay] = useState(null);
@@ -8135,7 +8229,9 @@ function WorkoutTab({
     },
     currentLang: appLang,
     onChangeLang: onChangeLang,
-    onReopenOnboarding: onReopenOnboarding
+    onReopenOnboarding: onReopenOnboarding,
+    currentUnit: appUnit,
+    onChangeUnit: onChangeUnit
   }), showAddDay && /*#__PURE__*/React.createElement(DayEditorModal, {
     onClose: () => setShowAddDay(false),
     onSave: addCustomDay,
@@ -9157,7 +9253,7 @@ function MuscleTagModal({
       background: Object.keys(muscles).length ? 'linear-gradient(135deg,var(--accent),#8B1111)' : '#2a2a2a',
       color: Object.keys(muscles).length ? '#fff' : '#666'
     }
-  }, "KAYDET")), /*#__PURE__*/React.createElement("button", {
+  }, t('save_muscle'))), /*#__PURE__*/React.createElement("button", {
     onClick: () => onSave(null),
     style: S.resetAutoBtn
   }, t('reset_auto'))));
@@ -9386,7 +9482,7 @@ function DayView({
         }
       }, name), last ? /*#__PURE__*/React.createElement("div", {
         style: S.exerciseLast
-      }, "Son: ", last.sets.map(s => `${s.weight}kg × ${s.reps}`).join(' · ')) : /*#__PURE__*/React.createElement("div", {
+      }, "Son: ", last.sets.map(s => `${wFmt(s.weight)}${wUnit()} × ${s.reps}`).join(' · ')) : /*#__PURE__*/React.createElement("div", {
         style: {
           ...S.exerciseLast,
           color: '#555'
@@ -9516,7 +9612,9 @@ function ExerciseView({
     const normalizedWeight = weight.replace(',', '.');
     const w = parseFloat(normalizedWeight);
     if (!w || w <= 0) return;
-    onAddLog(normalizedWeight, reps);
+    // Kullanıcı imperial modundaysa girdiği lb → kg'ye çevir (veri hep kg saklanır)
+    const kgWeight = CURRENT_UNIT === 'imperial' ? +(w / KG_TO_LB).toFixed(2) : w;
+    onAddLog(String(kgWeight), reps);
     setWeight('');
     setReps('');
     weightRef.current?.focus();
@@ -9562,7 +9660,7 @@ function ExerciseView({
     style: S.prDualLabel
   }, t('top_record')), /*#__PURE__*/React.createElement("span", {
     style: S.prDualValue
-  }, topPR ? `${topPR.weight}kg × ${topPR.reps}` : '—')), /*#__PURE__*/React.createElement("div", {
+  }, topPR ? `${wFmt(topPR.weight)}${wUnit()} × ${topPR.reps}` : '—')), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.prDualRow,
       borderTop: '1px solid rgba(255,255,255,0.06)'
@@ -9571,7 +9669,7 @@ function ExerciseView({
     style: S.prDualLabel
   }, t('backoff_record')), /*#__PURE__*/React.createElement("span", {
     style: S.prDualValue
-  }, backoffPR ? `${backoffPR.weight}kg × ${backoffPR.reps}` : '—'))),
+  }, backoffPR ? `${wFmt(backoffPR.weight)}${wUnit()} × ${backoffPR.reps}` : '—'))),
     // ————— GÜNÜN NOTU (o güne + egzersize özel) —————
     (editingNote ? /*#__PURE__*/React.createElement("div", {
       style: { background: 'rgba(74,144,226,0.07)', border: '1px solid rgba(74,144,226,0.28)', borderRadius: 12, padding: 12, marginBottom: 12 }
@@ -9625,9 +9723,9 @@ function ExerciseView({
       ...S.targetValue,
       color: topBeaten ? '#4CAF50' : '#FF5252'
     }
-  }, targetTop.weight, /*#__PURE__*/React.createElement("span", {
+  }, wFmt(targetTop.weight), /*#__PURE__*/React.createElement("span", {
     style: S.targetUnit
-  }, "kg"), " × ", targetTop.reps), /*#__PURE__*/React.createElement("div", {
+  }, wUnit()), " × ", targetTop.reps), /*#__PURE__*/React.createElement("div", {
     style: S.targetStatus
   }, t('top_set_explain'))) : showingBackoff ?
   /*#__PURE__*/
@@ -9644,7 +9742,7 @@ function ExerciseView({
     style: {
       color: '#4CAF50'
     }
-  }, "✓"), " TOP YENDİN — ", todayTop.weight, "kg × ", todayTop.reps, " ", /*#__PURE__*/React.createElement("span", {
+  }, "✓"), " TOP YENDİN — ", wFmt(todayTop.weight), wUnit() + " × ", todayTop.reps, " ", /*#__PURE__*/React.createElement("span", {
     style: {
       color: '#666'
     }
@@ -9652,7 +9750,7 @@ function ExerciseView({
     style: {
       color: '#FF5252'
     }
-  }, "✗"), " TOP yenmedi — ", todayTop.weight, "kg × ", todayTop.reps, " ", /*#__PURE__*/React.createElement("span", {
+  }, "✗"), " TOP yenmedi — ", wFmt(todayTop.weight), wUnit() + " × ", todayTop.reps, " ", /*#__PURE__*/React.createElement("span", {
     style: {
       color: '#666'
     }
@@ -9660,7 +9758,7 @@ function ExerciseView({
     style: {
       color: '#888'
     }
-  }, "●"), " İLK TOP — ", todayTop.weight, "kg × ", todayTop.reps)), targetBackoff ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, "●"), " İLK TOP — ", wFmt(todayTop.weight), wUnit() + " × ", todayTop.reps)), targetBackoff ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.targetLabel,
       marginTop: 12
@@ -9670,18 +9768,18 @@ function ExerciseView({
       ...S.targetValue,
       color: backoffBeaten ? '#4CAF50' : '#FF5252'
     }
-  }, targetBackoff.weight, /*#__PURE__*/React.createElement("span", {
+  }, wFmt(targetBackoff.weight), /*#__PURE__*/React.createElement("span", {
     style: S.targetUnit
-  }, "kg"), " × ", targetBackoff.reps), backoffBeaten ? /*#__PURE__*/React.createElement("div", {
+  }, wUnit()), " × ", targetBackoff.reps), backoffBeaten ? /*#__PURE__*/React.createElement("div", {
     style: S.targetStatus
   }, t('best_backoff_today'), /*#__PURE__*/React.createElement("span", {
     style: {
       color: '#4CAF50',
       fontWeight: 800
     }
-  }, todayBestBackoff.weight, "kg × ", todayBestBackoff.reps), " 🔥") : todayBestBackoff ? /*#__PURE__*/React.createElement("div", {
+  }, wFmt(todayBestBackoff.weight), wUnit() + " × ", todayBestBackoff.reps), " 🔥") : todayBestBackoff ? /*#__PURE__*/React.createElement("div", {
     style: S.targetStatus
-  }, t('best_backoff_today'), todayBestBackoff.weight, "kg × ", todayBestBackoff.reps) : /*#__PURE__*/React.createElement("div", {
+  }, t('best_backoff_today'), wFmt(todayBestBackoff.weight), wUnit() + " × ", todayBestBackoff.reps) : /*#__PURE__*/React.createElement("div", {
     style: S.targetStatus
   }, t('do_backoff_now'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9750,7 +9848,7 @@ function ExerciseView({
     style: S.numInput
   }), /*#__PURE__*/React.createElement("div", {
     style: S.unit
-  }, "KG")), /*#__PURE__*/React.createElement("div", {
+  }, wUnit().toUpperCase())), /*#__PURE__*/React.createElement("div", {
     style: S.times
   }, "×"), /*#__PURE__*/React.createElement("div", {
     style: S.inputGroup
@@ -9763,7 +9861,7 @@ function ExerciseView({
     style: S.numInput
   }), /*#__PURE__*/React.createElement("div", {
     style: S.unit
-  }, "TEKRAR"))), /*#__PURE__*/React.createElement("button", {
+  }, t('reps_cap')))), /*#__PURE__*/React.createElement("button", {
     onClick: handleSubmit,
     disabled: !weight || !reps,
     style: {
@@ -9772,7 +9870,7 @@ function ExerciseView({
       color: weight && reps ? '#fff' : '#666'
     },
     className: "submit-btn"
-  }, /*#__PURE__*/React.createElement(Icon.Check, null), " KAYDET")), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(Icon.Check, null), " " + t('save_cap'))), /*#__PURE__*/React.createElement("div", {
     style: S.sectionLabel
   }, t('history_cap')), history.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: S.emptyState
@@ -9789,7 +9887,7 @@ function ExerciseView({
       style: S.historyDate
     }, /*#__PURE__*/React.createElement(Icon.Cal, null), /*#__PURE__*/React.createElement("span", null, formatDate(session.timestamp))), /*#__PURE__*/React.createElement("div", {
       style: S.historyVolume
-    }, session.sets.reduce((s, x) => s + x.weight * x.reps, 0).toFixed(0), "kg " + t('volume_lower'))), /*#__PURE__*/React.createElement("div", {
+    }, wFmt(session.sets.reduce((s, x) => s + x.weight * x.reps, 0), 0), " " + wUnit() + " " + t('volume_lower'))), /*#__PURE__*/React.createElement("div", {
       style: S.setsList
     }, sorted.map((set, idx) => {
       const isTop = idx === 0;
@@ -9810,9 +9908,9 @@ function ExerciseView({
         style: S.setValue
       }, /*#__PURE__*/React.createElement("span", {
         style: S.setWeight
-      }, set.weight), /*#__PURE__*/React.createElement("span", {
+      }, wFmt(set.weight)), /*#__PURE__*/React.createElement("span", {
         style: S.setUnit
-      }, "kg"), /*#__PURE__*/React.createElement("span", {
+      }, wUnit()), /*#__PURE__*/React.createElement("span", {
         style: S.setX
       }, "×"), /*#__PURE__*/React.createElement("span", {
         style: S.setReps
@@ -10137,7 +10235,9 @@ function MenuModal({
   onPhotoChange,
   currentLang,
   onChangeLang,
-  onReopenOnboarding
+  onReopenOnboarding,
+  currentUnit,
+  onChangeUnit
 }) {
   const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
@@ -10215,6 +10315,13 @@ function MenuModal({
         key: l.id, onClick: () => onChangeLang(l.id),
         style: { flex: 1, padding: '12px', borderRadius: 11, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, background: currentLang === l.id ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#141414', border: '1px solid ' + (currentLang === l.id ? 'transparent' : '#2a2a2a'), color: currentLang === l.id ? '#fff' : '#999' }
       }, l.label))),
+    // ————— BİRİM SEÇİCİ (kg/lbs · cm/inch) —————
+    timerSettings && onTimerSettingsChange && onChangeUnit && /*#__PURE__*/React.createElement("div", { style: { ...S.modalTitle, marginTop: 0 } }, t('units')),
+    timerSettings && onTimerSettingsChange && onChangeUnit && /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginBottom: 16 } },
+      [{ id: 'metric', label: t('unit_metric') }, { id: 'imperial', label: t('unit_imperial') }].map(u => /*#__PURE__*/React.createElement("button", {
+        key: u.id, onClick: () => onChangeUnit(u.id),
+        style: { flex: 1, padding: '12px', borderRadius: 11, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, background: currentUnit === u.id ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#141414', border: '1px solid ' + (currentUnit === u.id ? 'transparent' : '#2a2a2a'), color: currentUnit === u.id ? '#fff' : '#999' }
+      }, u.label))),
     // ————— TANITIMI TEKRAR GÖSTER —————
     timerSettings && onTimerSettingsChange && onReopenOnboarding && /*#__PURE__*/React.createElement("button", {
       onClick: () => { onClose(); setTimeout(() => onReopenOnboarding(), 60); },
@@ -10442,7 +10549,7 @@ function DayEditorModal({
       background: name.trim() ? previewGradient : '#2a2a2a',
       color: name.trim() ? '#fff' : '#666'
     }
-  }, isEdit ? 'KAYDET' : t('create'))), isEdit && onDelete && /*#__PURE__*/React.createElement("button", {
+  }, isEdit ? t('save_cap') : t('create'))), isEdit && onDelete && /*#__PURE__*/React.createElement("button", {
     onClick: onDelete,
     style: S.deleteDayBtn
   }, t('delete_this_day'))));
@@ -10542,7 +10649,7 @@ function SessionSummaryModal({
     }
   }, pr.type === 'top' ? 'TOP' : 'BACK-OFF'), /*#__PURE__*/React.createElement("span", {
     style: S.summaryPRVal
-  }, pr.weight, "kg × ", pr.reps)))), /*#__PURE__*/React.createElement("div", {
+  }, wFmt(pr.weight), wUnit() + " × ", pr.reps)))), /*#__PURE__*/React.createElement("div", {
     style: S.summaryWeek
   }, /*#__PURE__*/React.createElement("div", {
     style: S.summarySectionLabel
@@ -10678,7 +10785,7 @@ function MeasurementsSection() {
           let sym;
           if (stat.diff == null) sym = null;
           else if (Math.abs(stat.diff) < 0.25) sym = { txt: '✓ Dengeli', col: '#4CAF50' };
-          else sym = { txt: (stat.diff > 0 ? t('meas_right')+' ' : t('meas_left')+' ') + '+' + Math.abs(stat.diff).toFixed(1) + info.unit, col: '#FF8A65' };
+          else sym = { txt: (stat.diff > 0 ? t('meas_right')+' ' : t('meas_left')+' ') + '+' + mFmt(f, Math.abs(stat.diff)) + mUnit(f), col: '#FF8A65' };
           return /*#__PURE__*/React.createElement("button", {
             key: f, onClick: () => setDetailField(f),
             style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 13, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }
@@ -10689,11 +10796,11 @@ function MeasurementsSection() {
             /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, alignItems: 'stretch' } },
               /*#__PURE__*/React.createElement("div", { style: { flex: 1 } },
                 /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#FF6B6B', fontWeight: 800, letterSpacing: 0.3, textTransform: 'uppercase' } }, t('meas_right')),
-                /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1.15 } }, r ? r.value : '—', r ? /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888' } }, " " + info.unit) : null)),
+                /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1.15 } }, r ? mFmt(f, r.value) : '—', r ? /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888' } }, " " + mUnit(f)) : null)),
               /*#__PURE__*/React.createElement("div", { style: { width: 1, background: '#242424' } }),
               /*#__PURE__*/React.createElement("div", { style: { flex: 1 } },
                 /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#4A90E2', fontWeight: 800, letterSpacing: 0.3, textTransform: 'uppercase' } }, t('meas_left')),
-                /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1.15 } }, l ? l.value : '—', l ? /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888' } }, " " + info.unit) : null))),
+                /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1.15 } }, l ? mFmt(f, l.value) : '—', l ? /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888' } }, " " + mUnit(f)) : null))),
             sym ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, fontWeight: 800, marginTop: 6, color: sym.col } }, sym.txt) : null);
         }
         // ——— TEK ALAN ———
@@ -10707,9 +10814,9 @@ function MeasurementsSection() {
           /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 } },
             /*#__PURE__*/React.createElement(ApexIcon, { name: isWeight ? 'scale' : 'ruler', size: 14, color: 'var(--accent-light)', strokeWidth: 2 }),
             /*#__PURE__*/React.createElement("span", { style: { fontSize: 10.5, color: '#999', textTransform: 'uppercase', letterSpacing: 0.3, fontWeight: 800 } }, t('meas_'+f))),
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 24, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1 } }, stat.value, /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#888', fontWeight: 700 } }, " " + info.unit)),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 24, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1 } }, mFmt(f, stat.value), /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#888', fontWeight: 700 } }, " " + mUnit(f))),
           Math.abs(stat.delta) > 0.05 ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, fontWeight: 800, marginTop: 5, color: deltaColor, display: 'flex', alignItems: 'center', gap: 3 } },
-            (stat.delta > 0 ? '▲ ' : '▼ ') + Math.abs(stat.delta).toFixed(1) + ' ' + info.unit + ' (30g)') :
+            (stat.delta > 0 ? '▲ ' : '▼ ') + mFmt(f, Math.abs(stat.delta)) + ' ' + mUnit(f) + ' (30' + (CURRENT_LANG==='en'?'d':'g') + ')') :
             /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, fontWeight: 700, marginTop: 5, color: '#666' } }, t('meas_no_change')));
       })),
     showAdd && /*#__PURE__*/React.createElement(AddMeasurementModal, { onClose: () => setShowAdd(false), onSaved: () => { refresh(); setShowAdd(false); } }),
@@ -10731,7 +10838,10 @@ function AddMeasurementModal({ onClose, onSaved }) {
     const parseVal = (key) => {
       const raw = (vals[key] || '').toString().replace(',', '.');
       const v = parseFloat(raw);
-      return (!isNaN(v) && v > 0) ? v : null;
+      if (isNaN(v) || v <= 0) return null;
+      // Kullanıcı imperial girdiyse kg/cm'ye çevir (veri hep metric saklanır)
+      const baseField = key.replace(/_r$|_l$/, '');
+      return +mIn(baseField, v).toFixed(2);
     };
     [...coreFields, ...extras].forEach(f => {
       if (MEAS_FIELDS[f].dual) {
@@ -10757,12 +10867,12 @@ function AddMeasurementModal({ onClose, onSaved }) {
         type: 'text', inputMode: 'decimal', value: vals[f] || '', onChange: e => setVal(f, e.target.value.replace(/[^0-9.,]/g, '')),
         placeholder: '—', style: { ...numInputStyle, textAlign: 'left' }
       }),
-      /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#666', fontWeight: 700, width: 22, flexShrink: 0 } }, MEAS_FIELDS[f].unit)));
+      /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#666', fontWeight: 700, width: 22, flexShrink: 0 } }, mUnit(f))));
   // çift alan input — sağ/sol dar kutu, taşmadan
   const dualInput = (f) => /*#__PURE__*/React.createElement("div", { key: f, style: { marginBottom: 12 } },
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 } },
       /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#999', fontWeight: 700 } }, t('meas_'+f)),
-      /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666', fontWeight: 700 } }, MEAS_FIELDS[f].unit)),
+      /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666', fontWeight: 700 } }, mUnit(f))),
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8 } },
       /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#FF6B6B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 3, textAlign: 'center' } }, t('meas_right')),
@@ -10819,11 +10929,11 @@ function MeasurementDetailModal({ field, onClose, onChanged }) {
     const min = Math.min(...vals), max = Math.max(...vals), range = max - min || 1;
     return /*#__PURE__*/React.createElement("div", null,
       label ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: labelColor, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 } },
-        label, /*#__PURE__*/React.createElement("span", { style: { color: '#fff', fontSize: 15, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif" } }, s.value + ' ' + info.unit)) : null,
+        label, /*#__PURE__*/React.createElement("span", { style: { color: '#fff', fontSize: 15, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif" } }, mFmt(field, s.value) + ' ' + mUnit(field))) : null,
       hist.length >= 2 ? /*#__PURE__*/React.createElement("div", { style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 14, marginBottom: 10 } },
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'flex-end', gap: 5, height: 80 } },
           hist.map((h, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' } },
-            /*#__PURE__*/React.createElement("div", { style: { fontSize: 8, color: '#888', fontWeight: 700, marginBottom: 3 } }, h.val),
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 8, color: '#888', fontWeight: 700, marginBottom: 3 } }, mFmt(field, h.val)),
             /*#__PURE__*/React.createElement("div", { style: { width: '100%', height: (12 + (h.val - min) / range * 68) + '%', background: 'linear-gradient(180deg,var(--accent),var(--accent-deep))', borderRadius: '4px 4px 0 0', minHeight: 8 } })))),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 5, marginTop: 5 } },
           hist.map((h, i) => /*#__PURE__*/React.createElement("span", { key: i, style: { flex: 1, textAlign: 'center', fontSize: 8, color: '#666', fontWeight: 700 } }, fmtMeasDate(h.date))))) :
@@ -10832,7 +10942,7 @@ function MeasurementDetailModal({ field, onClose, onChanged }) {
         hist.slice().reverse().map((h, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderTop: i === 0 ? 'none' : '1px solid #191919' } },
           /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#aaa' } }, fmtMeasDate(h.date)),
           /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-            /*#__PURE__*/React.createElement("span", { style: { fontSize: 13.5, fontWeight: 800 } }, h.val + ' ' + info.unit),
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 13.5, fontWeight: 800 } }, mFmt(field, h.val) + ' ' + mUnit(field)),
             /*#__PURE__*/React.createElement("button", { onClick: () => delItem(subfield, h.date), style: { background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex' } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'trash', size: 14, color: '#FF5252', strokeWidth: 2 })))))));
   };
   return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: onClose },
@@ -10843,12 +10953,12 @@ function MeasurementDetailModal({ field, onClose, onChanged }) {
       info.dual ?
         /*#__PURE__*/React.createElement(React.Fragment, null,
           stat.diff != null ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, fontWeight: 800, marginBottom: 14, color: Math.abs(stat.diff) < 0.25 ? '#4CAF50' : '#FF8A65' } },
-            Math.abs(stat.diff) < 0.25 ? t('meas_balanced') : ((stat.diff > 0 ? t('meas_right') : t('meas_left')) + ' +' + Math.abs(stat.diff).toFixed(1) + info.unit)) : null,
+            Math.abs(stat.diff) < 0.25 ? t('meas_balanced') : ((stat.diff > 0 ? t('meas_right') : t('meas_left')) + ' +' + mFmt(field, Math.abs(stat.diff)) + mUnit(field))) : null,
           seriesBlock(stat.right, field + '_r', t('meas_right'), '#FF6B6B'),
           /*#__PURE__*/React.createElement("div", { style: { height: 14 } }),
           seriesBlock(stat.left, field + '_l', t('meas_left'), '#4A90E2')) :
         /*#__PURE__*/React.createElement(React.Fragment, null,
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 26, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", marginBottom: 16, marginTop: -8 } }, stat.value, /*#__PURE__*/React.createElement("span", { style: { fontSize: 14, color: '#888' } }, " " + info.unit)),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 26, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", marginBottom: 16, marginTop: -8 } }, mFmt(field, stat.value), /*#__PURE__*/React.createElement("span", { style: { fontSize: 14, color: '#888' } }, " " + mUnit(field))),
           seriesBlock(stat, field, null, null)),
       /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel, marginTop: 12 } }, "Kapat")));
 }
@@ -11152,7 +11262,7 @@ function ProgressTab({
     style: { fontSize: 11, color: '#666', marginTop: 2 }
   }, t('prog_set_count_hint')), monthStats.biggestJump && /*#__PURE__*/React.createElement("div", {
     style: { ...S.progHeroDelta, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'flame', size: 15, strokeWidth: 2.4, color: 'var(--accent)' }), t('prog_biggest_jump') + monthStats.biggestJump.name + " +" + monthStats.biggestJump.delta + "kg")), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'flame', size: 15, strokeWidth: 2.4, color: 'var(--accent)' }), t('prog_biggest_jump') + monthStats.biggestJump.name + " +" + wFmt(monthStats.biggestJump.delta) + wUnit())), /*#__PURE__*/React.createElement("div", {
     style: S.progStatGrid
   }, /*#__PURE__*/React.createElement("div", {
     style: S.progStatBox
@@ -11183,7 +11293,7 @@ function ProgressTab({
     style: S.plateauName
   }, es.name), /*#__PURE__*/React.createElement("div", {
     style: S.plateauSub
-  }, es.weight, "kg · son rekor ", es.weeksSince, t('prog_weeks_ago'))), /*#__PURE__*/React.createElement("div", {
+  }, wFmt(es.weight), " " + wUnit() + " · " + t('prog_last_record') + " ", es.weeksSince, t('prog_weeks_ago'))), /*#__PURE__*/React.createElement("div", {
     style: S.plateauBadge
   }, es.weeksSince, " hafta")))), muscleProgress.list.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, topMuscle && /*#__PURE__*/React.createElement("div", {
     style: S.winnerBanner
@@ -11243,7 +11353,7 @@ function ProgressTab({
     }
   }, es.isStuck ? t('weeks_stuck',{n:es.weeksSince}) : t('est_1rm_lower',{n:es.oneRM}))), /*#__PURE__*/React.createElement("div", {
     style: S.prRowWt
-  }, es.weight, "kg")))), /*#__PURE__*/React.createElement(MeasurementsSection, null));
+  }, wFmt(es.weight), " " + wUnit())))), /*#__PURE__*/React.createElement(MeasurementsSection, null));
 }
 
 // Tek hareket derin grafik ekranı
@@ -11405,7 +11515,7 @@ function ExerciseProgressDetail({
     style: S.exDetailName
   }, es.name), /*#__PURE__*/React.createElement("div", {
     style: S.exDetailCur
-  }, t('prog_current_top'), es.weight, "kg × ", es.reps))), /*#__PURE__*/React.createElement("div", {
+  }, t('prog_current_top'), wFmt(es.weight), wUnit() + " × ", es.reps))), /*#__PURE__*/React.createElement("div", {
     style: S.exBigStats
   }, /*#__PURE__*/React.createElement("div", {
     style: S.exStat
@@ -11454,7 +11564,7 @@ function ExerciseProgressDetail({
     style: S.crosshairDate
   }, fmtDate(active.ts)), /*#__PURE__*/React.createElement("span", {
     style: S.crosshairVal
-  }, active.weight, "kg × ", active.reps)), points.length >= 1 ? /*#__PURE__*/React.createElement("svg", {
+  }, wFmt(active.weight), wUnit() + " × ", active.reps)), points.length >= 1 ? /*#__PURE__*/React.createElement("svg", {
     ref: svgRef,
     viewBox: "0 0 300 170",
     style: {
@@ -11592,7 +11702,7 @@ function ExerciseProgressDetail({
       color: '#ccc',
       lineHeight: 1.5
     }
-  }, es.weight, "kg'da ", es.weeksSince, t('prog_plateau'))));
+  }, wFmt(es.weight), " " + wUnit() + " " + t('prog_at') + " ", es.weeksSince, t('prog_plateau'))));
 }
 
 // ═══════════════════════════════════════════
