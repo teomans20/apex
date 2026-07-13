@@ -1112,7 +1112,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.34'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.35'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1211,7 +1211,7 @@ const I18N = {
     md_exercises: 'EGZERSİZLER · düzenlemek için dokun', md_days_header: 'GÜNLER', unknown_exercises: 'TANINMAYAN EGZERSİZLER',
     journal_empty: 'Henüz kayıtlı antrenman yok', journal_empty_sub: 'İlk antrenmanını kaydet, burada görünsün',
     balance_warning: '⚠ DENGE UYARISI',
-    same_lower: 'aynı', vs_prev_day: '% önceki {day} gününe göre', imbalance_msg: '{a}, {b} kasından ~{x}x fazla çalışılmış',
+    same_lower: 'aynı', refresh: '↻ Yenile', refreshing: '↻ Yenileniyor...', ready_q: 'HAZIR MISIN?', workout_active: 'ANTRENMAN', month_workouts: 'BU AY ANTRENMAN', est_1rm_lower: 'tahmini 1RM ~{n}kg', weeks_stuck: '⏳ {n} haftadır takılı', volume_lower: 'hacim', vs_prev_day: '% önceki {day} gününe göre', imbalance_msg: '{a}, {b} kasından ~{x}x fazla çalışılmış',
     program_sent_to: ' arkadaşına ', program_went: ' programı gitti', exercises_will_send: ' egzersiz gönderilecek. Ağırlıkların gitmez — arkadaşın kendi verilerini girer.', day_prefix: 'Bu günde "', ex_exists: '" adlı bir egzersiz zaten var.',
     poked_excl: 'Dürtüldü!',
     notif_will_see: ' bildirimini görecek',
@@ -1425,7 +1425,7 @@ const I18N = {
     md_exercises: 'EXERCISES · tap to edit', md_days_header: 'DAYS', unknown_exercises: 'UNRECOGNIZED EXERCISES',
     journal_empty: 'No saved workouts yet', journal_empty_sub: 'Log your first workout, it will appear here',
     balance_warning: '⚠ BALANCE WARNING',
-    same_lower: 'same', vs_prev_day: '% vs previous {day} day', imbalance_msg: '{a} worked ~{x}x more than {b}',
+    same_lower: 'same', refresh: '↻ Refresh', refreshing: '↻ Refreshing...', ready_q: 'READY?', workout_active: 'WORKOUT', month_workouts: 'WORKOUTS THIS MONTH', est_1rm_lower: 'est. 1RM ~{n}kg', weeks_stuck: '⏳ stuck for {n} weeks', volume_lower: 'volume', vs_prev_day: '% vs previous {day} day', imbalance_msg: '{a} worked ~{x}x more than {b}',
     program_sent_to: ' to ', program_went: ' program sent', exercises_will_send: " exercises will be sent. Your weights won't go — your friend enters their own.", day_prefix: 'An exercise named "', ex_exists: '" already exists.',
     poked_excl: 'Poked!',
     notif_will_see: ' will get the notification',
@@ -5673,12 +5673,12 @@ function FeedView({
     }, t('feed_empty'), /*#__PURE__*/React.createElement("br", null), friends.length === 0 ? t('feed_empty_sub') : t('feed_empty_sub2'), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("button", {
       onClick: load,
       style: { marginTop: 18, background: '#141414', border: '1px solid #242424', borderRadius: 10, padding: '9px 20px', color: '#888', fontSize: 12, fontWeight: 700, cursor: 'pointer' }
-    }, refreshing ? '↻ Yenileniyor...' : '↻ Yenile'));
+    }, refreshing ? t('refreshing') : t('refresh')));
   }
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
     onClick: load,
     style: { width: '100%', background: '#141414', border: '1px solid #242424', borderRadius: 10, padding: '9px', color: '#888', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginBottom: 12 }
-  }, refreshing ? '↻ Yenileniyor...' : '↻ Yenile'), items.map(item => /*#__PURE__*/React.createElement(FeedCard, {
+  }, refreshing ? t('refreshing') : t('refresh')), items.map(item => /*#__PURE__*/React.createElement(FeedCard, {
     key: item.ownerUid + '_' + item.id,
     item: item,
     myUid: me.uid,
@@ -5860,7 +5860,7 @@ function FeedCard({
     style: S.feedTag
   }, t('pr_badge'), item.delta ? ` · +${item.delta}kg` : ''))), item.type === 'workout' && /*#__PURE__*/React.createElement("div", {
     style: S.feedBody
-  }, "💪 ", item.dayName, t('completed_day'), item.setCount, " set", item.volume ? ` · ${(item.volume / 1000).toFixed(1)}t hacim` : ''), showWho && /*#__PURE__*/React.createElement("div", {
+  }, "💪 ", item.dayName, t('completed_day'), item.setCount, " set", item.volume ? ` · ${(item.volume / 1000).toFixed(1)}t ` + t('volume_lower') : ''), showWho && /*#__PURE__*/React.createElement("div", {
     style: S.whoPopup,
     onClick: () => setShowWho(null)
   }, /*#__PURE__*/React.createElement("span", {
@@ -9162,7 +9162,7 @@ function DayView({
     style: S.timerLeft
   }, /*#__PURE__*/React.createElement(Icon.Timer, null), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: S.timerLabel
-  }, activeSession ? 'ANTRENMAN' : 'HAZIRSIN MI?'), activeSession ? /*#__PURE__*/React.createElement(WorkoutTimerDisplay, {
+  }, activeSession ? t('workout_active') : t('ready_q')), activeSession ? /*#__PURE__*/React.createElement(WorkoutTimerDisplay, {
     startTime: activeSession.startTime
   }) : /*#__PURE__*/React.createElement("div", {
     style: {
@@ -9633,7 +9633,7 @@ function ExerciseView({
       style: S.historyDate
     }, /*#__PURE__*/React.createElement(Icon.Cal, null), /*#__PURE__*/React.createElement("span", null, formatDate(session.timestamp))), /*#__PURE__*/React.createElement("div", {
       style: S.historyVolume
-    }, session.sets.reduce((s, x) => s + x.weight * x.reps, 0).toFixed(0), "kg hacim")), /*#__PURE__*/React.createElement("div", {
+    }, session.sets.reduce((s, x) => s + x.weight * x.reps, 0).toFixed(0), "kg " + t('volume_lower'))), /*#__PURE__*/React.createElement("div", {
       style: S.setsList
     }, sorted.map((set, idx) => {
       const isTop = idx === 0;
@@ -10998,7 +10998,7 @@ function ProgressTab({
     style: S.progStatV
   }, trainingStats.monthWorkouts), /*#__PURE__*/React.createElement("div", {
     style: S.progStatL
-  }, "BU AY ANTRENMAN")), /*#__PURE__*/React.createElement("div", {
+  }, t('month_workouts'))), /*#__PURE__*/React.createElement("div", {
     style: S.progStatBox
   }, /*#__PURE__*/React.createElement("div", {
     style: S.progStatV
@@ -11079,7 +11079,7 @@ function ProgressTab({
       ...S.prRowSub,
       color: es.isStuck ? '#FFA726' : '#4CAF50'
     }
-  }, es.isStuck ? `⏳ ${es.weeksSince} haftadır takılı` : `tahmini 1RM ~${es.oneRM}kg`)), /*#__PURE__*/React.createElement("div", {
+  }, es.isStuck ? t('weeks_stuck',{n:es.weeksSince}) : t('est_1rm_lower',{n:es.oneRM}))), /*#__PURE__*/React.createElement("div", {
     style: S.prRowWt
   }, es.weight, "kg")))), /*#__PURE__*/React.createElement(MeasurementsSection, null));
 }
