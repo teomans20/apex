@@ -1112,7 +1112,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(ACTIVE_GYM_KEY, id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.30'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.31'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -3166,7 +3166,7 @@ function PokeModal({
     style: { fontSize: 17, fontWeight: 800, marginBottom: 4 }
   }, "👊 " + (friend.name || friend.username) + " dürtülüyor"), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 13, color: '#888', marginBottom: 16 }
-  }, "Bir mesaj seç, ona bildirim gitsin:"), POKE_MESSAGES.slice(0, 3).map((msg, i) => /*#__PURE__*/React.createElement("button", {
+  }, t('poke_notif_hint')), POKE_MESSAGES.slice(0, 3).map((msg, i) => /*#__PURE__*/React.createElement("button", {
     key: i,
     onClick: () => send(msg),
     disabled: sending,
@@ -3205,7 +3205,7 @@ function NotificationPanel({
   }, /*#__PURE__*/React.createElement("path", { d: "M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" }), /*#__PURE__*/React.createElement("path", { d: "M13.73 21a2 2 0 0 1-3.46 0" })), "Bildirimler"), total > 0 ? /*#__PURE__*/React.createElement("span", {
     onClick: onClearAll,
     style: { fontSize: 12, color: '#666', fontWeight: 700, cursor: 'pointer' }
-  }, "Tümünü temizle") : /*#__PURE__*/React.createElement("span", {
+  }, t('clear_all')) : /*#__PURE__*/React.createElement("span", {
     onClick: onClose,
     style: { fontSize: 18, color: '#666', cursor: 'pointer', lineHeight: 1 }
   }, "✕")),
@@ -3290,17 +3290,17 @@ function ShareProgramModal({
     style: { fontSize: 40, marginBottom: 10 }
   }, "✅"), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 16, fontWeight: 800, color: '#fff' }
-  }, "Gönderildi!"), /*#__PURE__*/React.createElement("div", {
+  }, t('sent_excl')), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 13, color: '#888', marginTop: 4 }
   }, selectedUids.length + " arkadaşına " + dayName + " programı gitti")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 17, fontWeight: 800, color: '#fff', marginBottom: 4 }
-  }, "📤 Programı Gönder"), /*#__PURE__*/React.createElement("div", {
+  }, t('send_program')), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 13, color: '#888', marginBottom: 16 }
   }, "\"" + dayName + "\" günündeki " + exercises.length + " egzersiz gönderilecek. Ağırlıkların gitmez — arkadaşın kendi verilerini girer."), friends === null ? /*#__PURE__*/React.createElement("div", {
     style: { textAlign: 'center', color: '#555', padding: '20px 0', fontSize: 13 }
-  }, "Yükleniyor...") : friends.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, t('loading3')) : friends.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: { textAlign: 'center', color: '#555', padding: '20px 0', fontSize: 13 }
-  }, "Henüz arkadaşın yok. Önce arkadaş ekle.") : /*#__PURE__*/React.createElement("div", {
+  }, t('no_friends_yet')) : /*#__PURE__*/React.createElement("div", {
     style: { maxHeight: 280, overflowY: 'auto', marginBottom: 14 }
   }, friends.map(f => {
     const av = avatarFor(f.name);
@@ -3340,7 +3340,7 @@ function ShareProgramModal({
     onClick: handleSend,
     disabled: selectedUids.length === 0 || sending,
     style: { flex: 2, padding: '13px', background: selectedUids.length > 0 ? '#4a9eff' : '#1a1a1a', border: 'none', borderRadius: 12, color: selectedUids.length > 0 ? '#fff' : '#555', fontSize: 14, fontWeight: 800, cursor: selectedUids.length > 0 ? 'pointer' : 'default' }
-  }, sending ? "Gönderiliyor..." : selectedUids.length > 0 ? "Gönder (" + selectedUids.length + ")" : "Arkadaş seç")))));
+  }, sending ? t('sending') : selectedUids.length > 0 ? "Gönder (" + selectedUids.length + ")" : "Arkadaş seç")))));
 }
 function DayDetailModal({
   targetDateKey,
@@ -3739,7 +3739,7 @@ function UsernameSetup({
   const handleSubmit = async () => {
     const u = normalizeUsername(username);
     if (!isValidUsername(u)) {
-      setError('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _)');
+      setError(t('username_rule'));
       return;
     }
     setBusy(true);
@@ -3747,12 +3747,12 @@ function UsernameSetup({
     try {
       const status = await isUsernameAvailable(u);
       if (status === 'taken') {
-        setError('Bu kullanıcı adı alınmış, başka dene');
+        setError(t('username_taken'));
         setBusy(false);
         return;
       }
       if (status === 'error') {
-        setError('Kullanıcı adı kontrol edilemedi, tekrar dene');
+        setError(t('username_check_fail'));
         setBusy(false);
         return;
       }
@@ -3781,14 +3781,14 @@ function UsernameSetup({
       fontSize: 26,
       marginTop: 24
     }
-  }, "KULLANICI ADI SEÇ"), /*#__PURE__*/React.createElement("div", {
+  }, t('choose_username')), /*#__PURE__*/React.createElement("div", {
     style: {
       color: '#888',
       fontSize: 13,
       marginTop: 8,
       lineHeight: 1.5
     }
-  }, "Arkadaşların seni bu adla bulacak.", /*#__PURE__*/React.createElement("br", null), "Sonra değiştiremezsin, dikkatli seç."), /*#__PURE__*/React.createElement("div", {
+  }, t('username_desc1'), /*#__PURE__*/React.createElement("br", null), t('username_desc2')), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       alignItems: 'center',
@@ -4685,7 +4685,7 @@ function FriendsTab({
     style: S.header
   }, /*#__PURE__*/React.createElement("div", {
     style: S.gymSelectorName
-  }, sub === 'feed' ? 'AKIŞ' : 'ARKADAŞLAR'), /*#__PURE__*/React.createElement("button", {
+  }, sub === 'feed' ? t('friends_flow') : t('tab_friends')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSub(sub === 'add' ? 'friends' : 'add'),
     style: S.friendAddBtn
   }, sub === 'add' ? '✕' : '＋ Ekle')),
@@ -4694,13 +4694,13 @@ function FriendsTab({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setSub('feed'),
     style: { ...S.feedSegBtn, ...(sub === 'feed' ? S.feedSegBtnOn : {}), display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'flame', size: 15, strokeWidth: 2.4, color: sub === 'feed' ? '#fff' : 'var(--accent-light)' }), "AKIŞ"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'flame', size: 15, strokeWidth: 2.4, color: sub === 'feed' ? '#fff' : 'var(--accent-light)' }), t('friends_flow')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSub('leaderboard'),
     style: { ...S.feedSegBtn, ...(sub === 'leaderboard' ? S.feedSegBtnOn : {}), display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'medal', size: 15, strokeWidth: 2.2, color: sub === 'leaderboard' ? '#fff' : '#FFB74D' }), "LİDER"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'medal', size: 15, strokeWidth: 2.2, color: sub === 'leaderboard' ? '#fff' : '#FFB74D' }), t('friends_leader')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSub('friends'),
     style: { ...S.feedSegBtn, ...(sub === 'friends' ? S.feedSegBtnOn : {}), display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'users', size: 15, strokeWidth: 2.2, color: sub === 'friends' ? '#fff' : '#4A90E2' }), "ARKADAŞ" + (requests.length + programReqs.length > 0 ? ` (${requests.length + programReqs.length})` : ''))),
+  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'users', size: 15, strokeWidth: 2.2, color: sub === 'friends' ? '#fff' : '#4A90E2' }), t('friends_users') + (requests.length + programReqs.length > 0 ? ` (${requests.length + programReqs.length})` : ''))),
   sub === 'feed' ? /*#__PURE__*/React.createElement(FeedView, {
     me: me,
     friends: friends,
@@ -4722,7 +4722,7 @@ function FriendsTab({
     style: { background: 'rgba(255,82,82,0.12)', border: '1px solid rgba(255,82,82,0.4)', borderRadius: 10, padding: 10, fontSize: 12, color: '#FF5252', marginBottom: 12 }
   }, actionError), requests.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.friendSection
-  }, "GELEN İSTEKLER (", requests.length, ")"), requests.map(r => /*#__PURE__*/React.createElement("div", {
+  }, t('incoming_requests'), " (", requests.length, ")"), requests.map(r => /*#__PURE__*/React.createElement("div", {
     key: r.uid,
     style: S.friendRow
   }, /*#__PURE__*/React.createElement(Avatar, {
@@ -4747,15 +4747,15 @@ function FriendsTab({
       }
     },
     style: S.btnAccept
-  }, "Kabul"), /*#__PURE__*/React.createElement("button", {
+  }, t('accept')), /*#__PURE__*/React.createElement("button", {
     onClick: async () => {
       await rejectFriendRequest(authUser.uid, r.uid);
       refresh();
     },
     style: S.btnReject
-  }, "Sil")))), programReqs.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, t('delete'))))), programReqs.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.friendSection
-  }, "📥 GELEN PROGRAMLAR (", programReqs.length, ")"), programReqs.map(pr => /*#__PURE__*/React.createElement("div", {
+  }, t('incoming_programs'), " (", programReqs.length, ")"), programReqs.map(pr => /*#__PURE__*/React.createElement("div", {
     key: pr.id,
     style: { background: 'rgba(74,158,255,0.08)', border: '1px solid rgba(74,158,255,0.3)', borderRadius: 14, padding: 14, marginBottom: 10 }
   }, /*#__PURE__*/React.createElement("div", {
@@ -4780,7 +4780,7 @@ function FriendsTab({
       refresh();
     },
     style: { flex: 2, padding: '11px', background: '#4a9eff', border: 'none', borderRadius: 10, color: '#fff', fontSize: 13.5, fontWeight: 800, cursor: 'pointer' }
-  }, "✓ Ekle"), /*#__PURE__*/React.createElement("button", {
+  }, t('added_excl')), /*#__PURE__*/React.createElement("button", {
     onClick: async () => {
       await dismissProgramRequest(authUser.uid, pr.id);
       refresh();
@@ -4788,7 +4788,7 @@ function FriendsTab({
     style: { flex: 1, padding: '11px', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 10, color: '#999', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }
   }, "Sil"))))), /*#__PURE__*/React.createElement("div", {
     style: S.friendSection
-  }, "ARKADAŞLARIN (", friends.length, ")"), loading ? /*#__PURE__*/React.createElement(SkeletonFeed, { rows: 3 }) : friends.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, t('your_friends'), " (", friends.length, ")"), loading ? /*#__PURE__*/React.createElement(SkeletonFeed, { rows: 3 }) : friends.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
       color: '#666',
@@ -4796,7 +4796,7 @@ function FriendsTab({
       fontSize: 14,
       lineHeight: 1.6
     }
-  }, "Henüz arkadaşın yok.", /*#__PURE__*/React.createElement("br", null), "＋ Ekle ile @kullanıcı adından ekle 🔥") : friends.map(f => /*#__PURE__*/React.createElement("div", {
+  }, t('no_friends_yet'), /*#__PURE__*/React.createElement("br", null), t('add_via_username')) : friends.map(f => /*#__PURE__*/React.createElement("div", {
     key: f.uid,
     style: S.friendRow
   }, /*#__PURE__*/React.createElement("button", {
@@ -4833,13 +4833,13 @@ function FriendsTab({
       return /*#__PURE__*/React.createElement("button", {
         disabled: true,
         style: { padding: '8px 14px', borderRadius: 10, border: '1px solid #2a2a2a', fontSize: 13, fontWeight: 800, background: '#161616', color: '#666', flexShrink: 0, cursor: 'default' }
-      }, "✓ Dürtüldü");
+      }, t('poked_check'));
     }
     if (canPoke) {
       return /*#__PURE__*/React.createElement("button", {
         onClick: () => setPokeTarget(f),
         style: { padding: '8px 14px', borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 800, cursor: 'pointer', background: '#FFA726', color: '#1a1a1a', flexShrink: 0 }
-      }, "👊 Dürt");
+      }, t('poke'));
     }
     return /*#__PURE__*/React.createElement("button", {
       onClick: async () => {
@@ -4849,10 +4849,10 @@ function FriendsTab({
         }
       },
       style: S.btnReject
-    }, "Çıkar");
+    }, t('remove'));
   })())), sent.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.friendSection
-  }, "GÖNDERİLEN (", sent.length, ")"), sent.map(s => /*#__PURE__*/React.createElement("div", {
+  }, t('sent_label'), " (", sent.length, ")"), sent.map(s => /*#__PURE__*/React.createElement("div", {
     key: s.uid,
     style: S.friendRow
   }, /*#__PURE__*/React.createElement(Avatar, {
@@ -4968,10 +4968,10 @@ function AddFriendView({
       // Bu kişi bana zaten istek attıysa → istek atma, direkt arkadaş ol
       if (incomingFromThem) {
         await acceptFriendRequest(me, result.uid, result);
-        setMsg('Arkadaş oldunuz ✓');
+        setMsg(t('are_friends'));
       } else {
         await sendFriendRequest(me, result);
-        setMsg('İstek gönderildi ✓');
+        setMsg(t('request_sent'));
       }
       setResult(undefined);
       setQuery('');
@@ -4989,7 +4989,7 @@ function AddFriendView({
       marginBottom: 12,
       lineHeight: 1.5
     }
-  }, "Arkadaşının @kullanıcı adını yaz, istek at. Kabul edince arkadaş olursunuz."), /*#__PURE__*/React.createElement("div", {
+  }, t('add_friend_prompt')), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -5065,13 +5065,13 @@ function AddFriendView({
       color: '#666',
       fontSize: 12
     }
-  }, "Bu sensin 🙂") : alreadyFriend ? /*#__PURE__*/React.createElement("span", {
+  }, t('this_is_you')) : alreadyFriend ? /*#__PURE__*/React.createElement("span", {
     style: {
       color: '#4CAF50',
       fontSize: 12,
       fontWeight: 700
     }
-  }, "✓ Arkadaş") : alreadySent ? /*#__PURE__*/React.createElement("span", {
+  }, t('is_friend')) : alreadySent ? /*#__PURE__*/React.createElement("span", {
     style: {
       color: '#FFA726',
       fontSize: 12,
@@ -5080,7 +5080,7 @@ function AddFriendView({
   }, "Bekliyor") : /*#__PURE__*/React.createElement("button", {
     onClick: sendReq,
     style: S.btnAccept
-  }, incomingFromThem ? "Kabul Et" : "İstek At")));
+  }, incomingFromThem ? t('accept_full') : t('send_request'))));
 }
 
 // ═══════════════════════════════════════════
@@ -5174,7 +5174,7 @@ async function toggleReaction(ownerUid, itemId, reactionType, myUid) {
 function feedTimeAgo(ts) {
   const diff = Date.now() - ts;
   const min = Math.floor(diff / 60000);
-  if (min < 1) return 'az önce';
+  if (min < 1) return t('time_just_now');
   if (min < 60) return t('date_min_ago',{n:min});
   const hr = Math.floor(min / 60);
   if (hr < 24) return t('date_hr_ago',{n:hr});
@@ -5278,7 +5278,7 @@ function FeedView({
         marginTop: 40,
         fontSize: 13
       }
-    }, "Akış yükleniyor...");
+    }, t('feed_loading'));
   }
   if (items.length === 0) {
     return /*#__PURE__*/React.createElement("div", {
@@ -5289,7 +5289,7 @@ function FeedView({
         fontSize: 14,
         lineHeight: 1.6
       }
-    }, "Akış boş 🌱", /*#__PURE__*/React.createElement("br", null), friends.length === 0 ? 'Arkadaş ekle, aktiviteleri burada gör' : 'Sen veya arkadaşların antrenman yapınca burada görünecek', /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("button", {
+    }, t('feed_empty'), /*#__PURE__*/React.createElement("br", null), friends.length === 0 ? t('feed_empty_sub') : t('feed_empty_sub2'), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("button", {
       onClick: load,
       style: { marginTop: 18, background: '#141414', border: '1px solid #242424', borderRadius: 10, padding: '9px 20px', color: '#888', fontSize: 12, fontWeight: 700, cursor: 'pointer' }
     }, refreshing ? '↻ Yenileniyor...' : '↻ Yenile'));
@@ -5465,9 +5465,9 @@ function FeedCard({
       ...S.feedTag,
       background: '#FFA726'
     }
-  }, "⚡ PLATO KIRILDI"))), item.type === 'pr' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, t('plato_broken')))), item.type === 'pr' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.feedBody
-  }, "Yeni kişisel rekor 🔥"), /*#__PURE__*/React.createElement("div", {
+  }, t('pr_full')), /*#__PURE__*/React.createElement("div", {
     style: S.feedPr
   }, /*#__PURE__*/React.createElement("div", {
     style: S.feedExLabel
@@ -5477,7 +5477,7 @@ function FeedCard({
     style: S.feedUnit
   }, " kg × ", item.reps)), /*#__PURE__*/React.createElement("div", {
     style: S.feedTag
-  }, "🏆 YENİ REKOR", item.delta ? ` · +${item.delta}kg` : ''))), item.type === 'workout' && /*#__PURE__*/React.createElement("div", {
+  }, t('pr_badge'), item.delta ? ` · +${item.delta}kg` : ''))), item.type === 'workout' && /*#__PURE__*/React.createElement("div", {
     style: S.feedBody
   }, "💪 ", item.dayName, " günü tamamladı · ", item.setCount, " set", item.volume ? ` · ${(item.volume / 1000).toFixed(1)}t hacim` : ''), showWho && /*#__PURE__*/React.createElement("div", {
     style: S.whoPopup,
@@ -5560,7 +5560,7 @@ function FeedCard({
       color: '#555',
       marginTop: 5
     }
-  }, "💡 emojiye basılı tut, kimlerin verdiğini gör"));
+  }, t('emoji_hold_hint')));
 }
 
 // ═══════════════════════════════════════════
@@ -5786,9 +5786,9 @@ function LeaderboardView({
   };
   const sorted = [...board].sort((a, b) => metricVal(b) - metricVal(a));
   const metricLabel = {
-    gain: 'Bu Hafta Gelişim',
-    pr: 'Toplam Rekor',
-    workout: 'Toplam Antrenman'
+    gain: t('this_week_progress'),
+    pr: t('total_progress'),
+    workout: t('total_workouts_stat')
   }[metric];
   const valSuffix = {
     gain: ' kg',
@@ -5809,19 +5809,19 @@ function LeaderboardView({
       ...S.feedSegBtn,
       ...(metric === 'gain' ? S.feedSegBtnOn : {})
     }
-  }, "📈 GELİŞİM"), /*#__PURE__*/React.createElement("button", {
+  }, t('prof_progress')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setMetric('pr'),
     style: {
       ...S.feedSegBtn,
       ...(metric === 'pr' ? S.feedSegBtnOn : {})
     }
-  }, "🏆 REKOR"), /*#__PURE__*/React.createElement("button", {
+  }, t('prof_record')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setMetric('workout'),
     style: {
       ...S.feedSegBtn,
       ...(metric === 'workout' ? S.feedSegBtnOn : {})
     }
-  }, "🔥 ANTRENMAN")), /*#__PURE__*/React.createElement("div", {
+  }, t('prof_workout'))), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
       color: '#777',
@@ -5836,7 +5836,7 @@ function LeaderboardView({
       fontSize: 13,
       lineHeight: 1.6
     }
-  }, "Henüz veri yok 🌱", /*#__PURE__*/React.createElement("br", null), "Arkadaşların antrenman yaptıkça dolacak") : sorted.map((u, i) => /*#__PURE__*/React.createElement("div", {
+  }, t('no_data_seed'), /*#__PURE__*/React.createElement("br", null), t('no_data_seed_sub')) : sorted.map((u, i) => /*#__PURE__*/React.createElement("div", {
     key: u.uid,
     onClick: () => {
       if (!onOpenProfile) return;
@@ -5878,7 +5878,7 @@ function LeaderboardView({
     style: {
       color: '#4A90E2'
     }
-  }, "Gelişim"), " en adil sıralama — kim ne kaldırırsa kaldırsın, bu hafta ne kadar ilerlediğine bakar."));
+  }, t('progress_stat')), t('lb_desc')));
 }
 
 // Arkadaş profili (bir arkadaşa dokununca)
@@ -5900,7 +5900,7 @@ function FriendProfileView({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onBack,
     style: S.iconBtn
-  }, "‹ Geri"), /*#__PURE__*/React.createElement("div", {
+  }, t('back_arrow')), /*#__PURE__*/React.createElement("div", {
     style: S.topBarTitle
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -5957,7 +5957,7 @@ function FriendProfileView({
       fontSize: 13,
       lineHeight: 1.6
     }
-  }, "Bu arkadaşın paylaştığı veri yok 🤔", /*#__PURE__*/React.createElement("br", null), "Antrenman yapıp paylaşınca görünecek") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, t('friend_no_data'), /*#__PURE__*/React.createElement("br", null), t('friend_no_data_sub')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr 1fr',
@@ -5999,13 +5999,13 @@ function FriendProfileView({
     style: { flex: 1 }
   }, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 10, color: '#888', letterSpacing: 0.8, textTransform: 'uppercase', fontWeight: 800, marginBottom: 2 }
-  }, "En Çok Çalıştığı Kas"), /*#__PURE__*/React.createElement("div", {
+  }, t('most_worked_muscle')), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 17, fontWeight: 800 }
   }, stats.topMuscle.name)), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 20, fontWeight: 900, color: 'var(--accent-light)', fontFamily: "'Big Shoulders Display',sans-serif" }
   }, stats.topMuscle.pct, "%")), stats.topPRs && stats.topPRs.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.pfSection
-  }, "EN İYİ REKORLARI"), stats.topPRs.map((pr, i) => /*#__PURE__*/React.createElement("div", {
+  }, t('best_records')), stats.topPRs.map((pr, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: S.pfPr
   }, /*#__PURE__*/React.createElement("span", {
@@ -6014,7 +6014,7 @@ function FriendProfileView({
     style: S.pfPrW
   }, pr.weight, " kg", pr.reps ? ` × ${pr.reps}` : '')))), /*#__PURE__*/React.createElement("div", {
     style: S.lbNote
-  }, "💡 Sadece bu arkadaşın paylaştığı salonun özeti görünür. Detaylı logları gizli.")));
+  }, t('prof_gym_only'))));
 }
 
 // Yükleme ekranı — nabız atan logo + animasyonlu çubuk
@@ -6470,17 +6470,17 @@ function AuthScreen() {
   const [busy, setBusy] = useState(false);
   const trError = code => {
     const map = {
-      'auth/invalid-email': 'Geçersiz e-posta adresi',
-      'auth/user-not-found': 'Bu e-posta ile kayıt yok',
-      'auth/wrong-password': 'Hatalı şifre',
-      'auth/invalid-credential': 'E-posta veya şifre hatalı',
-      'auth/email-already-in-use': 'Bu e-posta zaten kayıtlı',
-      'auth/weak-password': 'Şifre en az 6 karakter olmalı',
-      'auth/missing-password': 'Şifre girin',
-      'auth/network-request-failed': 'İnternet bağlantısı yok',
-      'auth/too-many-requests': 'Çok fazla deneme, biraz bekle'
+      'auth/invalid-email': t('err_invalid_email'),
+      'auth/user-not-found': t('err_no_account'),
+      'auth/wrong-password': t('err_wrong_pass'),
+      'auth/invalid-credential': t('err_email_pass'),
+      'auth/email-already-in-use': t('err_email_used'),
+      'auth/weak-password': t('err_pass_short'),
+      'auth/missing-password': t('err_enter_pass'),
+      'auth/network-request-failed': t('err_no_internet'),
+      'auth/too-many-requests': t('err_too_many')
     };
-    return map[code] || 'Bir hata oluştu, tekrar dene';
+    return map[code] || t('err_generic');
   };
   const submit = async () => {
     setError('');
@@ -6489,11 +6489,11 @@ function AuthScreen() {
       return;
     }
     if (!password) {
-      setError('Şifre girin');
+      setError(t('err_enter_pass'));
       return;
     }
     if (mode === 'signup' && !name.trim()) {
-      setError('İsim girin');
+      setError(t('err_enter_name'));
       return;
     }
     setBusy(true);
@@ -6537,9 +6537,9 @@ function AuthScreen() {
     style: S.authTitle
   }, "APEX"), /*#__PURE__*/React.createElement("div", {
     style: S.authSubtitle
-  }, mode === 'login' ? 'Tekrar hoş geldin' : 'Hesap oluştur'), mode === 'signup' && /*#__PURE__*/React.createElement("input", {
+  }, mode === 'login' ? t('welcome_back') : t('create_account')), mode === 'signup' && /*#__PURE__*/React.createElement("input", {
     style: S.authInput,
-    placeholder: "İsmin",
+    placeholder: t('your_name'),
     value: name,
     onChange: e => setName(e.target.value),
     type: "text",
@@ -6557,7 +6557,7 @@ function AuthScreen() {
   }), /*#__PURE__*/React.createElement("input", {
     style: S.authInput,
     type: "password",
-    placeholder: "Şifre",
+    placeholder: t('password'),
     value: password,
     onChange: e => setPassword(e.target.value),
     onKeyDown: e => e.key === 'Enter' && submit()
@@ -6570,13 +6570,13 @@ function AuthScreen() {
       ...S.authSubmit,
       opacity: busy ? 0.6 : 1
     }
-  }, busy ? '...' : mode === 'login' ? 'GİRİŞ YAP' : 'KAYIT OL'), /*#__PURE__*/React.createElement("button", {
+  }, busy ? '...' : mode === 'login' ? t('login_btn') : 'KAYIT OL'), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setMode(mode === 'login' ? 'signup' : 'login');
       setError('');
     },
     style: S.authSwitch
-  }, mode === 'login' ? 'Hesabın yok mu? Kayıt ol' : 'Zaten hesabın var mı? Giriş yap')));
+  }, mode === 'login' ? t('no_account_q') : t('have_account_q'))));
 }
 function BottomTabs({
   tab,
@@ -10831,7 +10831,7 @@ function ExerciseProgressDetail({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onBack,
     style: S.iconBtn
-  }, "‹ Geri"), /*#__PURE__*/React.createElement("div", {
+  }, t('back_arrow')), /*#__PURE__*/React.createElement("div", {
     style: S.topBarTitle
   }), /*#__PURE__*/React.createElement("div", {
     style: {
