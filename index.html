@@ -1263,7 +1263,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.52'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.53'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -12025,7 +12025,7 @@ function ProgressTab({
     key: st.id,
     onClick: () => setSubTab(st.id),
     style: { flex: 1, textAlign: 'center', padding: '9px 4px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 800, border: 'none', background: subTab === st.id ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : 'transparent', color: subTab === st.id ? '#fff' : '#888' }
-  }, st.label))), exerciseStats.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, st.label))), subTab === 'gelisim' && (exerciseStats.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
       color: '#555',
@@ -12033,7 +12033,7 @@ function ProgressTab({
       fontSize: 14,
       lineHeight: 1.6
     }
-  }, t('prog_no_data'), /*#__PURE__*/React.createElement("br", null), t('prog_empty')) : /*#__PURE__*/React.createElement(React.Fragment, null, subTab === 'gelisim' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, t('prog_no_data'), /*#__PURE__*/React.createElement("br", null), t('prog_empty')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.progHero
   }, /*#__PURE__*/React.createElement("div", {
     style: S.progHeroBig
@@ -12134,7 +12134,7 @@ function ProgressTab({
     }
   }, es.isStuck ? t('weeks_stuck',{n:es.weeksSince}) : t('est_1rm_lower',{n:es.oneRM}))), /*#__PURE__*/React.createElement("div", {
     style: S.prRowWt
-  }, wFmt(es.weight), " " + wUnit())))), subTab === 'olculer' && /*#__PURE__*/React.createElement(MeasurementsSection, null), subTab === 'hedefler' && /*#__PURE__*/React.createElement(GoalsSection, { data: data, gymId: activeGym && activeGym.id })));
+  }, wFmt(es.weight), " " + wUnit()))))), subTab === 'olculer' && /*#__PURE__*/React.createElement(MeasurementsSection, null), subTab === 'hedefler' && /*#__PURE__*/React.createElement(GoalsSection, { data: data, gymId: activeGym && activeGym.id }));
 }
 
 // Tek hareket derin grafik ekranı
