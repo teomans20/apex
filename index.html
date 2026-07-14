@@ -5402,110 +5402,42 @@ function renderAvatarToDataUrl(emoji) {
 
 // Kırpma modal bileşeni
 function PhotoCropModal({ imgSrc, onDone, onClose }) {
-  const canvasRef = useRef(null);
-  const [img, setImg] = useState(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0, size: 0 });
-  const [dragging, setDragging] = useState(false);
-  const [dragStart, setDragStart] = useState(null);
+  const [preview, setPreview] = useState(null);
 
   useEffect(() => {
     const image = new Image();
     image.onload = () => {
-      setImg(image);
+      const SIZE = 200;
+      const canvas = document.createElement('canvas');
+      canvas.width = SIZE;
+      canvas.height = SIZE;
+      const ctx = canvas.getContext('2d');
       const side = Math.min(image.width, image.height);
-      setCrop({ x: (image.width - side) / 2, y: (image.height - side) / 2, size: side });
+      const sx = (image.width - side) / 2;
+      const sy = (image.height - side) / 2;
+      ctx.drawImage(image, sx, sy, side, side, 0, 0, SIZE, SIZE);
+      setPreview(canvas.toDataURL('image/jpeg', 0.82));
     };
     image.src = imgSrc;
   }, [imgSrc]);
 
-  useEffect(() => {
-    if (!img || !canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const dispW = 280;
-    const scale = dispW / img.width;
-    const dispH = img.height * scale;
-    canvas.width = dispW;
-    canvas.height = dispH;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0, dispW, dispH);
-    // Karartma
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(0, 0, dispW, dispH);
-    // Kırpma alanı (aydınlık)
-    const cx = crop.x * scale, cy = crop.y * scale, cs = crop.size * scale;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx + cs / 2, cy + cs / 2, cs / 2, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.drawImage(img, 0, 0, dispW, dispH);
-    ctx.restore();
-    // Çerçeve
-    ctx.strokeStyle = 'var(--accent, #FF3D3D)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx + cs / 2, cy + cs / 2, cs / 2, 0, Math.PI * 2);
-    ctx.stroke();
-  }, [img, crop]);
-
-  const getPos = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const t = e.touches ? e.touches[0] : e;
-    return { px: t.clientX - rect.left, py: t.clientY - rect.top };
-  };
-
-  const onStart = (e) => {
-    e.preventDefault();
-    const pos = getPos(e);
-    setDragging(true);
-    setDragStart({ ...pos, ox: crop.x, oy: crop.y });
-  };
-  const onMove = (e) => {
-    if (!dragging || !dragStart || !img) return;
-    e.preventDefault();
-    const pos = getPos(e);
-    const scale = 280 / img.width;
-    const dx = (pos.px - dragStart.px) / scale;
-    const dy = (pos.py - dragStart.py) / scale;
-    let nx = dragStart.ox + dx;
-    let ny = dragStart.oy + dy;
-    nx = Math.max(0, Math.min(nx, img.width - crop.size));
-    ny = Math.max(0, Math.min(ny, img.height - crop.size));
-    setCrop(p => ({ ...p, x: nx, y: ny }));
-  };
-  const onEnd = () => setDragging(false);
-
-  const onZoom = (e) => {
-    if (!img) return;
-    const delta = e.target.value;
-    const minSize = 80;
-    const maxSize = Math.min(img.width, img.height);
-    const newSize = minSize + (maxSize - minSize) * (1 - delta / 100);
-    let nx = crop.x + (crop.size - newSize) / 2;
-    let ny = crop.y + (crop.size - newSize) / 2;
-    nx = Math.max(0, Math.min(nx, img.width - newSize));
-    ny = Math.max(0, Math.min(ny, img.height - newSize));
-    setCrop({ x: nx, y: ny, size: newSize });
-  };
-
-  const confirm = () => {
-    if (!img) return;
-    const dataUrl = cropAndResize(img, crop.x, crop.y, crop.size);
-    onDone(dataUrl);
-  };
-
-  return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: e => { if (e.target === e.currentTarget) onClose(); } },
-    /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxWidth: 320, padding: 16 } },
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, textAlign: 'center', marginBottom: 12 } }, t('crop_title')),
-      /*#__PURE__*/React.createElement("canvas", {
-        ref: canvasRef,
-        style: { width: 280, display: 'block', margin: '0 auto', borderRadius: 12, touchAction: 'none', cursor: 'move' },
-        onMouseDown: onStart, onMouseMove: onMove, onMouseUp: onEnd, onMouseLeave: onEnd,
-        onTouchStart: onStart, onTouchMove: onMove, onTouchEnd: onEnd
-      }),
-      /*#__PURE__*/React.createElement("input", { type: 'range', min: 0, max: 90, defaultValue: 0, onChange: onZoom, style: { width: '100%', margin: '12px 0 8px', accentColor: 'var(--accent)' } }),
-      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8 } },
-        /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel, flex: 1, margin: 0 } }, t('close')),
-        /*#__PURE__*/React.createElement("button", { onClick: confirm, style: { flex: 1, padding: '12px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', color: '#fff', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' } }, t('crop_confirm')))));
+  return /*#__PURE__*/React.createElement("div", {
+    style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 },
+    onClick: e => { if (e.target === e.currentTarget) onClose(); }
+  },
+    preview ? /*#__PURE__*/React.createElement(React.Fragment, null,
+      /*#__PURE__*/React.createElement("div", { style: { width: 180, height: 180, borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--accent)', marginBottom: 20 } },
+        /*#__PURE__*/React.createElement("img", { src: preview, alt: '', style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' } })),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 12 } },
+        /*#__PURE__*/React.createElement("button", {
+          onClick: onClose,
+          style: { padding: '12px 24px', borderRadius: 10, border: '1px solid #333', background: '#1a1a1a', color: '#ccc', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }
+        }, t('close')),
+        /*#__PURE__*/React.createElement("button", {
+          onClick: () => onDone(preview),
+          style: { padding: '12px 24px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }
+        }, t('crop_confirm')))
+    ) : /*#__PURE__*/React.createElement("div", { style: { color: '#888', fontSize: 14 } }, '...'));
 }
 
 function processProfilePhoto(file) {
