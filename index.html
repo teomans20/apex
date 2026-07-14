@@ -9013,8 +9013,10 @@ function HomeView({
       day: 'numeric',
       month: 'long'
     })),
-    // Bugünün önerisi: en uzun süredir çalışılmayan gün (sırası gelen)
+    // Bugünün önerisi: aktif rutin YOKSA en uzun süredir çalışılmayan gün
     (() => {
+      const activeRt = loadActiveRoutine();
+      if (activeRt) return null; // rutin aktifse mavi kartı gösterme
       const dayIds = Object.keys(dayConfig || {});
       if (dayIds.length === 0) return null;
       const todayKey = dateKey(Date.now());
@@ -9118,15 +9120,16 @@ function HomeView({
     if (!routine) return null;
     const todayDay = getRoutineToday(routine, activeRt);
     if (!todayDay) return null;
+    // Rutindeki günün gerçek dayType'ını çöz: srcKey varsa ve dayConfig'de mevcutsa onu kullan
+    const resolvedDayType = (todayDay.srcKey && dayConfig[todayDay.srcKey]) ? todayDay.srcKey : null;
     return /*#__PURE__*/React.createElement("button", {
-      onClick: () => onSelectDay(todayDay.name.toLowerCase().replace(/\s+/g,'_')),
+      onClick: () => { if (resolvedDayType) onSelectDay(resolvedDayType); else onOpenRoutines(); },
       style: { width: '100%', display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, background: 'linear-gradient(135deg,rgba(var(--accent-rgb),0.15),rgba(0,0,0,0.02))', border: '1px solid rgba(var(--accent-rgb),0.35)', borderRadius: 15, padding: '13px 15px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
     },
       /*#__PURE__*/React.createElement("div", { style: { width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'dumbbell', size: 22, color: '#fff', strokeWidth: 2.2 })),
       /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, color: 'var(--accent-light)', letterSpacing: 0.5, textTransform: 'uppercase' } }, t('routine_today')),
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 14.5, fontWeight: 800, color: '#fff', marginTop: 2 } }, todayDay.name),
-        todayDay.exercises.length > 0 && /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#999', marginTop: 2 } }, todayDay.exercises.map(e => e.n).join(' · '))),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 14.5, fontWeight: 800, color: '#fff', marginTop: 2 } }, todayDay.name)),
       /*#__PURE__*/React.createElement("span", { style: { color: 'var(--accent-light)', fontSize: 11, fontWeight: 700, flexShrink: 0 } }, t('routine_start') + ' ›'));
   })(),
   /*#__PURE__*/React.createElement("div", {
@@ -11861,7 +11864,7 @@ function RoutineEditorModal({ routine, onClose, onSave, data }) {
   };
   const addDayFrom = (src) => {
     const id = 'd_' + Date.now();
-    setDays(p => [...p, { id: id, name: src.name, subtitle: src.subtitle || '', accent: src.accent || ROUTINE_ACCENTS[p.length % ROUTINE_ACCENTS.length], exercises: src.exercises.map(e => ({ ...e })) }]);
+    setDays(p => [...p, { id: id, name: src.name, subtitle: src.subtitle || '', accent: src.accent || ROUTINE_ACCENTS[p.length % ROUTINE_ACCENTS.length], srcKey: src.key, exercises: src.exercises.map(e => ({ ...e })) }]);
     setExpandedDay(id);
     setShowDayPicker(false);
   };
@@ -11891,7 +11894,7 @@ function RoutineEditorModal({ routine, onClose, onSave, data }) {
     const r = {
       id: routine ? routine.id : 'r_' + Date.now(),
       name: finalName,
-      days: days.map((d, i) => ({ id: d.id || ('d_' + i), name: d.name.trim(), subtitle: (d.subtitle || '').trim(), accent: d.accent || ROUTINE_ACCENTS[i % ROUTINE_ACCENTS.length], exercises: d.exercises.filter(e => e.n.trim()).map(e => ({ n: e.n.trim() })) })),
+      days: days.map((d, i) => ({ id: d.id || ('d_' + i), name: d.name.trim(), subtitle: (d.subtitle || '').trim(), accent: d.accent || ROUTINE_ACCENTS[i % ROUTINE_ACCENTS.length], srcKey: d.srcKey || null, exercises: d.exercises.filter(e => e.n.trim()).map(e => ({ n: e.n.trim() })) })),
       schedule: { mode: schedMode, weekMap: schedMode === 'weekly' ? weekMap : undefined },
       createdAt: routine ? routine.createdAt : Date.now()
     };
