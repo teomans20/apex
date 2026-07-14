@@ -153,7 +153,6 @@
     }
   }
 </style>
-<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}</script>
 </head>
 <body>
 <div id="root"></div>
@@ -1647,7 +1646,7 @@ const I18N = {
     routine_pick_ex: 'Hareket Seç', routine_blank_day: 'Boş Gün Ekle',
     mon: 'Pzt', tue: 'Sal', wed: 'Çar', thu: 'Per', fri: 'Cum', sat: 'Cmt', sun: 'Paz',
     block_user: 'Engelle', unblock_user: 'Engeli Kaldır', report_user: 'Şikâyet Et', report_photo: 'Fotoğrafı Şikâyet Et',
-    block_confirm: 'Bu kullanıcıyı engellemek istediğinden emin misin? Feed\'de gözükmeyecek ve seni göremeyecek.',
+    block_confirm: 'Bu kullanıcıyı engellemek istediğinden emin misin? Arkadaşlığınız kaldırılır ve bu kullanıcı akışında görünmez.',
     report_sent: 'Şikâyet gönderildi.', report_reason: 'Şikâyet sebebi', report_reason_ph: 'Nedenini kısaca açıkla',
     report_submit: 'Gönder', report_spam: 'Spam', report_inappropriate: 'Uygunsuz içerik', report_harassment: 'Taciz',
     blocked_users: 'Engellenen Kullanıcılar', no_blocked: 'Engellediğin kimse yok.',
@@ -1909,7 +1908,7 @@ const I18N = {
     routine_pick_ex: 'Pick Exercise', routine_blank_day: 'Add Blank Day',
     mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun',
     block_user: 'Block', unblock_user: 'Unblock', report_user: 'Report', report_photo: 'Report Photo',
-    block_confirm: 'Are you sure you want to block this user? They won\'t appear in your feed and won\'t be able to see you.',
+    block_confirm: 'Are you sure you want to block this user? Your friendship will be removed and they won\'t appear in your feed.',
     report_sent: 'Report submitted.', report_reason: 'Reason', report_reason_ph: 'Briefly explain why',
     report_submit: 'Submit', report_spam: 'Spam', report_inappropriate: 'Inappropriate content', report_harassment: 'Harassment',
     blocked_users: 'Blocked Users', no_blocked: 'You haven\'t blocked anyone.',
@@ -7051,7 +7050,7 @@ function FriendProfileView({
             }, t(k)))),
           /*#__PURE__*/React.createElement("textarea", { value: reportReason, onChange: e => setReportReason(e.target.value), placeholder: t('report_reason_ph'), rows: 3, style: { width: '100%', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 9, padding: 10, color: '#fff', fontSize: 13, fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box', marginBottom: 12 } }),
           /*#__PURE__*/React.createElement("button", {
-            onClick: async () => { if (!reportReason.trim()) return; await reportUser(myUid, friend.uid, reportReason.trim(), showReport); setReportDone(true); },
+            onClick: async () => { if (!reportReason.trim()) return; try { await reportUser(myUid, friend.uid, reportReason.trim(), showReport); setReportDone(true); } catch (e) { console.warn('Report failed:', e); setReportDone(true); } },
             disabled: !reportReason.trim(),
             style: { width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: reportReason.trim() ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#222', color: reportReason.trim() ? '#fff' : '#555', fontSize: 13.5, fontWeight: 800, cursor: reportReason.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }
           }, t('report_submit')),
@@ -11295,11 +11294,21 @@ function MenuModal({
     /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxWidth: 300, padding: 16 } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, textAlign: 'center', marginBottom: 14 } }, t('avatar_pick')),
       /*#__PURE__*/React.createElement("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, justifyItems: 'center' } },
-        AVATAR_RING_COLORS.map((pair, idx) => /*#__PURE__*/React.createElement("button", {
-          key: idx,
-          onClick: () => handleAvatarPick(idx),
-          style: { width: 56, height: 56, borderRadius: '50%', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }
-        }, /*#__PURE__*/React.createElement(Avatar, { name: String.fromCharCode(65 + idx * 3), size: 56 })))),
+        AVATAR_RING_COLORS.map((pair, idx) => {
+          const s = 56, r = s/2, headR = s*0.17, headY = s*0.36;
+          return /*#__PURE__*/React.createElement("button", {
+            key: idx,
+            onClick: () => handleAvatarPick(idx),
+            style: { width: s, height: s, borderRadius: '50%', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }
+          }, /*#__PURE__*/React.createElement("svg", { width: s, height: s, viewBox: '0 0 '+s+' '+s },
+            /*#__PURE__*/React.createElement("defs", null,
+              /*#__PURE__*/React.createElement("linearGradient", { id: 'apk'+idx, x1:'0%', y1:'0%', x2:'100%', y2:'100%' },
+                /*#__PURE__*/React.createElement("stop", { offset:'0%', stopColor: pair[0] }),
+                /*#__PURE__*/React.createElement("stop", { offset:'100%', stopColor: pair[1] }))),
+            /*#__PURE__*/React.createElement("circle", { cx:r, cy:r, r:r-1.5, fill:'#0f0f0f', stroke:'url(#apk'+idx+')', strokeWidth:2 }),
+            /*#__PURE__*/React.createElement("circle", { cx:r, cy:headY, r:headR, fill:'#1c1c1c' }),
+            /*#__PURE__*/React.createElement("path", { d:'M'+(r-s*0.26)+' '+(s*0.82)+' Q'+(r-s*0.26)+' '+(s*0.56)+' '+r+' '+(s*0.54)+' Q'+(r+s*0.26)+' '+(s*0.56)+' '+(r+s*0.26)+' '+(s*0.82), fill:'#1c1c1c' })));
+        })),
       /*#__PURE__*/React.createElement("button", { onClick: () => setShowAvatars(false), style: { ...S.modalCancel, marginTop: 14 } }, t('close')))),
   accountView && /*#__PURE__*/React.createElement(AccountModal, {
     mode: accountView,
