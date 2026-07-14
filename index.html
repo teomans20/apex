@@ -25,7 +25,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <script>
   // APEX Firebase projesi
   var firebaseConfig = {
@@ -1170,7 +1169,7 @@ function _clearGuestVault() {
 // Ölçü, hedef, egzersiz notları, timer tercihleri → users/{uid}/data/local_profile_v1
 // Push: mutasyon sonrası (debounced). Restore: login sonrası tek sefer.
 // Restore ASLA dolu kasa slotunu ezmez (copyVault ile aynı felsefe).
-const LOCAL_PROFILE_KEYS = ['apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise', 'apex-routines', 'apex-active-routine'];
+const LOCAL_PROFILE_KEYS = ['apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise', 'apex-routines', 'apex-active-routine', 'apex-blocked'];
 function _readVaultProfile() {
   const out = {};
   LOCAL_PROFILE_KEYS.forEach(base => {
@@ -1271,7 +1270,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.55'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.56'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1646,7 +1645,12 @@ const I18N = {
     routine_today: 'Bugünkü Rutin', routine_next: 'Sıradaki', routine_start: 'Başla',
     routine_day_subtitle_ph: 'örn. Göğüs · Omuz · Triceps',
     routine_pick_ex: 'Hareket Seç', routine_blank_day: 'Boş Gün Ekle',
-    mon: 'Pzt', tue: 'Sal', wed: 'Çar', thu: 'Per', fri: 'Cum', sat: 'Cmt', sun: 'Paz'
+    mon: 'Pzt', tue: 'Sal', wed: 'Çar', thu: 'Per', fri: 'Cum', sat: 'Cmt', sun: 'Paz',
+    block_user: 'Engelle', unblock_user: 'Engeli Kaldır', report_user: 'Şikâyet Et', report_photo: 'Fotoğrafı Şikâyet Et',
+    block_confirm: 'Bu kullanıcıyı engellemek istediğinden emin misin? Feed\'de gözükmeyecek ve seni göremeyecek.',
+    report_sent: 'Şikâyet gönderildi.', report_reason: 'Şikâyet sebebi', report_reason_ph: 'Nedenini kısaca açıkla',
+    report_submit: 'Gönder', report_spam: 'Spam', report_inappropriate: 'Uygunsuz içerik', report_harassment: 'Taciz',
+    blocked_users: 'Engellenen Kullanıcılar', no_blocked: 'Engellediğin kimse yok.'
   },
   en: {
     tab_workout: 'WORKOUT', tab_progress: 'PROGRESS', subtab_growth: 'Growth', subtab_goals: 'Goals', subtab_measure: 'Measures', goals_soon_title: 'Goals coming soon', goals_soon_desc: 'Set personal goals and track your progress toward them.',
@@ -1902,7 +1906,12 @@ const I18N = {
     routine_today: "Today's Routine", routine_next: 'Next', routine_start: 'Start',
     routine_day_subtitle_ph: 'e.g. Chest · Shoulders · Triceps',
     routine_pick_ex: 'Pick Exercise', routine_blank_day: 'Add Blank Day',
-    mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun'
+    mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun',
+    block_user: 'Block', unblock_user: 'Unblock', report_user: 'Report', report_photo: 'Report Photo',
+    block_confirm: 'Are you sure you want to block this user? They won\'t appear in your feed and won\'t be able to see you.',
+    report_sent: 'Report submitted.', report_reason: 'Reason', report_reason_ph: 'Briefly explain why',
+    report_submit: 'Submit', report_spam: 'Spam', report_inappropriate: 'Inappropriate content', report_harassment: 'Harassment',
+    blocked_users: 'Blocked Users', no_blocked: 'You haven\'t blocked anyone.'
   }
 };
 
@@ -4678,6 +4687,46 @@ async function removeFriend(myUid, friendUid) {
   await window.APEX_DB.collection('users').doc(friendUid).collection('friends').doc(myUid).delete();
 }
 
+// ————— ENGELLEME & ŞİKÂYET —————
+const BLOCKED_KEY = 'apex-blocked';
+function loadBlocked() {
+  try { return JSON.parse(localStorage.getItem(vk(BLOCKED_KEY)) || '[]'); } catch (e) { return []; }
+}
+function saveBlocked(list) {
+  try { localStorage.setItem(vk(BLOCKED_KEY), JSON.stringify(list)); } catch (e) {}
+}
+function isBlocked(uid) {
+  return loadBlocked().includes(uid);
+}
+async function blockUser(myUid, targetUid) {
+  // 1. Yerel engelleme listesine ekle
+  const list = loadBlocked();
+  if (!list.includes(targetUid)) { list.push(targetUid); saveBlocked(list); }
+  // 2. Arkadaşlığı kaldır (varsa)
+  try { await removeFriend(myUid, targetUid); } catch (e) {}
+  // 3. Gelen istekleri temizle
+  if (window.APEX_DB) {
+    try { await window.APEX_DB.collection('users').doc(myUid).collection('friendRequests').doc(targetUid).delete(); } catch (e) {}
+    try { await window.APEX_DB.collection('users').doc(myUid).collection('sentRequests').doc(targetUid).delete(); } catch (e) {}
+    try { await window.APEX_DB.collection('users').doc(targetUid).collection('friendRequests').doc(myUid).delete(); } catch (e) {}
+    try { await window.APEX_DB.collection('users').doc(targetUid).collection('sentRequests').doc(myUid).delete(); } catch (e) {}
+  }
+}
+function unblockUser(targetUid) {
+  const list = loadBlocked().filter(id => id !== targetUid);
+  saveBlocked(list);
+}
+async function reportUser(myUid, targetUid, reason, type) {
+  if (!window.APEX_DB) return;
+  await window.APEX_DB.collection('reports').doc().set({
+    reporter: myUid,
+    reported: targetUid,
+    type: type || 'user', // 'user' | 'photo'
+    reason: reason,
+    timestamp: Date.now()
+  });
+}
+
 // Arkadaş listesini çek
 async function loadFriends(uid) {
   if (!window.APEX_DB) return [];
@@ -5478,7 +5527,9 @@ function FriendsTab({
   if (profileFriend) {
     return /*#__PURE__*/React.createElement(FriendProfileView, {
       friend: profileFriend,
-      onBack: () => setProfileFriend(null)
+      onBack: () => setProfileFriend(null),
+      myUid: authUser.uid,
+      onBlocked: () => { setProfileFriend(null); refresh(); }
     });
   }
 
@@ -6025,7 +6076,8 @@ function FeedView({
   const load = async () => {
     setRefreshing(true);
     const feed = await loadCombinedFeed(me.uid, friends, me);
-    setItems(feed);
+    const blockedList = loadBlocked();
+    setItems(blockedList.length > 0 ? feed.filter(item => !blockedList.includes(item.ownerUid)) : feed);
     setRefreshing(false);
   };
   // Arkadaş listesi yüklendiğinde feed'i yükle (ilk açılışta boş gelme bug'ı çözümü).
@@ -6687,10 +6739,16 @@ function LeaderboardView({
 // Arkadaş profili (bir arkadaşa dokununca)
 function FriendProfileView({
   friend,
-  onBack
+  onBack,
+  myUid,
+  onBlocked
 }) {
   const [stats, setStats] = useState(undefined);
   const [profilePhoto, setProfilePhoto] = useState(null);
+  const [showReport, setShowReport] = useState(false); // false | 'user' | 'photo'
+  const [reportReason, setReportReason] = useState('');
+  const [reportDone, setReportDone] = useState(false);
+  const [blocked, setBlocked] = useState(() => isBlocked(friend.uid));
   useEffect(() => {
     loadPublicStats(friend.uid).then(s => setStats(s || null));
     loadProfilePhoto(friend.uid).then(p => setProfilePhoto(p));
@@ -6817,7 +6875,45 @@ function FriendProfileView({
     style: S.pfPrW
   }, wFmt(pr.weight), " " + wUnit(), pr.reps ? ` × ${pr.reps}` : '')))), /*#__PURE__*/React.createElement("div", {
     style: S.lbNote
-  }, t('prof_gym_only'))));
+  }, t('prof_gym_only'))),
+    // — Engelle / Şikâyet butonları —
+    /*#__PURE__*/React.createElement("div", { style: { marginTop: 24, borderTop: '1px solid #1c1c1c', paddingTop: 16 } },
+      /*#__PURE__*/React.createElement("button", {
+        onClick: async () => {
+          if (blocked) { unblockUser(friend.uid); setBlocked(false); }
+          else { if (!confirm(t('block_confirm'))) return; await blockUser(myUid, friend.uid); setBlocked(true); if (onBlocked) onBlocked(); }
+        },
+        style: { width: '100%', padding: '11px 0', borderRadius: 10, border: '1px solid #2a2a2a', background: '#161616', color: blocked ? '#4CAF50' : '#FF5252', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
+      }, /*#__PURE__*/React.createElement(ApexIcon, { name: blocked ? 'check' : 'x', size: 14, color: blocked ? '#4CAF50' : '#FF5252', strokeWidth: 2.5 }), blocked ? t('unblock_user') : t('block_user')),
+      !blocked && /*#__PURE__*/React.createElement("button", {
+        onClick: () => setShowReport('user'),
+        style: { width: '100%', padding: '11px 0', borderRadius: 10, border: '1px solid #2a2a2a', background: '#161616', color: '#FFA726', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
+      }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'flag', size: 14, color: '#FFA726', strokeWidth: 2.5 }), t('report_user')),
+      !blocked && profilePhoto && /*#__PURE__*/React.createElement("button", {
+        onClick: () => setShowReport('photo'),
+        style: { width: '100%', padding: '11px 0', borderRadius: 10, border: '1px solid #2a2a2a', background: '#161616', color: '#FFA726', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
+      }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'flag', size: 14, color: '#FFA726', strokeWidth: 2.5 }), t('report_photo'))),
+    // — Report modal —
+    showReport && /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: e => { if (e.target === e.currentTarget) { setShowReport(false); setReportReason(''); setReportDone(false); } } },
+      /*#__PURE__*/React.createElement("div", { style: S.modal },
+        reportDone ? /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', padding: '20px 0' } },
+          /*#__PURE__*/React.createElement(ApexIcon, { name: 'check', size: 32, color: '#4CAF50', strokeWidth: 2 }),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 700, marginTop: 10, color: '#4CAF50' } }, t('report_sent')),
+          /*#__PURE__*/React.createElement("button", { onClick: () => { setShowReport(false); setReportDone(false); setReportReason(''); }, style: { ...S.modalCancel, marginTop: 16 } }, t('close'))) :
+        /*#__PURE__*/React.createElement(React.Fragment, null,
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginBottom: 14, textAlign: 'center' } }, showReport === 'photo' ? t('report_photo') : t('report_user')),
+          /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' } },
+            ['report_spam', 'report_inappropriate', 'report_harassment'].map(k => /*#__PURE__*/React.createElement("button", {
+              key: k, onClick: () => setReportReason(t(k)),
+              style: { padding: '7px 12px', borderRadius: 8, border: reportReason === t(k) ? '1px solid var(--accent)' : '1px solid #2a2a2a', background: reportReason === t(k) ? 'rgba(var(--accent-rgb),0.15)' : '#161616', color: reportReason === t(k) ? 'var(--accent-light)' : '#999', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }
+            }, t(k)))),
+          /*#__PURE__*/React.createElement("textarea", { value: reportReason, onChange: e => setReportReason(e.target.value), placeholder: t('report_reason_ph'), rows: 3, style: { width: '100%', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 9, padding: 10, color: '#fff', fontSize: 13, fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box', marginBottom: 12 } }),
+          /*#__PURE__*/React.createElement("button", {
+            onClick: async () => { if (!reportReason.trim()) return; await reportUser(myUid, friend.uid, reportReason.trim(), showReport); setReportDone(true); },
+            disabled: !reportReason.trim(),
+            style: { width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: reportReason.trim() ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#222', color: reportReason.trim() ? '#fff' : '#555', fontSize: 13.5, fontWeight: 800, cursor: reportReason.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }
+          }, t('report_submit')),
+          /*#__PURE__*/React.createElement("button", { onClick: () => { setShowReport(false); setReportReason(''); }, style: { ...S.modalCancel, marginTop: 8 } }, t('close'))))));
 }
 
 // Yükleme ekranı — nabız atan logo + animasyonlu çubuk
@@ -10738,20 +10834,11 @@ function AccountModal({ mode, authUser, onClose }) {
       await reauth();
       const uid = authUser.uid;
       const DB = window.APEX_DB;
-      // Cloud Function ile tam silme (subcollections + diğer kullanıcıların friend listeleri + username + auth)
-      let cfDone = false;
-      try {
-        const fn = window.firebase && window.firebase.functions && window.firebase.functions();
-        if (fn) {
-          const deleteAccountFull = fn.httpsCallable('deleteAccountFull');
-          await deleteAccountFull();
-          cfDone = true;
-        }
-      } catch (e) { console.warn('CF deleteAccountFull failed, falling back to client-side:', e); }
-      // CF yoksa veya hata verdiyse client-side silme
-      if (!cfDone && DB) {
+      if (DB) {
+        // Kullanıcı belgesini al (username için)
         const userDoc = await DB.collection('users').doc(uid).get().catch(() => null);
         const uname = userDoc && userDoc.exists ? userDoc.data().username : null;
+        // Tüm subcollection'ları sil
         const subs = ['data', 'friends', 'friendRequests', 'sentRequests', 'programRequests', 'notifications', 'public', 'feed'];
         for (const sub of subs) {
           try {
@@ -10761,10 +10848,13 @@ function AccountModal({ mode, authUser, onClose }) {
             if (snap.docs.length > 0) await batch.commit();
           } catch (e) {}
         }
+        // Ana kullanıcı belgesini sil
         await DB.collection('users').doc(uid).delete().catch(() => {});
+        // Username mapping sil
         if (uname) await DB.collection('usernames').doc(uname).delete().catch(() => {});
-        await authUser.delete();
       }
+      // Auth hesabını sil
+      await authUser.delete();
       // Yerel kasayı temizle: ::u_{uid} ile biten tüm key'ler
       try {
         const suffix = '::u_' + uid;
