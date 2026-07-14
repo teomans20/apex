@@ -5557,14 +5557,27 @@ async function loadProfilePhoto(uid) {
   }
 }
 
+const AVATAR_RING_COLORS = [
+  ['#FF3D3D', '#8B1111'],
+  ['#4A90E2', '#1E3A5F'],
+  ['#34D399', '#064E3B'],
+  ['#A78BFA', '#4C1D95'],
+  ['#FFA726', '#8B6914'],
+  ['#FF6B6B', '#991B1B'],
+  ['#4DD0E1', '#0E5E6F'],
+  ['#F472B6', '#831843']
+];
+
 function avatarFor(name) {
   const letter = (name || '?').trim().charAt(0).toUpperCase() || '?';
-  const colors = ['linear-gradient(135deg,var(--accent),#8B1111)', 'linear-gradient(135deg,#4A90E2,#1E3A5F)', 'linear-gradient(135deg,#34D399,#064E3B)', 'linear-gradient(135deg,#A78BFA,#4C1D95)', 'linear-gradient(135deg,#FFA726,#8B6914)'];
   let h = 0;
-  for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) % colors.length;
+  for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) % AVATAR_RING_COLORS.length;
+  const pair = AVATAR_RING_COLORS[h];
   return {
     letter,
-    bg: colors[h]
+    bg: 'linear-gradient(135deg,' + pair[0] + ',' + pair[1] + ')',
+    ringColor: pair[0],
+    ringDark: pair[1]
   };
 }
 
@@ -5914,21 +5927,32 @@ function Avatar({
       }
     }));
   }
+  // Gradient ring + person silhouette SVG
+  const s = size;
+  const r = s / 2;
+  const headR = s * 0.17;
+  const headY = s * 0.36;
+  const bodyW = s * 0.52;
+  const bodyTop = s * 0.56;
+  const bodyBot = s * 0.82;
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      width: size,
-      height: size,
+      width: s,
+      height: s,
       borderRadius: '50%',
-      background: a.bg,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontWeight: 800,
-      fontSize: size * 0.4,
-      fontFamily: "'Big Shoulders Display',sans-serif",
-      flexShrink: 0
+      flexShrink: 0,
+      position: 'relative',
+      background: '#0f0f0f'
     }
-  }, a.letter);
+  },
+    /*#__PURE__*/React.createElement("svg", { width: s, height: s, viewBox: '0 0 ' + s + ' ' + s },
+      /*#__PURE__*/React.createElement("defs", null,
+        /*#__PURE__*/React.createElement("linearGradient", { id: 'ring_' + (name||'').length + '_' + s, x1: '0%', y1: '0%', x2: '100%', y2: '100%' },
+          /*#__PURE__*/React.createElement("stop", { offset: '0%', stopColor: a.ringColor }),
+          /*#__PURE__*/React.createElement("stop", { offset: '100%', stopColor: a.ringDark }))),
+      /*#__PURE__*/React.createElement("circle", { cx: r, cy: r, r: r - 1.5, fill: '#0f0f0f', stroke: 'url(#ring_' + (name||'').length + '_' + s + ')', strokeWidth: s > 50 ? 2.5 : 2 }),
+      /*#__PURE__*/React.createElement("circle", { cx: r, cy: headY, r: headR, fill: '#1c1c1c' }),
+      /*#__PURE__*/React.createElement("path", { d: 'M' + (r - bodyW/2) + ' ' + bodyBot + ' Q' + (r - bodyW/2) + ' ' + bodyTop + ' ' + r + ' ' + (bodyTop - 2) + ' Q' + (r + bodyW/2) + ' ' + bodyTop + ' ' + (r + bodyW/2) + ' ' + bodyBot, fill: '#1c1c1c' })));
 }
 
 // Arkadaş ekleme görünümü
@@ -6420,21 +6444,8 @@ function FeedCard({
     style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' }
   })) : /*#__PURE__*/React.createElement("div", {
     onClick: openProfile,
-    style: {
-      width: 38,
-      height: 38,
-      borderRadius: '50%',
-      background: a.bg,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontWeight: 800,
-      fontSize: 15,
-      fontFamily: "'Big Shoulders Display',sans-serif",
-      flexShrink: 0,
-      cursor: 'pointer'
-    }
-  }, a.letter), /*#__PURE__*/React.createElement("div", {
+    style: { cursor: 'pointer', flexShrink: 0 }
+  }, /*#__PURE__*/React.createElement(Avatar, { name: item.ownerName || item.ownerUsername, size: 38 })), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1
     }
@@ -6929,20 +6940,8 @@ function FriendProfileView({
     alt: '',
     style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' }
   })) : /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 74,
-      height: 74,
-      borderRadius: '50%',
-      background: a.bg,
-      margin: '0 auto 10px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: "'Big Shoulders Display',sans-serif",
-      fontWeight: 900,
-      fontSize: 32
-    }
-  }, a.letter), /*#__PURE__*/React.createElement("div", {
+    style: { margin: '0 auto 10px', width: 74, height: 74 }
+  }, /*#__PURE__*/React.createElement(Avatar, { name: friend.name || friend.username, size: 74 })), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "'Big Shoulders Display',sans-serif",
       fontWeight: 800,
