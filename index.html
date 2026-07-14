@@ -9013,33 +9013,34 @@ function HomeView({
       day: 'numeric',
       month: 'long'
     })),
-    // Bugünün önerisi: aktif rutin YOKSA en uzun süredir çalışılmayan gün
+    // — Active routine banner —
     (() => {
       const activeRt = loadActiveRoutine();
-      if (activeRt) return null; // rutin aktifse mavi kartı gösterme
-      const dayIds = Object.keys(dayConfig || {});
-      if (dayIds.length === 0) return null;
-      const todayKey = dateKey(Date.now());
-      // bugün zaten antrenman yapıldıysa öneri kartı gösterme
-      const trainedToday = (data.logs || []).some(l => dateKey(l.timestamp) === todayKey);
-      if (trainedToday) return null;
-      let suggest = null, oldest = Infinity;
-      dayIds.forEach(id => {
-        const lastLog = (data.logs || []).filter(l => l.dayType === id).reduce((m, l) => Math.max(m, l.timestamp), 0);
-        if (lastLog < oldest) { oldest = lastLog; suggest = id; }
-      });
-      if (!suggest) return null;
-      const cfg = dayConfig[suggest];
-      const daysAgo = oldest === 0 ? null : Math.floor((Date.now() - oldest) / 86400000);
+      if (!activeRt) return null;
+      const routines = loadRoutines();
+      const routine = routines.find(r => r.id === activeRt.routineId);
+      if (!routine) return null;
+      const todayDay = getRoutineToday(routine, activeRt);
+      if (!todayDay) return null;
+      let resolvedDayType = (todayDay.srcKey && dayConfig[todayDay.srcKey]) ? todayDay.srcKey : null;
+      if (!resolvedDayType) {
+        const entries = Object.entries(dayConfig || {});
+        for (let i = 0; i < entries.length; i++) {
+          if (entries[i][1] && entries[i][1].name && entries[i][1].name.toLowerCase() === todayDay.name.toLowerCase()) {
+            resolvedDayType = entries[i][0];
+            break;
+          }
+        }
+      }
       return /*#__PURE__*/React.createElement("button", {
-        onClick: () => onSelectDay(suggest),
-        style: { width: '100%', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, background: 'linear-gradient(135deg,' + ((cfg && cfg.accentSoft) || 'rgba(var(--accent-rgb),0.12)') + ',rgba(0,0,0,0.02))', border: '1px solid ' + ((cfg && cfg.accent) ? cfg.accent + '44' : 'rgba(var(--accent-rgb),0.28)'), borderRadius: 15, padding: '13px 15px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
+        onClick: () => { if (resolvedDayType) onSelectDay(resolvedDayType); else onOpenRoutines(); },
+        style: { width: '100%', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, background: 'linear-gradient(135deg,rgba(var(--accent-rgb),0.15),rgba(0,0,0,0.02))', border: '1px solid rgba(var(--accent-rgb),0.35)', borderRadius: 15, padding: '13px 15px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
       },
-        /*#__PURE__*/React.createElement("div", { style: { width: 42, height: 42, borderRadius: 12, background: (cfg && cfg.gradient) || 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'dumbbell', size: 22, color: '#fff', strokeWidth: 2.2 })),
+        /*#__PURE__*/React.createElement("div", { style: { width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'dumbbell', size: 22, color: '#fff', strokeWidth: 2.2 })),
         /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: '#fff' } }, t('next_label',{name:((cfg && cfg.name) || suggest)})),
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11.5, color: '#999', marginTop: 2 } }, daysAgo == null ? t('never_done') : t('last_label',{n:daysAgo}))),
-        /*#__PURE__*/React.createElement("span", { style: { color: (cfg && cfg.accent) || 'var(--accent-light)', fontSize: 18, flexShrink: 0 } }, '›'));
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, color: 'var(--accent-light)', letterSpacing: 0.5, textTransform: 'uppercase' } }, t('routine_today')),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14.5, fontWeight: 800, color: '#fff', marginTop: 2 } }, todayDay.name)),
+        /*#__PURE__*/React.createElement("span", { style: { color: 'var(--accent-light)', fontSize: 18, flexShrink: 0 } }, '›'));
     })()), (() => {
       const insights = computeInsights(data);
       if (!insights.length) return null;
@@ -9111,37 +9112,6 @@ function HomeView({
       /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 12.5, fontWeight: 800, color: '#fff' } }, t('routines_title')),
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#999', marginTop: 1 } }, t('routines_sub'))))),
-  // — Active routine banner —
-  (() => {
-    const activeRt = loadActiveRoutine();
-    if (!activeRt) return null;
-    const routines = loadRoutines();
-    const routine = routines.find(r => r.id === activeRt.routineId);
-    if (!routine) return null;
-    const todayDay = getRoutineToday(routine, activeRt);
-    if (!todayDay) return null;
-    // Rutindeki günün gerçek dayType'ını çöz: srcKey varsa ve dayConfig'de mevcutsa onu kullan, yoksa isimle eşleştir
-    let resolvedDayType = (todayDay.srcKey && dayConfig[todayDay.srcKey]) ? todayDay.srcKey : null;
-    if (!resolvedDayType) {
-      // İsimle eşleştir: dayConfig'deki gün adı ile routine day name'i karşılaştır
-      const entries = Object.entries(dayConfig || {});
-      for (let i = 0; i < entries.length; i++) {
-        if (entries[i][1] && entries[i][1].name && entries[i][1].name.toLowerCase() === todayDay.name.toLowerCase()) {
-          resolvedDayType = entries[i][0];
-          break;
-        }
-      }
-    }
-    return /*#__PURE__*/React.createElement("button", {
-      onClick: () => { if (resolvedDayType) onSelectDay(resolvedDayType); else onOpenRoutines(); },
-      style: { width: '100%', display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, background: 'linear-gradient(135deg,rgba(var(--accent-rgb),0.15),rgba(0,0,0,0.02))', border: '1px solid rgba(var(--accent-rgb),0.35)', borderRadius: 15, padding: '13px 15px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
-    },
-      /*#__PURE__*/React.createElement("div", { style: { width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'dumbbell', size: 22, color: '#fff', strokeWidth: 2.2 })),
-      /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, color: 'var(--accent-light)', letterSpacing: 0.5, textTransform: 'uppercase' } }, t('routine_today')),
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 14.5, fontWeight: 800, color: '#fff', marginTop: 2 } }, todayDay.name)),
-      /*#__PURE__*/React.createElement("span", { style: { color: 'var(--accent-light)', fontSize: 11, fontWeight: 700, flexShrink: 0 } }, t('routine_start') + ' ›'));
-  })(),
   /*#__PURE__*/React.createElement("div", {
     style: S.sectionLabel
   }, t('which_today')), /*#__PURE__*/React.createElement("div", {
