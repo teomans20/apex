@@ -11096,11 +11096,42 @@ function MenuModal({
     try { await onPhotoChange(dataUrl); } catch (e) {}
     setBusy(false);
   };
-  const handleAvatarPick = async (emoji) => {
+  const handleAvatarPick = async (colorIdx) => {
     setShowAvatars(false);
     setBusy(true);
     try {
-      const dataUrl = renderAvatarToDataUrl(emoji);
+      const pair = AVATAR_RING_COLORS[colorIdx];
+      const SIZE = 200;
+      const canvas = document.createElement('canvas');
+      canvas.width = SIZE;
+      canvas.height = SIZE;
+      const ctx = canvas.getContext('2d');
+      // Arka plan
+      ctx.fillStyle = '#0f0f0f';
+      ctx.beginPath();
+      ctx.arc(SIZE/2, SIZE/2, SIZE/2, 0, Math.PI*2);
+      ctx.fill();
+      // Gradient ring
+      const grad = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+      grad.addColorStop(0, pair[0]);
+      grad.addColorStop(1, pair[1]);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(SIZE/2, SIZE/2, SIZE/2 - 3, 0, Math.PI*2);
+      ctx.stroke();
+      // Siluet - kafa
+      ctx.fillStyle = '#1c1c1c';
+      ctx.beginPath();
+      ctx.arc(SIZE/2, SIZE*0.36, SIZE*0.17, 0, Math.PI*2);
+      ctx.fill();
+      // Siluet - gövde
+      ctx.beginPath();
+      ctx.moveTo(SIZE*0.24, SIZE*0.82);
+      ctx.quadraticCurveTo(SIZE*0.24, SIZE*0.56, SIZE/2, SIZE*0.54);
+      ctx.quadraticCurveTo(SIZE*0.76, SIZE*0.56, SIZE*0.76, SIZE*0.82);
+      ctx.fill();
+      const dataUrl = canvas.toDataURL('image/png');
       await onPhotoChange(dataUrl);
     } catch (e) {}
     setBusy(false);
@@ -11261,15 +11292,15 @@ function MenuModal({
     onClose: () => setCropSrc(null)
   }),
   showAvatars && /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: e => { if (e.target === e.currentTarget) setShowAvatars(false); } },
-    /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxWidth: 320, padding: 16 } },
+    /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxWidth: 300, padding: 16 } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, textAlign: 'center', marginBottom: 14 } }, t('avatar_pick')),
-      /*#__PURE__*/React.createElement("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 } },
-        DEFAULT_AVATARS.map(emoji => /*#__PURE__*/React.createElement("button", {
-          key: emoji,
-          onClick: () => handleAvatarPick(emoji),
-          style: { width: '100%', aspectRatio: '1', borderRadius: '50%', border: '1px solid #2a2a2a', background: '#1a1a1a', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
-        }, emoji))),
-      /*#__PURE__*/React.createElement("button", { onClick: () => setShowAvatars(false), style: { ...S.modalCancel, marginTop: 12 } }, t('close')))),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, justifyItems: 'center' } },
+        AVATAR_RING_COLORS.map((pair, idx) => /*#__PURE__*/React.createElement("button", {
+          key: idx,
+          onClick: () => handleAvatarPick(idx),
+          style: { width: 56, height: 56, borderRadius: '50%', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }
+        }, /*#__PURE__*/React.createElement(Avatar, { name: String.fromCharCode(65 + idx * 3), size: 56 })))),
+      /*#__PURE__*/React.createElement("button", { onClick: () => setShowAvatars(false), style: { ...S.modalCancel, marginTop: 14 } }, t('close')))),
   accountView && /*#__PURE__*/React.createElement(AccountModal, {
     mode: accountView,
     authUser: authUser,
