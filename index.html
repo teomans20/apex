@@ -1269,7 +1269,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.58'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.59'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1650,7 +1650,8 @@ const I18N = {
     report_sent: 'Şikâyet gönderildi.', report_reason: 'Şikâyet sebebi', report_reason_ph: 'Nedenini kısaca açıkla',
     report_submit: 'Gönder', report_spam: 'Spam', report_inappropriate: 'Uygunsuz içerik', report_harassment: 'Taciz',
     blocked_users: 'Engellenen Kullanıcılar', no_blocked: 'Engellediğin kimse yok.',
-    crop_title: 'Fotoğrafı Kırp', crop_confirm: 'Uygula', avatar_pick: 'Avatar Seç'
+    crop_title: 'Fotoğrafı Kırp', crop_confirm: 'Uygula', avatar_pick: 'Avatar Seç',
+    privacy_link: 'Gizlilik', terms_link: 'Koşullar', support_link: 'Destek'
   },
   en: {
     tab_workout: 'WORKOUT', tab_progress: 'PROGRESS', subtab_growth: 'Growth', subtab_goals: 'Goals', subtab_measure: 'Measures', goals_soon_title: 'Goals coming soon', goals_soon_desc: 'Set personal goals and track your progress toward them.',
@@ -1912,7 +1913,8 @@ const I18N = {
     report_sent: 'Report submitted.', report_reason: 'Reason', report_reason_ph: 'Briefly explain why',
     report_submit: 'Submit', report_spam: 'Spam', report_inappropriate: 'Inappropriate content', report_harassment: 'Harassment',
     blocked_users: 'Blocked Users', no_blocked: 'You haven\'t blocked anyone.',
-    crop_title: 'Crop Photo', crop_confirm: 'Apply', avatar_pick: 'Pick Avatar'
+    crop_title: 'Crop Photo', crop_confirm: 'Apply', avatar_pick: 'Pick Avatar',
+    privacy_link: 'Privacy', terms_link: 'Terms', support_link: 'Support'
   }
 };
 
@@ -11212,7 +11214,13 @@ function MenuModal({
       fontSize: 11,
       marginTop: 14
     }
-  }, "APEX v", APP_VERSION)),
+  }, "APEX v", APP_VERSION),
+  /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'center', gap: 16, marginTop: 8, marginBottom: 4 } },
+    /*#__PURE__*/React.createElement("a", { href: CURRENT_LANG === 'en' ? 'privacy-en.html' : 'privacy.html', target: '_blank', style: { fontSize: 11, color: '#555', textDecoration: 'none' } }, t('privacy_link')),
+    /*#__PURE__*/React.createElement("span", { style: { color: '#333' } }, '·'),
+    /*#__PURE__*/React.createElement("a", { href: CURRENT_LANG === 'en' ? 'terms-en.html' : 'terms.html', target: '_blank', style: { fontSize: 11, color: '#555', textDecoration: 'none' } }, t('terms_link')),
+    /*#__PURE__*/React.createElement("span", { style: { color: '#333' } }, '·'),
+    /*#__PURE__*/React.createElement("a", { href: CURRENT_LANG === 'en' ? 'support-en.html' : 'support.html', target: '_blank', style: { fontSize: 11, color: '#555', textDecoration: 'none' } }, t('support_link')))),
   showAvatars && /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: e => { if (e.target === e.currentTarget) setShowAvatars(false); } },
     /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxWidth: 300, padding: 16 } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, textAlign: 'center', marginBottom: 14 } }, t('avatar_pick')),

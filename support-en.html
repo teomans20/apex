@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX — Support</title>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+body {
+  background: #050505;
+  color: #d0d0d0;
+  font-family: 'Manrope', sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  padding: 32px 20px 60px;
+  max-width: 620px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse at top, rgba(255, 61, 61, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(255, 61, 61, 0.04) 0%, transparent 60%);
+}
+.header { margin-bottom: 40px; }
+.logo-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.logo-mark { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+.logo-text { font-family: 'Big Shoulders Display', sans-serif; font-size: 26px; font-weight: 900; color: #fff; letter-spacing: 3px; }
+h1 { font-family: 'Big Shoulders Display', sans-serif; font-size: 44px; font-weight: 900; color: #fff; margin-bottom: 8px; letter-spacing: -0.5px; line-height: 1; }
+.subtitle { font-size: 15px; color: #888; font-weight: 500; }
+.section-label { font-size: 11px; font-weight: 800; color: #666; letter-spacing: 2px; text-transform: uppercase; margin: 40px 0 16px; }
+.card { background: linear-gradient(180deg, #101010 0%, #0a0a0a 100%); border: 1px solid #1a1a1a; border-radius: 16px; padding: 22px; margin-bottom: 12px; position: relative; overflow: hidden; transition: border-color 0.2s ease; }
+.card:hover { border-color: #2a2a2a; }
+.card-head { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.icon-box { width: 40px; height: 40px; border-radius: 10px; background: #161616; border: 1px solid #222; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.icon-box svg { width: 20px; height: 20px; stroke: #FF3D3D; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.card-title { font-family: 'Big Shoulders Display', sans-serif; font-size: 18px; font-weight: 800; color: #fff; letter-spacing: 0.5px; }
+.card p { color: #999; font-size: 14px; margin: 0 0 10px 0; }
+.card p:last-child { margin-bottom: 0; }
+.email-primary { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; background: linear-gradient(135deg, #FF3D3D, #8B1111); color: #fff; border-radius: 12px; font-weight: 700; font-size: 14px; text-decoration: none; margin-top: 12px; box-shadow: 0 6px 20px rgba(255, 61, 61, 0.25); transition: transform 0.15s ease; }
+.email-primary:hover { transform: translateY(-1px); }
+.email-primary svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.link-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.link-pill { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #161616; border: 1px solid #222; border-radius: 8px; color: #ccc; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.15s ease; }
+.link-pill:hover { background: #1a1a1a; border-color: #333; color: #fff; }
+.link-pill svg { width: 12px; height: 12px; stroke: #888; fill: none; stroke-width: 2.5; }
+.faq-card { background: #0d0d0d; border: 1px solid #171717; border-radius: 14px; padding: 18px 22px; margin-bottom: 8px; }
+.faq-q { font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+.faq-q::before { content: ''; width: 3px; height: 14px; background: #FF3D3D; border-radius: 2px; }
+.faq-a { color: #888; font-size: 13.5px; padding-left: 13px; }
+.footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid #1a1a1a; text-align: center; font-size: 12px; color: #444; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-wrap">
+    <div class="logo-mark">
+      <svg width="26" height="26" viewBox="0 0 40 40" fill="none">
+        <defs>
+          <linearGradient id="apexLogo" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#FF5252"/>
+            <stop offset="100%" stop-color="#C41E1E"/>
+          </linearGradient>
+        </defs>
+        <path d="M20 4 L36 34 L27 34 L20 20 L13 34 L4 34 Z" fill="url(#apexLogo)"/>
+      </svg>
+    </div>
+    <div class="logo-text">APEX</div>
+  </div>
+  <h1>Support</h1>
+  <div class="subtitle">Need help? We're here for you.</div>
+</div>
+
+<div class="section-label">Contact</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="icon-box">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+    </div>
+    <div class="card-title">Email</div>
+  </div>
+  <p>Report an issue, send a suggestion, or get help with your account. We usually respond within 24 hours.</p>
+  <a href="mailto:teomansarpaltay@icloud.com" class="email-primary">
+    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+    teomansarpaltay@icloud.com
+  </a>
+</div>
+
+<div class="section-label">Legal & Account</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="icon-box">
+      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    </div>
+    <div class="card-title">Account & Privacy</div>
+  </div>
+  <p>To delete your account: <strong style="color:#ccc">Settings → Account → Delete Account</strong>. This action cannot be undone; all your data will be permanently removed.</p>
+  <div class="link-row">
+    <a href="privacy-en.html" class="link-pill">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z"/></svg>
+      Privacy Policy
+    </a>
+    <a href="terms-en.html" class="link-pill">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5"/></svg>
+      Terms of Service
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="icon-box">
+      <svg viewBox="0 0 24 24"><path d="M4 4l16 16M20 4L4 20"/><circle cx="12" cy="12" r="9"/></svg>
+    </div>
+    <div class="card-title">Reporting & Blocking</div>
+  </div>
+  <p>If you see inappropriate behavior: <strong style="color:#ccc">Friends → User Profile → Report</strong>. You can also block a user to prevent them from appearing in your feed.</p>
+</div>
+
+<div class="section-label">Frequently Asked Questions</div>
+
+<div class="faq-card">
+  <div class="faq-q">Is my data safe?</div>
+  <div class="faq-a">Yes. Data is encrypted and stored on Firebase infrastructure. Each user can only access their own data.</div>
+</div>
+
+<div class="faq-card">
+  <div class="faq-q">Does it work offline?</div>
+  <div class="faq-a">Yes. Workout logs are stored locally on your device. You can record workouts without an internet connection; they'll sync automatically when the connection returns.</div>
+</div>
+
+<div class="faq-card">
+  <div class="faq-q">Can I transfer my data to another device?</div>
+  <div class="faq-a">Yes. When you sign in on any device, your workout logs and routines sync automatically.</div>
+</div>
+
+<div class="footer">APEX · Your training, your control.</div>
+
+</body>
+</html>
