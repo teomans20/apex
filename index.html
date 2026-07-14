@@ -25,6 +25,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <script>
   // APEX Firebase projesi
   var firebaseConfig = {
@@ -10736,19 +10737,44 @@ function AccountModal({ mode, authUser, onClose }) {
     try {
       await reauth();
       const uid = authUser.uid;
-      // Firestore kullanıcı verisini temizle (best-effort)
+      const DB = window.APEX_DB;
+      // Cloud Function ile tam silme (subcollections + diğer kullanıcıların friend listeleri + username + auth)
+      let cfDone = false;
       try {
-        if (window.APEX_DB) {
-          await window.APEX_DB.collection('users').doc(uid).delete();
+        const fn = window.firebase && window.firebase.functions && window.firebase.functions();
+        if (fn) {
+          const deleteAccountFull = fn.httpsCallable('deleteAccountFull');
+          await deleteAccountFull();
+          cfDone = true;
         }
-      } catch (e) {}
-      // Auth hesabını sil
-      await authUser.delete();
-      // Yerel veriyi temizle
+      } catch (e) { console.warn('CF deleteAccountFull failed, falling back to client-side:', e); }
+      // CF yoksa veya hata verdiyse client-side silme
+      if (!cfDone && DB) {
+        const userDoc = await DB.collection('users').doc(uid).get().catch(() => null);
+        const uname = userDoc && userDoc.exists ? userDoc.data().username : null;
+        const subs = ['data', 'friends', 'friendRequests', 'sentRequests', 'programRequests', 'notifications', 'public', 'feed'];
+        for (const sub of subs) {
+          try {
+            const snap = await DB.collection('users').doc(uid).collection(sub).get();
+            const batch = DB.batch();
+            snap.docs.forEach(d => batch.delete(d.ref));
+            if (snap.docs.length > 0) await batch.commit();
+          } catch (e) {}
+        }
+        await DB.collection('users').doc(uid).delete().catch(() => {});
+        if (uname) await DB.collection('usernames').doc(uname).delete().catch(() => {});
+        await authUser.delete();
+      }
+      // Yerel kasayı temizle: ::u_{uid} ile biten tüm key'ler
       try {
-        ['apex-guest'].forEach(k => localStorage.removeItem(k));
+        const suffix = '::u_' + uid;
+        const toRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.endsWith(suffix) || k === 'apex-guest')) toRemove.push(k);
+        }
+        toRemove.forEach(k => localStorage.removeItem(k));
       } catch (e) {}
-      // onAuthStateChanged otomatik giriş ekranına döndürür
     } catch (e) {
       setError(e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' ? t('err_wrong_cur_pass') : t('err_generic'));
       setBusy(false);
