@@ -11074,7 +11074,7 @@ function MenuModal({
   };
   return /*#__PURE__*/React.createElement("div", {
     style: S.modalOverlay,
-    onClick: onClose
+    onClick: () => { if (!cropSrc && !showAvatars) onClose(); }
   }, /*#__PURE__*/React.createElement("div", {
     style: S.modal,
     onClick: e => e.stopPropagation()
