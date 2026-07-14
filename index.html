@@ -9120,8 +9120,18 @@ function HomeView({
     if (!routine) return null;
     const todayDay = getRoutineToday(routine, activeRt);
     if (!todayDay) return null;
-    // Rutindeki günün gerçek dayType'ını çöz: srcKey varsa ve dayConfig'de mevcutsa onu kullan
-    const resolvedDayType = (todayDay.srcKey && dayConfig[todayDay.srcKey]) ? todayDay.srcKey : null;
+    // Rutindeki günün gerçek dayType'ını çöz: srcKey varsa ve dayConfig'de mevcutsa onu kullan, yoksa isimle eşleştir
+    let resolvedDayType = (todayDay.srcKey && dayConfig[todayDay.srcKey]) ? todayDay.srcKey : null;
+    if (!resolvedDayType) {
+      // İsimle eşleştir: dayConfig'deki gün adı ile routine day name'i karşılaştır
+      const entries = Object.entries(dayConfig || {});
+      for (let i = 0; i < entries.length; i++) {
+        if (entries[i][1] && entries[i][1].name && entries[i][1].name.toLowerCase() === todayDay.name.toLowerCase()) {
+          resolvedDayType = entries[i][0];
+          break;
+        }
+      }
+    }
     return /*#__PURE__*/React.createElement("button", {
       onClick: () => { if (resolvedDayType) onSelectDay(resolvedDayType); else onOpenRoutines(); },
       style: { width: '100%', display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, background: 'linear-gradient(135deg,rgba(var(--accent-rgb),0.15),rgba(0,0,0,0.02))', border: '1px solid rgba(var(--accent-rgb),0.35)', borderRadius: 15, padding: '13px 15px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
