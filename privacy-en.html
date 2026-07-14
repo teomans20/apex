@@ -29,11 +29,14 @@ li { margin-bottom: 6px; }
 <h2>Data Collected</h2>
 <p>APEX collects and processes the following data:</p>
 <ul>
-  <li><strong>Account information:</strong> Email address, username, and display name (provided during signup).</li>
+  <li><strong>Account information:</strong> Email address, username, and display name.</li>
   <li><strong>Workout data:</strong> Exercise logs, sets/reps/weight information, workout dates.</li>
   <li><strong>Body measurements:</strong> Weight and optional body measurements.</li>
+  <li><strong>Goals, routines, and exercise notes:</strong> User-created workout goals, personal routines, and exercise notes.</li>
   <li><strong>Profile photo:</strong> Optionally uploaded profile image.</li>
-  <li><strong>Social data:</strong> Friends list, workout shares, reactions.</li>
+  <li><strong>Social data:</strong> Friends list, friend requests, notifications, workout shares, reactions, and sent programs.</li>
+  <li><strong>Safety and moderation data:</strong> Blocked users, user reports, report reasons, reported content type, and timestamps.</li>
+  <li><strong>Technical data:</strong> Technical information that may be processed by Firebase for authentication and service delivery.</li>
 </ul>
 
 <h2>Use of Data</h2>
@@ -41,26 +44,27 @@ li { margin-bottom: 6px; }
 <ul>
   <li>To provide workout tracking and progress analysis</li>
   <li>To offer social features (friends system, feed, program sharing)</li>
+  <li>To conduct safety and moderation operations</li>
   <li>To improve the app experience</li>
 </ul>
-<p>Your data is not shared with third parties, sold, or used for advertising.</p>
+<p>Your data is not sold or shared for advertising purposes. APEX uses Google Firebase services for authentication, data storage, and synchronization. Google may process data as a service provider for these purposes.</p>
 
 <h2>Data Storage</h2>
 <p>Data is securely stored in Google Firebase (Firestore and Authentication) infrastructure. Workout data is also stored locally on your device (localStorage) for offline access.</p>
 
-<h2>Data Security</h2>
-<p>Authentication is provided by Firebase Authentication, and data access control is enforced by Firestore Security Rules. Each user can only access their own data.</p>
+<h2>Data Security and Visibility</h2>
+<p>Authentication is provided by Firebase Authentication, and data access control is enforced by Firestore Security Rules. Access to private workout and measurement data is restricted through Firestore Security Rules. Usernames, profile photos, and content shared through social features may be visible to other users or friends.</p>
 
 <h2>User Rights</h2>
 <p>At any time, you can:</p>
 <ul>
   <li>View your data within the app.</li>
   <li>Edit your profile information.</li>
-  <li>Permanently delete your account and all associated data (Settings → Account → Delete Account).</li>
+  <li>Permanently delete your account from within the app (Settings → Account → Delete Account). Account deletion initiates the removal of your Firebase Authentication account and associated personal data held by APEX. Information that must be retained for legal purposes may be kept for the required period.</li>
 </ul>
 
-<h2>Cookies and Analytics</h2>
-<p>APEX does not use any cookies or third-party analytics tools.</p>
+<h2>Cookies and Local Storage</h2>
+<p>APEX does not use cookies for advertising or cross-app tracking. Browser local storage (localStorage), IndexedDB, or similar essential technologies may be used for app functionality, offline access, and session management.</p>
 
 <h2>Children's Privacy</h2>
 <p>APEX is not intended for children under 13 and does not knowingly collect data from anyone under 13.</p>

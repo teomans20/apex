@@ -29,11 +29,14 @@ li { margin-bottom: 6px; }
 <h2>Toplanan Veriler</h2>
 <p>APEX aşağıdaki verileri toplar ve işler:</p>
 <ul>
-  <li><strong>Hesap bilgileri:</strong> E-posta adresi, kullanıcı adı ve görünen ad (kayıt sırasında sağlanır).</li>
+  <li><strong>Hesap bilgileri:</strong> E-posta adresi, kullanıcı adı ve görünen ad.</li>
   <li><strong>Antrenman verileri:</strong> Egzersiz kayıtları, set/tekrar/ağırlık bilgileri, antrenman tarihleri.</li>
   <li><strong>Vücut ölçüleri:</strong> Kilo ve isteğe bağlı vücut ölçümleri.</li>
+  <li><strong>Hedefler, rutinler ve egzersiz notları:</strong> Kullanıcı tarafından oluşturulan antrenman hedefleri, kişisel rutinler ve egzersiz notları.</li>
   <li><strong>Profil fotoğrafı:</strong> İsteğe bağlı olarak yüklenen profil görseli.</li>
-  <li><strong>Sosyal veriler:</strong> Arkadaş listesi, antrenman paylaşımları, reaksiyonlar.</li>
+  <li><strong>Sosyal veriler:</strong> Arkadaş listesi, arkadaşlık istekleri, bildirimler, antrenman paylaşımları, reaksiyonlar ve gönderilen programlar.</li>
+  <li><strong>Güvenlik ve moderasyon verileri:</strong> Engellenen kullanıcılar, kullanıcı şikâyetleri, şikâyet nedeni, bildirilen içerik türü ve işlem zamanı.</li>
+  <li><strong>Teknik veriler:</strong> Firebase tarafından kimlik doğrulama ve hizmet sağlama kapsamında işlenebilecek teknik bilgiler.</li>
 </ul>
 
 <h2>Verilerin Kullanımı</h2>
@@ -41,26 +44,27 @@ li { margin-bottom: 6px; }
 <ul>
   <li>Antrenman takibi ve ilerleme analizleri sağlamak</li>
   <li>Sosyal özellikler (arkadaş sistemi, feed, program paylaşımı) sunmak</li>
+  <li>Güvenlik ve moderasyon işlemlerini yürütmek</li>
   <li>Uygulama deneyimini iyileştirmek</li>
 </ul>
-<p>Verileriniz üçüncü taraflarla paylaşılmaz, satılmaz veya reklam amacıyla kullanılmaz.</p>
+<p>Verileriniz satılmaz ve reklam amacıyla paylaşılmaz. Uygulamanın kimlik doğrulama, veri saklama ve senkronizasyon işlevlerini sunmak amacıyla Google Firebase hizmetleri kullanılır. Google, bu kapsamda verileri bir hizmet sağlayıcı olarak işleyebilir.</p>
 
 <h2>Veri Depolama</h2>
 <p>Veriler Google Firebase (Firestore ve Authentication) altyapısında güvenli şekilde saklanır. Antrenman verileri ayrıca cihazınızda (localStorage) yerel olarak tutulur ve çevrimdışı erişim sağlar.</p>
 
-<h2>Veri Güvenliği</h2>
-<p>Firebase Authentication ile kimlik doğrulama, Firestore Security Rules ile veri erişim kontrolü sağlanır. Her kullanıcı yalnızca kendi verilerine erişebilir.</p>
+<h2>Veri Güvenliği ve Görünürlük</h2>
+<p>Firebase Authentication ile kimlik doğrulama, Firestore Security Rules ile veri erişim kontrolü sağlanır. Özel antrenman ve ölçüm verilerine erişim Firestore güvenlik kurallarıyla sınırlandırılır. Kullanıcı adı, profil fotoğrafı ve kullanıcı tarafından sosyal özelliklerle paylaşılan içerikler diğer kullanıcılar veya arkadaşlar tarafından görülebilir.</p>
 
 <h2>Kullanıcı Hakları</h2>
 <p>Dilediğiniz zaman:</p>
 <ul>
   <li>Verilerinizi uygulama içinden görüntüleyebilirsiniz.</li>
   <li>Profil bilgilerinizi düzenleyebilirsiniz.</li>
-  <li>Hesabınızı ve tüm ilişkili verilerinizi kalıcı olarak silebilirsiniz (Ayarlar → Hesap → Hesabı Sil).</li>
+  <li>Hesabınızı uygulama içerisinden kalıcı olarak silebilirsiniz (Ayarlar → Hesap → Hesabı Sil). Hesap silme işlemi, Firebase Authentication hesabınızın ve APEX tarafından tutulan ilişkili kişisel verilerin silinmesi sürecini başlatır. Yasal olarak saklanması gereken bilgiler varsa bunlar gerekli süre boyunca tutulabilir.</li>
 </ul>
 
-<h2>Çerezler ve Analitik</h2>
-<p>APEX herhangi bir çerez veya üçüncü taraf analitik aracı kullanmaz.</p>
+<h2>Çerezler ve Yerel Depolama</h2>
+<p>APEX reklam veya kullanıcı takibi amacıyla çerez kullanmaz. Uygulamanın çalışması, çevrimdışı erişim ve oturum yönetimi için tarayıcı yerel depolaması (localStorage), IndexedDB veya benzeri zorunlu teknolojiler kullanılabilir.</p>
 
 <h2>Çocukların Gizliliği</h2>
 <p>APEX 13 yaşın altındaki çocuklara yönelik değildir ve bilerek 13 yaşın altındaki kişilerden veri toplamaz.</p>
