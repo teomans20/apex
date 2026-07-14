@@ -1269,7 +1269,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.59'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.60'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1651,7 +1651,8 @@ const I18N = {
     report_submit: 'Gönder', report_spam: 'Spam', report_inappropriate: 'Uygunsuz içerik', report_harassment: 'Taciz',
     blocked_users: 'Engellenen Kullanıcılar', no_blocked: 'Engellediğin kimse yok.',
     crop_title: 'Fotoğrafı Kırp', crop_confirm: 'Uygula', avatar_pick: 'Avatar Seç',
-    privacy_link: 'Gizlilik', terms_link: 'Koşullar', support_link: 'Destek'
+    privacy_link: 'Gizlilik', terms_link: 'Koşullar', support_link: 'Destek',
+    report_failed: 'Şikâyet gönderilemedi, tekrar dene.'
   },
   en: {
     tab_workout: 'WORKOUT', tab_progress: 'PROGRESS', subtab_growth: 'Growth', subtab_goals: 'Goals', subtab_measure: 'Measures', goals_soon_title: 'Goals coming soon', goals_soon_desc: 'Set personal goals and track your progress toward them.',
@@ -1914,7 +1915,8 @@ const I18N = {
     report_submit: 'Submit', report_spam: 'Spam', report_inappropriate: 'Inappropriate content', report_harassment: 'Harassment',
     blocked_users: 'Blocked Users', no_blocked: 'You haven\'t blocked anyone.',
     crop_title: 'Crop Photo', crop_confirm: 'Apply', avatar_pick: 'Pick Avatar',
-    privacy_link: 'Privacy', terms_link: 'Terms', support_link: 'Support'
+    privacy_link: 'Privacy', terms_link: 'Terms', support_link: 'Support',
+    report_failed: 'Report could not be sent, please try again.'
   }
 };
 
@@ -6984,7 +6986,7 @@ function FriendProfileView({
             }, t(k)))),
           /*#__PURE__*/React.createElement("textarea", { value: reportReason, onChange: e => setReportReason(e.target.value), placeholder: t('report_reason_ph'), rows: 3, style: { width: '100%', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 9, padding: 10, color: '#fff', fontSize: 13, fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box', marginBottom: 12 } }),
           /*#__PURE__*/React.createElement("button", {
-            onClick: async () => { if (!reportReason.trim()) return; try { await reportUser(myUid, friend.uid, reportReason.trim(), showReport); setReportDone(true); } catch (e) { console.warn('Report failed:', e); setReportDone(true); } },
+            onClick: async () => { if (!reportReason.trim()) return; try { await reportUser(myUid, friend.uid, reportReason.trim(), showReport); setReportDone(true); } catch (e) { console.warn('Report failed:', e); alert(t('report_failed')); } },
             disabled: !reportReason.trim(),
             style: { width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: reportReason.trim() ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#222', color: reportReason.trim() ? '#fff' : '#555', fontSize: 13.5, fontWeight: 800, cursor: reportReason.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }
           }, t('report_submit')),
