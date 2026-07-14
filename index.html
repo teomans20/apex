@@ -1269,7 +1269,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.57'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.58'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -11006,7 +11006,7 @@ function MenuModal({
   const [accountView, setAccountView] = useState(null); // null | 'password' | 'delete'
   const emailVerified = authUser && authUser.emailVerified;
   const [verifySent, setVerifySent] = useState(false);
-  const [cropSrc, setCropSrc] = useState(null);
+  const [cropSrc, setCropSrc] = useState(null); // kullanılmıyor ama avatar/overlay guard için kalıyor
   const [showAvatars, setShowAvatars] = useState(false);
   const sendVerify = async () => {
     try { await authUser.sendEmailVerification(); setVerifySent(true); } catch (e) {}
@@ -11015,17 +11015,13 @@ function MenuModal({
   const handleFile = async e => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    // Fotoğrafı okuyup kırpma modalına gönder
-    const reader = new FileReader();
-    reader.onload = ev => setCropSrc(ev.target.result);
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-  const handleCropDone = async (dataUrl) => {
-    setCropSrc(null);
     setBusy(true);
-    try { await onPhotoChange(dataUrl); } catch (e) {}
+    try {
+      const dataUrl = await processProfilePhoto(file);
+      await onPhotoChange(dataUrl);
+    } catch (err) {}
     setBusy(false);
+    e.target.value = '';
   };
   const handleAvatarPick = async (colorIdx) => {
     setShowAvatars(false);
@@ -11074,7 +11070,7 @@ function MenuModal({
   };
   return /*#__PURE__*/React.createElement("div", {
     style: S.modalOverlay,
-    onClick: () => { if (!cropSrc && !showAvatars) onClose(); }
+    onClick: () => { if (!showAvatars) onClose(); }
   }, /*#__PURE__*/React.createElement("div", {
     style: S.modal,
     onClick: e => e.stopPropagation()
@@ -11217,11 +11213,6 @@ function MenuModal({
       marginTop: 14
     }
   }, "APEX v", APP_VERSION)),
-  cropSrc && /*#__PURE__*/React.createElement(PhotoCropModal, {
-    imgSrc: cropSrc,
-    onDone: handleCropDone,
-    onClose: () => setCropSrc(null)
-  }),
   showAvatars && /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: e => { if (e.target === e.currentTarget) setShowAvatars(false); } },
     /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxWidth: 300, padding: 16 } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, textAlign: 'center', marginBottom: 14 } }, t('avatar_pick')),
