@@ -1650,7 +1650,8 @@ const I18N = {
     block_confirm: 'Bu kullanıcıyı engellemek istediğinden emin misin? Feed\'de gözükmeyecek ve seni göremeyecek.',
     report_sent: 'Şikâyet gönderildi.', report_reason: 'Şikâyet sebebi', report_reason_ph: 'Nedenini kısaca açıkla',
     report_submit: 'Gönder', report_spam: 'Spam', report_inappropriate: 'Uygunsuz içerik', report_harassment: 'Taciz',
-    blocked_users: 'Engellenen Kullanıcılar', no_blocked: 'Engellediğin kimse yok.'
+    blocked_users: 'Engellenen Kullanıcılar', no_blocked: 'Engellediğin kimse yok.',
+    crop_title: 'Fotoğrafı Kırp', crop_confirm: 'Uygula', avatar_pick: 'Avatar Seç'
   },
   en: {
     tab_workout: 'WORKOUT', tab_progress: 'PROGRESS', subtab_growth: 'Growth', subtab_goals: 'Goals', subtab_measure: 'Measures', goals_soon_title: 'Goals coming soon', goals_soon_desc: 'Set personal goals and track your progress toward them.',
@@ -1911,7 +1912,8 @@ const I18N = {
     block_confirm: 'Are you sure you want to block this user? They won\'t appear in your feed and won\'t be able to see you.',
     report_sent: 'Report submitted.', report_reason: 'Reason', report_reason_ph: 'Briefly explain why',
     report_submit: 'Submit', report_spam: 'Spam', report_inappropriate: 'Inappropriate content', report_harassment: 'Harassment',
-    blocked_users: 'Blocked Users', no_blocked: 'You haven\'t blocked anyone.'
+    blocked_users: 'Blocked Users', no_blocked: 'You haven\'t blocked anyone.',
+    crop_title: 'Crop Photo', crop_confirm: 'Apply', avatar_pick: 'Pick Avatar'
   }
 };
 
@@ -5365,7 +5367,148 @@ function buildJournalEntries(data) {
 
 // Avatar harfi + rengi (isimden)
 // Bir foto dosyasını kare kırp + 200x200 küçült + JPEG sıkıştır → base64 data URL döner
-// (küçük tutulur ki Firestore'a sığsın ~15-30KB, her yerde net görünsün)
+function cropAndResize(img, cx, cy, cSize) {
+  const SIZE = 200;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, cx, cy, cSize, cSize, 0, 0, SIZE, SIZE);
+  return canvas.toDataURL('image/jpeg', 0.82);
+}
+
+// Default avatar setleri (emoji-based, Firestore'a base64 olarak kaydedilir)
+const DEFAULT_AVATARS = ['🏋️','💪','🔥','⚡','🦁','🐺','🦅','🎯','🏆','💎','👑','🚀','🎧','🤖'];
+function renderAvatarToDataUrl(emoji) {
+  const SIZE = 200;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+  // Arka plan
+  const grad = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+  grad.addColorStop(0, '#1a1a1a');
+  grad.addColorStop(1, '#0a0a0a');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2);
+  ctx.fill();
+  // Emoji
+  ctx.font = '90px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, SIZE / 2, SIZE / 2 + 4);
+  return canvas.toDataURL('image/png');
+}
+
+// Kırpma modal bileşeni
+function PhotoCropModal({ imgSrc, onDone, onClose }) {
+  const canvasRef = useRef(null);
+  const [img, setImg] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0, size: 0 });
+  const [dragging, setDragging] = useState(false);
+  const [dragStart, setDragStart] = useState(null);
+
+  useEffect(() => {
+    const image = new Image();
+    image.onload = () => {
+      setImg(image);
+      const side = Math.min(image.width, image.height);
+      setCrop({ x: (image.width - side) / 2, y: (image.height - side) / 2, size: side });
+    };
+    image.src = imgSrc;
+  }, [imgSrc]);
+
+  useEffect(() => {
+    if (!img || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const dispW = 280;
+    const scale = dispW / img.width;
+    const dispH = img.height * scale;
+    canvas.width = dispW;
+    canvas.height = dispH;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, dispW, dispH);
+    // Karartma
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, dispW, dispH);
+    // Kırpma alanı (aydınlık)
+    const cx = crop.x * scale, cy = crop.y * scale, cs = crop.size * scale;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx + cs / 2, cy + cs / 2, cs / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(img, 0, 0, dispW, dispH);
+    ctx.restore();
+    // Çerçeve
+    ctx.strokeStyle = 'var(--accent, #FF3D3D)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx + cs / 2, cy + cs / 2, cs / 2, 0, Math.PI * 2);
+    ctx.stroke();
+  }, [img, crop]);
+
+  const getPos = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { px: t.clientX - rect.left, py: t.clientY - rect.top };
+  };
+
+  const onStart = (e) => {
+    e.preventDefault();
+    const pos = getPos(e);
+    setDragging(true);
+    setDragStart({ ...pos, ox: crop.x, oy: crop.y });
+  };
+  const onMove = (e) => {
+    if (!dragging || !dragStart || !img) return;
+    e.preventDefault();
+    const pos = getPos(e);
+    const scale = 280 / img.width;
+    const dx = (pos.px - dragStart.px) / scale;
+    const dy = (pos.py - dragStart.py) / scale;
+    let nx = dragStart.ox + dx;
+    let ny = dragStart.oy + dy;
+    nx = Math.max(0, Math.min(nx, img.width - crop.size));
+    ny = Math.max(0, Math.min(ny, img.height - crop.size));
+    setCrop(p => ({ ...p, x: nx, y: ny }));
+  };
+  const onEnd = () => setDragging(false);
+
+  const onZoom = (e) => {
+    if (!img) return;
+    const delta = e.target.value;
+    const minSize = 80;
+    const maxSize = Math.min(img.width, img.height);
+    const newSize = minSize + (maxSize - minSize) * (1 - delta / 100);
+    let nx = crop.x + (crop.size - newSize) / 2;
+    let ny = crop.y + (crop.size - newSize) / 2;
+    nx = Math.max(0, Math.min(nx, img.width - newSize));
+    ny = Math.max(0, Math.min(ny, img.height - newSize));
+    setCrop({ x: nx, y: ny, size: newSize });
+  };
+
+  const confirm = () => {
+    if (!img) return;
+    const dataUrl = cropAndResize(img, crop.x, crop.y, crop.size);
+    onDone(dataUrl);
+  };
+
+  return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: e => { if (e.target === e.currentTarget) onClose(); } },
+    /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxWidth: 320, padding: 16 } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, textAlign: 'center', marginBottom: 12 } }, t('crop_title')),
+      /*#__PURE__*/React.createElement("canvas", {
+        ref: canvasRef,
+        style: { width: 280, display: 'block', margin: '0 auto', borderRadius: 12, touchAction: 'none', cursor: 'move' },
+        onMouseDown: onStart, onMouseMove: onMove, onMouseUp: onEnd, onMouseLeave: onEnd,
+        onTouchStart: onStart, onTouchMove: onMove, onTouchEnd: onEnd
+      }),
+      /*#__PURE__*/React.createElement("input", { type: 'range', min: 0, max: 90, defaultValue: 0, onChange: onZoom, style: { width: '100%', margin: '12px 0 8px', accentColor: 'var(--accent)' } }),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8 } },
+        /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel, flex: 1, margin: 0 } }, t('close')),
+        /*#__PURE__*/React.createElement("button", { onClick: confirm, style: { flex: 1, padding: '12px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', color: '#fff', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' } }, t('crop_confirm')))));
+}
+
 function processProfilePhoto(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -10933,6 +11076,8 @@ function MenuModal({
   const [accountView, setAccountView] = useState(null); // null | 'password' | 'delete'
   const emailVerified = authUser && authUser.emailVerified;
   const [verifySent, setVerifySent] = useState(false);
+  const [cropSrc, setCropSrc] = useState(null);
+  const [showAvatars, setShowAvatars] = useState(false);
   const sendVerify = async () => {
     try { await authUser.sendEmailVerification(); setVerifySent(true); } catch (e) {}
   };
@@ -10940,13 +11085,26 @@ function MenuModal({
   const handleFile = async e => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
+    // Fotoğrafı okuyup kırpma modalına gönder
+    const reader = new FileReader();
+    reader.onload = ev => setCropSrc(ev.target.result);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+  const handleCropDone = async (dataUrl) => {
+    setCropSrc(null);
+    setBusy(true);
+    try { await onPhotoChange(dataUrl); } catch (e) {}
+    setBusy(false);
+  };
+  const handleAvatarPick = async (emoji) => {
+    setShowAvatars(false);
     setBusy(true);
     try {
-      const dataUrl = await processProfilePhoto(file);
+      const dataUrl = renderAvatarToDataUrl(emoji);
       await onPhotoChange(dataUrl);
-    } catch (err) {}
+    } catch (e) {}
     setBusy(false);
-    e.target.value = '';
   };
   const removePhoto = async () => {
     setBusy(true);
@@ -10985,7 +11143,12 @@ function MenuModal({
     onClick: removePhoto,
     disabled: busy,
     style: { background: 'none', border: 'none', color: '#FF5252', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginTop: 2 }
-  }, t('set_photo_remove'))), /*#__PURE__*/React.createElement("div", {
+  }, t('set_photo_remove')),
+  /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowAvatars(true),
+    disabled: busy,
+    style: { background: 'none', border: 'none', color: 'var(--accent-light)', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginTop: 2 }
+  }, t('avatar_pick'))), /*#__PURE__*/React.createElement("div", {
     style: S.menuUserName
   }, authUser.displayName || t('user_label'), myUsername && /*#__PURE__*/React.createElement("span", {
     style: { color: 'var(--accent)', fontSize: 13, fontWeight: 700, marginLeft: 8 }
@@ -11093,6 +11256,21 @@ function MenuModal({
       marginTop: 14
     }
   }, "APEX v", APP_VERSION)),
+  cropSrc && /*#__PURE__*/React.createElement(PhotoCropModal, {
+    imgSrc: cropSrc,
+    onDone: handleCropDone,
+    onClose: () => setCropSrc(null)
+  }),
+  showAvatars && /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: e => { if (e.target === e.currentTarget) setShowAvatars(false); } },
+    /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxWidth: 320, padding: 16 } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, textAlign: 'center', marginBottom: 14 } }, t('avatar_pick')),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 } },
+        DEFAULT_AVATARS.map(emoji => /*#__PURE__*/React.createElement("button", {
+          key: emoji,
+          onClick: () => handleAvatarPick(emoji),
+          style: { width: '100%', aspectRatio: '1', borderRadius: '50%', border: '1px solid #2a2a2a', background: '#1a1a1a', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+        }, emoji))),
+      /*#__PURE__*/React.createElement("button", { onClick: () => setShowAvatars(false), style: { ...S.modalCancel, marginTop: 12 } }, t('close')))),
   accountView && /*#__PURE__*/React.createElement(AccountModal, {
     mode: accountView,
     authUser: authUser,
