@@ -1269,7 +1269,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.60'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.61'; // PNG ikon (eski iOS uyumlu)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1641,7 +1641,7 @@ const I18N = {
     routine_sets: 'Set', routine_reps: 'Tekrar',
     routine_schedule: 'ZAMANLAMA', routine_mode_cycle: 'Sıralı Döngü', routine_mode_weekly: 'Haftalık',
     routine_save: 'Kaydet', routine_confirm_delete: 'Bu rutini silmek istediğinden emin misin?',
-    routine_today: 'Bugünkü Rutin', routine_next: 'Sıradaki', routine_start: 'Başla',
+    routine_today: 'Bugünkü Rutin', routine_next: 'Sıradaki', routine_start: 'Başla', routine_done: 'Tamamlandı',
     routine_day_subtitle_ph: 'örn. Göğüs · Omuz · Triceps',
     routine_pick_ex: 'Hareket Seç', routine_blank_day: 'Boş Gün Ekle',
     mon: 'Pzt', tue: 'Sal', wed: 'Çar', thu: 'Per', fri: 'Cum', sat: 'Cmt', sun: 'Paz',
@@ -1905,7 +1905,7 @@ const I18N = {
     routine_sets: 'Sets', routine_reps: 'Reps',
     routine_schedule: 'SCHEDULE', routine_mode_cycle: 'Sequential Cycle', routine_mode_weekly: 'Weekly',
     routine_save: 'Save', routine_confirm_delete: 'Are you sure you want to delete this routine?',
-    routine_today: "Today's Routine", routine_next: 'Next', routine_start: 'Start',
+    routine_today: "Today's Routine", routine_next: 'Next', routine_start: 'Start', routine_done: 'Completed',
     routine_day_subtitle_ph: 'e.g. Chest · Shoulders · Triceps',
     routine_pick_ex: 'Pick Exercise', routine_blank_day: 'Add Blank Day',
     mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun',
@@ -9206,15 +9206,18 @@ function HomeView({
           }
         }
       }
+      // Bugün bu günde antrenman yapıldı mı?
+      const todayKey = dateKey(Date.now());
+      const doneToday = resolvedDayType && (data.logs || []).some(l => l.dayType === resolvedDayType && dateKey(l.timestamp) === todayKey);
       return /*#__PURE__*/React.createElement("button", {
         onClick: () => { if (resolvedDayType) onSelectDay(resolvedDayType); else onOpenRoutines(); },
-        style: { width: '100%', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, background: 'linear-gradient(135deg,rgba(var(--accent-rgb),0.15),rgba(0,0,0,0.02))', border: '1px solid rgba(var(--accent-rgb),0.35)', borderRadius: 15, padding: '13px 15px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
+        style: { width: '100%', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, background: doneToday ? 'linear-gradient(135deg,rgba(76,175,80,0.12),rgba(0,0,0,0.02))' : 'linear-gradient(135deg,rgba(var(--accent-rgb),0.15),rgba(0,0,0,0.02))', border: '1px solid ' + (doneToday ? 'rgba(76,175,80,0.35)' : 'rgba(var(--accent-rgb),0.35)'), borderRadius: 15, padding: '13px 15px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
       },
-        /*#__PURE__*/React.createElement("div", { style: { width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'dumbbell', size: 22, color: '#fff', strokeWidth: 2.2 })),
+        /*#__PURE__*/React.createElement("div", { style: { width: 42, height: 42, borderRadius: 12, background: doneToday ? 'linear-gradient(135deg,#4CAF50,#2E7D32)' : 'linear-gradient(135deg,var(--accent),var(--accent-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: doneToday ? 'check' : 'dumbbell', size: 22, color: '#fff', strokeWidth: 2.2 })),
         /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, color: 'var(--accent-light)', letterSpacing: 0.5, textTransform: 'uppercase' } }, t('routine_today')),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, color: doneToday ? '#4CAF50' : 'var(--accent-light)', letterSpacing: 0.5, textTransform: 'uppercase' } }, doneToday ? t('routine_done') : t('routine_today')),
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 14.5, fontWeight: 800, color: '#fff', marginTop: 2 } }, todayDay.name)),
-        /*#__PURE__*/React.createElement("span", { style: { color: 'var(--accent-light)', fontSize: 18, flexShrink: 0 } }, '›'));
+        /*#__PURE__*/React.createElement("span", { style: { color: doneToday ? '#4CAF50' : 'var(--accent-light)', fontSize: 18, flexShrink: 0 } }, doneToday ? '✓' : '›'));
     })()), (() => {
       const insights = computeInsights(data);
       if (!insights.length) return null;
