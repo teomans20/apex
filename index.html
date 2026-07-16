@@ -7285,12 +7285,13 @@ function App() {
   }, (ptrPull > 0 || ptrRefreshing) && /*#__PURE__*/React.createElement("div", {
     style: { height: ptrPull, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 8, overflow: 'hidden', transition: ptrRefreshing ? 'height 0.3s ease' : 'none' }
   }, /*#__PURE__*/React.createElement("div", {
-    style: { opacity: Math.min(1, ptrPull / ptrThreshold), transform: 'scale(' + Math.min(1, ptrPull / ptrThreshold) + ') rotate(' + (ptrRefreshing ? '0' : (ptrPull * 3)) + 'deg)', transition: ptrRefreshing ? 'none' : 'transform 0.05s ease' }
-  }, /*#__PURE__*/React.createElement("svg", { width: 28, height: 28, viewBox: '0 0 180 180', className: ptrRefreshing ? 'spin' : '' },
-    /*#__PURE__*/React.createElement("path", { d: 'M38 145 L90 38 L142 145 L114 145 L90 80 L66 145 Z', fill: 'var(--accent)' }))),
-  ptrPull >= ptrThreshold && !ptrRefreshing && /*#__PURE__*/React.createElement("div", {
-    style: { fontSize: 9, fontWeight: 800, letterSpacing: 3, color: '#555', marginTop: 4 }
-  }, "APEX")), /*#__PURE__*/React.createElement("div", {
+    style: { opacity: Math.min(1, ptrPull / ptrThreshold), transform: 'scale(' + Math.min(1, ptrPull / ptrThreshold) + ')', position: 'relative', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }
+  },
+  /*#__PURE__*/React.createElement("svg", { width: 40, height: 40, viewBox: '0 0 40 40', style: { position: 'absolute', inset: 0, ...(ptrRefreshing ? { animation: 'spin 0.9s linear infinite' } : { transform: 'rotate(' + (ptrPull * 4) + 'deg)' }) } },
+    /*#__PURE__*/React.createElement("circle", { cx: 20, cy: 20, r: 17, fill: 'none', stroke: '#1a1a1a', strokeWidth: 2.5 }),
+    /*#__PURE__*/React.createElement("circle", { cx: 20, cy: 20, r: 17, fill: 'none', stroke: 'var(--accent)', strokeWidth: 2.5, strokeLinecap: 'round', strokeDasharray: (ptrRefreshing ? 30 : Math.round(ptrPull / ptrThreshold * 60)) + ' 107' })),
+  /*#__PURE__*/React.createElement("svg", { width: 16, height: 16, viewBox: '0 0 180 180', style: { position: 'relative' } },
+    /*#__PURE__*/React.createElement("path", { d: 'M38 145 L90 38 L142 145 L114 145 L90 80 L66 145 Z', fill: 'var(--accent)' })))), /*#__PURE__*/React.createElement("div", {
     key: tab,
     style: { ...S.content, animation: 'apexPageIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)' }
   }, tab === 'workout' && /*#__PURE__*/React.createElement(WorkoutTab, {
