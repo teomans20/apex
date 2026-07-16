@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.64'; // PR celebration V1 GRAND: rays + spinning medal + bounce text
+const APP_VERSION = '5.9.66'; // Settings sub-views: swipe-right to go back + "Ayarlara Dön" bottom button
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1439,6 +1439,8 @@ const I18N = {
     timer_title: 'Dinlenme Zamanlayıcısı', timer_toggle: 'Zamanlayıcı', timer_auto: 'Set sonrası otomatik başlat', timer_default_dur: 'Varsayılan Süre', timer_for_new: 'Yeni egzersizler için (saniye)', timer_custom: 'Özel', timer_vibrate: 'Titreşim', timer_vibrate_sub: 'Süre bitince titret',
     export_backup: 'Yedek Dışa Aktar', import_backup: 'Yedek Yükle', logout: 'Çıkış Yap',
     account_section: 'Hesap', verify_email: 'E-postanı doğrula', verify_sent: 'Doğrulama e-postası gönderildi', change_password: 'Şifre Değiştir', delete_account: 'Hesabı Sil',
+    section_appearance: 'Görünüm', section_workout: 'Antrenman', section_data: 'Veri', section_about: 'Hakkında', section_danger: 'Tehlikeli Bölge',
+    photo_setting: 'Profil Fotoğrafı', timer_setting_desc: 'Setler arası dinlenme', menu_back: 'Geri', closed_status: 'Kapalı', settings_back_to_menu: 'Ayarlara Dön',
     change_pass_desc: 'Güvenlik için mevcut şifreni gir, sonra yeni şifreni belirle.', current_password: 'Mevcut şifre', new_password: 'Yeni şifre (en az 6 karakter)',
     delete_account_warn: 'Bu işlem geri alınamaz. Hesabın, bulut verilerin, arkadaşlıkların ve kullanıcı adın kalıcı olarak silinir. Onaylamak için mevcut şifreni gir.', delete_account_confirm: 'HESABI KALICI OLARAK SİL',
     pass_changed: 'Şifre değiştirildi', pass_changed_desc: 'Yeni şifrenle giriş yapabilirsin.', err_enter_cur_pass: 'Mevcut şifreni gir', err_wrong_cur_pass: 'Mevcut şifre yanlış',
@@ -1706,6 +1708,8 @@ const I18N = {
     timer_title: 'Rest Timer', timer_toggle: 'Timer', timer_auto: 'Auto-start after set', timer_default_dur: 'Default Duration', timer_for_new: 'For new exercises (seconds)', timer_custom: 'Custom', timer_vibrate: 'Vibrate', timer_vibrate_sub: 'Vibrate when time is up',
     export_backup: 'Export Backup', import_backup: 'Import Backup', logout: 'Log Out',
     account_section: 'Account', verify_email: 'Verify your email', verify_sent: 'Verification email sent', change_password: 'Change Password', delete_account: 'Delete Account',
+    section_appearance: 'Appearance', section_workout: 'Workout', section_data: 'Data', section_about: 'About', section_danger: 'Danger Zone',
+    photo_setting: 'Profile Photo', timer_setting_desc: 'Rest between sets', menu_back: 'Back', closed_status: 'Off', settings_back_to_menu: 'Back to Settings',
     change_pass_desc: 'For security, enter your current password, then set a new one.', current_password: 'Current password', new_password: 'New password (min 6 characters)',
     delete_account_warn: 'This cannot be undone. Your account, cloud data, friendships and username will be permanently deleted. Enter your current password to confirm.', delete_account_confirm: 'PERMANENTLY DELETE ACCOUNT',
     pass_changed: 'Password changed', pass_changed_desc: 'You can sign in with your new password.', err_enter_cur_pass: 'Enter your current password', err_wrong_cur_pass: 'Current password is incorrect',
@@ -11037,6 +11041,39 @@ function AccountModal({ mode, authUser, onClose }) {
           /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel } }, t('cancel')))));
 }
 
+// Approach A: reusable menu item card with icon+title+optional subtitle+optional value+arrow
+function MenuItemA({ icon, iconColor, title, subtitle, value, toggle, onToggle, danger, disabled, onClick }) {
+  return /*#__PURE__*/React.createElement("button", {
+    onClick: onClick,
+    disabled: disabled,
+    style: {
+      display: 'flex', alignItems: 'center', gap: 11, padding: '11px 12px',
+      background: '#0f0f0f', border: '1px solid #1a1a1a', borderRadius: 11,
+      marginBottom: 5, cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.6 : 1,
+      fontFamily: 'inherit', width: '100%', textAlign: 'left', color: danger ? '#FF5252' : '#fff'
+    }
+  },
+    /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+        background: 'rgba(' + hexRgbStr(iconColor) + ',0.10)',
+        border: '1px solid rgba(' + hexRgbStr(iconColor) + ',0.20)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }
+    }, /*#__PURE__*/React.createElement(ApexIcon, { name: icon, size: 15, color: iconColor || 'var(--accent)', strokeWidth: 2 })),
+    /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, letterSpacing: '-0.1px' } }, title),
+      subtitle && /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, color: danger ? '#f4433680' : '#666', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, subtitle)),
+    value && /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#888', fontWeight: 700, padding: '3px 8px', background: '#1a1a1a', borderRadius: 6, flexShrink: 0 } }, value),
+    /*#__PURE__*/React.createElement("div", { style: { color: '#333', fontSize: 14, flexShrink: 0 } }, '›'));
+}
+// Helper: hex color like '#4A90E2' → 'r,g,b' string
+function hexRgbStr(hex) {
+  if (!hex || !hex.startsWith('#')) return '255,61,61';
+  const c = hexToRgb(hex);
+  return c.r + ',' + c.g + ',' + c.b;
+}
+
 function MenuModal({
   onClose,
   onExport,
@@ -11065,6 +11102,24 @@ function MenuModal({
     }
   };
   const [accountView, setAccountView] = useState(null); // null | 'password' | 'delete'
+  const [menuView, setMenuView] = useState('main'); // 'main' | 'theme' | 'lang' | 'unit' | 'timer' | 'photo'
+  const swipeStartX = useRef(null);
+  const swipeStartY = useRef(null);
+  const [swipeDx, setSwipeDx] = useState(0);
+  const onSubTouchStart = e => { swipeStartX.current = e.touches[0].clientX; swipeStartY.current = e.touches[0].clientY; };
+  const onSubTouchMove = e => {
+    if (swipeStartX.current === null) return;
+    const dx = e.touches[0].clientX - swipeStartX.current;
+    const dy = Math.abs(e.touches[0].clientY - swipeStartY.current);
+    // Only track horizontal right-swipes; ignore if user is scrolling vertically
+    if (dx > 0 && dy < 40) setSwipeDx(dx);
+  };
+  const onSubTouchEnd = () => {
+    if (swipeDx > 60) { setMenuView('main'); }
+    setSwipeDx(0);
+    swipeStartX.current = null;
+    swipeStartY.current = null;
+  };
   const emailVerified = authUser && authUser.emailVerified;
   const [verifySent, setVerifySent] = useState(false);
   const [cropSrc, setCropSrc] = useState(null); // kullanılmıyor ama avatar/overlay guard için kalıyor
@@ -11134,73 +11189,159 @@ function MenuModal({
     onClick: () => { if (!showAvatars) onClose(); }
   }, /*#__PURE__*/React.createElement("div", {
     style: S.modal,
-    onClick: e => e.stopPropagation()
+    onClick: e => e.stopPropagation(),
+    onTouchStart: menuView !== 'main' ? onSubTouchStart : undefined,
+    onTouchMove: menuView !== 'main' ? onSubTouchMove : undefined,
+    onTouchEnd: menuView !== 'main' ? onSubTouchEnd : undefined
   }, /*#__PURE__*/React.createElement("input", {
     ref: fileRef,
     type: "file",
     accept: "image/*",
     onChange: handleFile,
     style: { display: 'none' }
-  }), authUser && /*#__PURE__*/React.createElement("div", {
-    style: S.menuUserBox
-  }, /*#__PURE__*/React.createElement("div", {
-    style: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 12 }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: { position: 'relative', width: 84, height: 84, marginBottom: 6 }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: { width: 84, height: 84, borderRadius: '50%', border: '2.5px solid var(--accent)', padding: 3, boxSizing: 'border-box' }
-  }, /*#__PURE__*/React.createElement(Avatar, {
-    name: authUser.displayName || myUsername,
-    photo: myPhoto,
-    size: 73
-  })), /*#__PURE__*/React.createElement("button", {
-    onClick: pickPhoto,
-    disabled: busy,
-    style: { position: 'absolute', bottom: -2, right: -2, width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,var(--accent),var(--accent-dark))', border: '2.5px solid #0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, cursor: 'pointer', boxShadow: '0 2px 8px rgba(var(--accent-rgb),0.5)' }
-  }, busy ? '…' : '📷')), myPhoto && /*#__PURE__*/React.createElement("button", {
-    onClick: removePhoto,
-    disabled: busy,
-    style: { background: 'none', border: 'none', color: '#FF5252', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginTop: 2 }
-  }, t('set_photo_remove')),
-  /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowAvatars(true),
-    disabled: busy,
-    style: { background: 'none', border: 'none', color: 'var(--accent-light)', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginTop: 2 }
-  }, t('avatar_pick'))), /*#__PURE__*/React.createElement("div", {
-    style: S.menuUserName
-  }, authUser.displayName || t('user_label'), myUsername && /*#__PURE__*/React.createElement("span", {
-    style: { color: 'var(--accent)', fontSize: 13, fontWeight: 700, marginLeft: 8 }
-  }, "@" + myUsername)), /*#__PURE__*/React.createElement("div", {
-    style: S.menuUserEmail
-  }, authUser.email), /*#__PURE__*/React.createElement("div", {
-    style: S.menuUserSync
-  }, t('cloud_sync_on'))), /*#__PURE__*/React.createElement("div", {
-    style: S.modalTitle
-  }, timerSettings && onTimerSettingsChange ? t('language') : t('data_label')),
-    // ————— DİL SEÇİCİ (en üstte) —————
-    timerSettings && onTimerSettingsChange && onChangeLang && /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginBottom: 16 } },
+  }),
+  // ═════════ USER HEADER (all views) ═════════
+  authUser && /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', alignItems: 'center', gap: 11, paddingBottom: 12, borderBottom: '1px solid #1a1a1a', marginBottom: 14 }
+  },
+    menuView !== 'main' && /*#__PURE__*/React.createElement("button", {
+      onClick: () => setMenuView('main'),
+      style: { background: '#141414', border: '1px solid #262626', color: '#aaa', width: 32, height: 32, borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+    }, /*#__PURE__*/React.createElement("svg", { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: '#aaa', strokeWidth: 2, strokeLinecap: 'round' }, /*#__PURE__*/React.createElement("polyline", { points: "15 18 9 12 15 6" }))),
+    menuView === 'main' && /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowAvatars(true),
+      style: { width: 46, height: 46, borderRadius: 14, padding: 0, border: 'none', background: 'none', cursor: 'pointer', flexShrink: 0 }
+    }, /*#__PURE__*/React.createElement(Avatar, { name: authUser.displayName || myUsername, photo: myPhoto, size: 46 })),
+    /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } },
+        menuView === 'main' ? (authUser.displayName || t('user_label')) : t(menuView === 'theme' ? 'theme' : menuView === 'lang' ? 'language' : menuView === 'unit' ? 'units' : menuView === 'timer' ? 'timer_title' : menuView === 'photo' ? 'photo_setting' : 'settings')),
+      menuView === 'main' && myUsername && /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: 'var(--accent)', fontWeight: 700, marginTop: 2 } }, "@" + myUsername)),
+    /*#__PURE__*/React.createElement("button", {
+      onClick: onClose,
+      style: { background: '#141414', border: '1px solid #262626', color: '#888', width: 32, height: 32, borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }
+    }, "×")),
+
+  // ═════════ MAIN VIEW ═════════
+  menuView === 'main' && /*#__PURE__*/React.createElement(React.Fragment, null,
+
+    // ─── HESAP ───
+    authUser && /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#555', fontWeight: 800, letterSpacing: 1.5, margin: '4px 2px 8px' } }, t('account_section').toUpperCase()),
+    authUser && !emailVerified && /*#__PURE__*/React.createElement(MenuItemA, {
+      icon: 'mail', iconColor: '#4A90E2',
+      title: verifySent ? t('verify_sent') : t('verify_email'),
+      subtitle: authUser.email,
+      onClick: sendVerify,
+      disabled: verifySent
+    }),
+    authUser && /*#__PURE__*/React.createElement(MenuItemA, {
+      icon: 'lock', iconColor: '#FF9800',
+      title: t('change_password'),
+      onClick: () => setAccountView('password')
+    }),
+
+    // ─── GÖRÜNÜM ───
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#555', fontWeight: 800, letterSpacing: 1.5, margin: '14px 2px 8px' } }, t('section_appearance').toUpperCase()),
+    /*#__PURE__*/React.createElement(MenuItemA, {
+      icon: 'muscle', iconColor: 'var(--accent)',
+      title: t('theme'),
+      value: t('theme_' + loadTheme()),
+      onClick: () => setMenuView('theme')
+    }),
+    onChangeLang && /*#__PURE__*/React.createElement(MenuItemA, {
+      icon: 'globe', iconColor: '#4CAF50',
+      title: t('language'),
+      value: currentLang === 'en' ? 'EN' : 'TR',
+      onClick: () => setMenuView('lang')
+    }),
+    onChangeUnit && /*#__PURE__*/React.createElement(MenuItemA, {
+      icon: 'ruler', iconColor: '#A78BFA',
+      title: t('units'),
+      value: currentUnit === 'imperial' ? 'lb / in' : 'kg / cm',
+      onClick: () => setMenuView('unit')
+    }),
+
+    // ─── ANTRENMAN ───
+    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#555', fontWeight: 800, letterSpacing: 1.5, margin: '14px 2px 8px' } }, t('section_workout').toUpperCase()),
+    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement(MenuItemA, {
+      icon: 'clock', iconColor: '#FFB74D',
+      title: t('timer_title'),
+      subtitle: timerSettings.enabled ? (timerSettings.defaultSec + 's' + (timerSettings.vibrate ? ' • ' + t('timer_vibrate').toLowerCase() : '')) : t('closed_status') || 'Kapalı',
+      onClick: () => setMenuView('timer')
+    }),
+
+    // ─── VERİ ───
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#555', fontWeight: 800, letterSpacing: 1.5, margin: '14px 2px 8px' } }, t('section_data').toUpperCase()),
+    /*#__PURE__*/React.createElement(MenuItemA, {
+      icon: 'export', iconColor: '#78909C',
+      title: t('export_backup'),
+      onClick: onExport
+    }),
+    /*#__PURE__*/React.createElement(MenuItemA, {
+      icon: 'import', iconColor: '#78909C',
+      title: t('import_backup'),
+      onClick: onImport
+    }),
+
+    // ─── HAKKINDA ───
+    onReopenOnboarding && /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#555', fontWeight: 800, letterSpacing: 1.5, margin: '14px 2px 8px' } }, t('section_about').toUpperCase()),
+    onReopenOnboarding && /*#__PURE__*/React.createElement(MenuItemA, {
+      icon: 'info', iconColor: '#999',
+      title: t('show_intro'),
+      onClick: () => { onClose(); setTimeout(() => onReopenOnboarding(), 60); }
+    }),
+
+    // ─── TEHLİKELİ BÖLGE ───
+    authUser && /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#f44336', fontWeight: 800, letterSpacing: 1.5, margin: '14px 2px 8px' } }, t('section_danger').toUpperCase()),
+    authUser && /*#__PURE__*/React.createElement(MenuItemA, {
+      icon: 'logout', iconColor: '#f44336',
+      title: t('logout'),
+      danger: true,
+      onClick: logout
+    }),
+    authUser && /*#__PURE__*/React.createElement(MenuItemA, {
+      icon: 'trash', iconColor: '#f44336',
+      title: t('delete_account'),
+      subtitle: t('delete_account_warn').split('.')[0],
+      danger: true,
+      onClick: () => setAccountView('delete')
+    }),
+
+    // ─── Footer ───
+    /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', color: '#444', fontSize: 11, marginTop: 20 } }, "APEX v" + APP_VERSION),
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'center', gap: 14, marginTop: 6, marginBottom: 4, fontSize: 10 } },
+      /*#__PURE__*/React.createElement("a", { href: CURRENT_LANG === 'en' ? 'privacy-en.html' : 'privacy.html', target: '_blank', style: { color: '#555', textDecoration: 'none' } }, t('privacy_link')),
+      /*#__PURE__*/React.createElement("span", { style: { color: '#333' } }, '·'),
+      /*#__PURE__*/React.createElement("a", { href: CURRENT_LANG === 'en' ? 'terms-en.html' : 'terms.html', target: '_blank', style: { color: '#555', textDecoration: 'none' } }, t('terms_link')),
+      /*#__PURE__*/React.createElement("span", { style: { color: '#333' } }, '·'),
+      /*#__PURE__*/React.createElement("a", { href: CURRENT_LANG === 'en' ? 'support-en.html' : 'support.html', target: '_blank', style: { color: '#555', textDecoration: 'none' } }, t('support_link')))
+  ),
+
+  // ═════════ SUB VIEW: THEME ═════════
+  menuView === 'theme' && /*#__PURE__*/React.createElement("div", { style: { paddingTop: 4, transform: swipeDx > 0 ? 'translateX(' + Math.min(swipeDx, 200) + 'px)' : 'none', transition: swipeDx > 0 ? 'none' : 'transform 0.25s cubic-bezier(0.16,1,0.3,1)', opacity: swipeDx > 0 ? Math.max(0.3, 1 - swipeDx / 300) : 1 } },
+    /*#__PURE__*/React.createElement(ThemePicker, { onThemeChange: onThemeChange })
+  ),
+
+  // ═════════ SUB VIEW: LANG ═════════
+  menuView === 'lang' && /*#__PURE__*/React.createElement("div", { style: { paddingTop: 4, transform: swipeDx > 0 ? 'translateX(' + Math.min(swipeDx, 200) + 'px)' : 'none', transition: swipeDx > 0 ? 'none' : 'transform 0.25s cubic-bezier(0.16,1,0.3,1)', opacity: swipeDx > 0 ? Math.max(0.3, 1 - swipeDx / 300) : 1 } },
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
       [{ id: 'tr', label: t('lang_tr') }, { id: 'en', label: 'English' }].map(l => /*#__PURE__*/React.createElement("button", {
         key: l.id, onClick: () => onChangeLang(l.id),
-        style: { flex: 1, padding: '12px', borderRadius: 11, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, background: currentLang === l.id ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#141414', border: '1px solid ' + (currentLang === l.id ? 'transparent' : '#2a2a2a'), color: currentLang === l.id ? '#fff' : '#999' }
-      }, l.label))),
-    // ————— BİRİM SEÇİCİ (kg/lbs · cm/inch) —————
-    timerSettings && onTimerSettingsChange && onChangeUnit && /*#__PURE__*/React.createElement("div", { style: { ...S.modalTitle, marginTop: 0 } }, t('units')),
-    timerSettings && onTimerSettingsChange && onChangeUnit && /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginBottom: 16 } },
+        style: { padding: '14px 16px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, background: currentLang === l.id ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#141414', border: '1px solid ' + (currentLang === l.id ? 'transparent' : '#2a2a2a'), color: currentLang === l.id ? '#fff' : '#999', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }
+      }, l.label, currentLang === l.id && /*#__PURE__*/React.createElement("svg", { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: '#fff', strokeWidth: 3, strokeLinecap: 'round' }, /*#__PURE__*/React.createElement("polyline", { points: "20 6 9 17 4 12" })))))
+  ),
+
+  // ═════════ SUB VIEW: UNIT ═════════
+  menuView === 'unit' && /*#__PURE__*/React.createElement("div", { style: { paddingTop: 4, transform: swipeDx > 0 ? 'translateX(' + Math.min(swipeDx, 200) + 'px)' : 'none', transition: swipeDx > 0 ? 'none' : 'transform 0.25s cubic-bezier(0.16,1,0.3,1)', opacity: swipeDx > 0 ? Math.max(0.3, 1 - swipeDx / 300) : 1 } },
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
       [{ id: 'metric', label: t('unit_metric') }, { id: 'imperial', label: t('unit_imperial') }].map(u => /*#__PURE__*/React.createElement("button", {
         key: u.id, onClick: () => onChangeUnit(u.id),
-        style: { flex: 1, padding: '12px', borderRadius: 11, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, background: currentUnit === u.id ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#141414', border: '1px solid ' + (currentUnit === u.id ? 'transparent' : '#2a2a2a'), color: currentUnit === u.id ? '#fff' : '#999' }
-      }, u.label))),
-    // ————— TANITIMI TEKRAR GÖSTER —————
-    timerSettings && onTimerSettingsChange && onReopenOnboarding && /*#__PURE__*/React.createElement("button", {
-      onClick: () => { onClose(); setTimeout(() => onReopenOnboarding(), 60); },
-      style: { width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '13px 15px', marginBottom: 16, borderRadius: 12, background: '#141414', border: '1px solid #2a2a2a', color: '#ccc', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }
-    }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'info', size: 16 }), t('show_intro')),
-    // ————— TEMA SEÇİCİ —————
-    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: S.modalTitle }, t('theme')),
-    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement(ThemePicker, { onThemeChange: onThemeChange }),
-    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: S.modalTitle }, t('timer_title')),
-    // ————— DİNLENME ZAMANLAYICISI AYARLARI —————
-    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: { background: '#0d0d0d', border: '1px solid #1c1c1c', borderRadius: 14, overflow: 'hidden', marginBottom: 12 } },
+        style: { padding: '14px 16px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, background: currentUnit === u.id ? 'linear-gradient(135deg,var(--accent),var(--accent-dark))' : '#141414', border: '1px solid ' + (currentUnit === u.id ? 'transparent' : '#2a2a2a'), color: currentUnit === u.id ? '#fff' : '#999', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }
+      }, u.label, currentUnit === u.id && /*#__PURE__*/React.createElement("svg", { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: '#fff', strokeWidth: 3, strokeLinecap: 'round' }, /*#__PURE__*/React.createElement("polyline", { points: "20 6 9 17 4 12" })))))
+  ),
+
+  // ═════════ SUB VIEW: TIMER ═════════
+  menuView === 'timer' && timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: { paddingTop: 4, transform: swipeDx > 0 ? 'translateX(' + Math.min(swipeDx, 200) + 'px)' : 'none', transition: swipeDx > 0 ? 'none' : 'transform 0.25s cubic-bezier(0.16,1,0.3,1)', opacity: swipeDx > 0 ? Math.max(0.3, 1 - swipeDx / 300) : 1 } },
+    /*#__PURE__*/React.createElement("div", { style: { background: '#0d0d0d', border: '1px solid #1c1c1c', borderRadius: 14, overflow: 'hidden', marginBottom: 12 } },
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 15px' } },
         /*#__PURE__*/React.createElement("div", null,
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'clock', size: 16 }), t('timer_toggle')),
@@ -11231,55 +11372,14 @@ function MenuModal({
         /*#__PURE__*/React.createElement("div", {
           onClick: () => onTimerSettingsChange({ ...timerSettings, vibrate: !timerSettings.vibrate }),
           style: { width: 44, height: 26, borderRadius: 13, background: timerSettings.vibrate ? 'var(--accent)' : '#2a2a2a', position: 'relative', flexShrink: 0, cursor: 'pointer' }
-        }, /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 3, left: timerSettings.vibrate ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff' } })))),
-    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: S.modalTitle }, t('data_label')),
-    /*#__PURE__*/React.createElement("button", {
-    onClick: onExport,
-    style: { ...S.menuItem, display: 'flex', alignItems: 'center', gap: 10 }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'export' }), t('export_backup')), /*#__PURE__*/React.createElement("button", {
-    onClick: onImport,
-    style: { ...S.menuItem, display: 'flex', alignItems: 'center', gap: 10 }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'import' }), t('import_backup')),
-  authUser && /*#__PURE__*/React.createElement("div", { style: { ...S.modalTitle, marginTop: 6 } }, t('account_section')),
-  authUser && !emailVerified && /*#__PURE__*/React.createElement("button", {
-    onClick: sendVerify,
-    disabled: verifySent,
-    style: { ...S.menuItem, display: 'flex', alignItems: 'center', gap: 10, opacity: verifySent ? 0.6 : 1 }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'mail', color: '#FFB74D' }), verifySent ? t('verify_sent') : t('verify_email')),
-  authUser && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setAccountView('password'),
-    style: { ...S.menuItem, display: 'flex', alignItems: 'center', gap: 10 }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'lock' }), t('change_password')),
-  authUser && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setAccountView('delete'),
-    style: { ...S.menuItem, color: '#FF5252', display: 'flex', alignItems: 'center', gap: 10 }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'trash', color: '#FF5252' }), t('delete_account')),
-  authUser && /*#__PURE__*/React.createElement("button", {
-    onClick: logout,
-    style: {
-      ...S.menuItem,
-      color: '#FF5252', display: 'flex', alignItems: 'center', gap: 10
-    }
-  }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'logout', color: '#FF5252' }), t('logout')), /*#__PURE__*/React.createElement("button", {
-    onClick: onClose,
-    style: {
-      ...S.modalCancel,
-      marginTop: 8
-    }
-  }, t('close')), /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: 'center',
-      color: '#444',
-      fontSize: 11,
-      marginTop: 14
-    }
-  }, "APEX v", APP_VERSION),
-  /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'center', gap: 16, marginTop: 8, marginBottom: 4 } },
-    /*#__PURE__*/React.createElement("a", { href: CURRENT_LANG === 'en' ? 'privacy-en.html' : 'privacy.html', target: '_blank', style: { fontSize: 11, color: '#555', textDecoration: 'none' } }, t('privacy_link')),
-    /*#__PURE__*/React.createElement("span", { style: { color: '#333' } }, '·'),
-    /*#__PURE__*/React.createElement("a", { href: CURRENT_LANG === 'en' ? 'terms-en.html' : 'terms.html', target: '_blank', style: { fontSize: 11, color: '#555', textDecoration: 'none' } }, t('terms_link')),
-    /*#__PURE__*/React.createElement("span", { style: { color: '#333' } }, '·'),
-    /*#__PURE__*/React.createElement("a", { href: CURRENT_LANG === 'en' ? 'support-en.html' : 'support.html', target: '_blank', style: { fontSize: 11, color: '#555', textDecoration: 'none' } }, t('support_link')))),
+        }, /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 3, left: timerSettings.vibrate ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff' } })))))),
+
+  // ═════════ BACK BUTTON (all sub-views) ═════════
+  menuView !== 'main' && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMenuView('main'),
+    style: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px', marginTop: 14, background: '#141414', border: '1px solid #262626', color: '#eee', fontSize: 13, fontWeight: 800, letterSpacing: 1, borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', transform: swipeDx > 0 ? 'translateX(' + Math.min(swipeDx, 200) + 'px)' : 'none', transition: swipeDx > 0 ? 'none' : 'transform 0.25s cubic-bezier(0.16,1,0.3,1)', opacity: swipeDx > 0 ? Math.max(0.3, 1 - swipeDx / 300) : 1 }
+  }, /*#__PURE__*/React.createElement("svg", { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: '#eee', strokeWidth: 2, strokeLinecap: 'round' }, /*#__PURE__*/React.createElement("polyline", { points: "15 18 9 12 15 6" })), t('settings_back_to_menu')),
+
   showAvatars && /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: e => { if (e.target === e.currentTarget) setShowAvatars(false); } },
     /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxWidth: 300, padding: 16 } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 800, textAlign: 'center', marginBottom: 14 } }, t('avatar_pick')),
