@@ -5629,7 +5629,16 @@ function FriendsTab({
 
   return /*#__PURE__*/React.createElement("div", {
     style: S.screen
-  }, /*#__PURE__*/React.createElement("div", {
+  }, loading ? /*#__PURE__*/React.createElement(React.Fragment, null,
+    /*#__PURE__*/React.createElement("div", { style: S.header },
+      /*#__PURE__*/React.createElement("div", { style: { ...SK_BG, width: 100, height: 16, borderRadius: 6 } }),
+      /*#__PURE__*/React.createElement("div", { style: { ...SK_BG, width: 50, height: 28, borderRadius: 8 } })),
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 6, padding: '0 16px', marginBottom: 16 } },
+      /*#__PURE__*/React.createElement("div", { style: { ...SK_BG, flex: 1, height: 36, borderRadius: 10 } }),
+      /*#__PURE__*/React.createElement("div", { style: { ...SK_BG, flex: 1, height: 36, borderRadius: 10 } }),
+      /*#__PURE__*/React.createElement("div", { style: { ...SK_BG, flex: 1, height: 36, borderRadius: 10 } })),
+    /*#__PURE__*/React.createElement(SkeletonFeed, { rows: 5 })
+  ) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.header
   }, /*#__PURE__*/React.createElement("div", {
     style: S.gymSelectorName
@@ -5834,7 +5843,7 @@ function FriendsTab({
       }
       setPokeTarget(null);
     }
-  })));
+  }))));
 }
 
 // Avatar bileşeni
@@ -6231,14 +6240,7 @@ function FeedView({
     }));
   };
   if (items === null) {
-    return /*#__PURE__*/React.createElement("div", {
-      style: {
-        textAlign: 'center',
-        color: '#555',
-        marginTop: 40,
-        fontSize: 13
-      }
-    }, t('feed_loading'));
+    return /*#__PURE__*/React.createElement(SkeletonFeed, { rows: 4 });
   }
   if (items.length === 0) {
     return /*#__PURE__*/React.createElement("div", {
