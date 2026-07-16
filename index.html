@@ -1269,7 +1269,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.61'; // PNG ikon (eski iOS uyumlu)
+const APP_VERSION = '5.9.62'; // A: insight SVG icons, B: bottom nav dot+glow+SVG, E: pull-to-refresh
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -2106,7 +2106,10 @@ const APEX_ICON_PATHS = {
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-4.3-4.3',
   check: 'M20 6L9 17l-5-5',
   chevronRight: 'M9 18l6-6-6-6',
-  clipboard: 'M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1zM8 6H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-2M9 11h6M9 15h4'
+  clipboard: 'M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1zM8 6H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-2M9 11h6M9 15h4',
+  alert: 'M12 9v4M12 17h.01M10.3 3.2L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.2a2 2 0 00-3.4 0z',
+  trending: 'M22 7l-8.5 8.5-5-5L2 17M16 7h6v6',
+  lightbulb: 'M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17a1 1 0 001 1h6a1 1 0 001-1v-2.3A7 7 0 0012 2z'
 };
 const SK_BG = { background: 'linear-gradient(90deg,#161616 25%,#232323 50%,#161616 75%)', backgroundSize: '200% 100%', animation: 'apexShimmer 1.4s infinite' };
 function SkeletonFeed({ rows }) {
@@ -7122,6 +7125,15 @@ function App() {
       setTab(target);
     }
   };
+  // Pull-to-refresh
+  const [ptrPull, setPtrPull] = useState(0);
+  const [ptrRefreshing, setPtrRefreshing] = useState(false);
+  const ptrStart = useRef(null);
+  const ptrThreshold = 70;
+  const onPtrTouchStart = e => { if (window.scrollY <= 0 && !ptrRefreshing) ptrStart.current = e.touches[0].clientY; else ptrStart.current = null; };
+  const onPtrTouchMove = e => { if (ptrStart.current === null) return; const dy = Math.max(0, e.touches[0].clientY - ptrStart.current); setPtrPull(Math.min(dy * 0.5, 80)); };
+  const onPtrTouchEnd = () => { if (ptrPull >= ptrThreshold && !ptrRefreshing) { setPtrRefreshing(true); setPtrPull(50); setResetSignals(prev => ({ ...prev, [tab]: prev[tab] + 1 })); setTimeout(() => { setPtrRefreshing(false); setPtrPull(0); }, 1000); } else { setPtrPull(0); } ptrStart.current = null; };
+
   const [authUser, setAuthUser] = useState(undefined); // undefined = yükleniyor, null = giriş yok, obj = giriş var
   const [myUsername, setMyUsername] = useState(undefined); // undefined = bilinmiyor, null = yok (seçilmeli), string = var
   const [gyms, setGyms] = useState(loadGyms);
@@ -7266,8 +7278,19 @@ function App() {
   // Giriş yapılmış (veya offline mod) → uygulama
   // key={activeGymId} → salon değişince sekmeler komple yeniden yüklenir (temiz veri)
   return /*#__PURE__*/React.createElement("div", {
-    style: S.app
+    style: S.app,
+    onTouchStart: onPtrTouchStart,
+    onTouchMove: onPtrTouchMove,
+    onTouchEnd: onPtrTouchEnd
+  }, (ptrPull > 0 || ptrRefreshing) && /*#__PURE__*/React.createElement("div", {
+    style: { height: ptrPull, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 8, overflow: 'hidden', transition: ptrRefreshing ? 'height 0.3s ease' : 'none' }
   }, /*#__PURE__*/React.createElement("div", {
+    style: { opacity: Math.min(1, ptrPull / ptrThreshold), transform: 'scale(' + Math.min(1, ptrPull / ptrThreshold) + ') rotate(' + (ptrRefreshing ? '0' : (ptrPull * 3)) + 'deg)', transition: ptrRefreshing ? 'none' : 'transform 0.05s ease' }
+  }, /*#__PURE__*/React.createElement("svg", { width: 28, height: 28, viewBox: '0 0 180 180', className: ptrRefreshing ? 'spin' : '' },
+    /*#__PURE__*/React.createElement("path", { d: 'M38 145 L90 38 L142 145 L114 145 L90 80 L66 145 Z', fill: 'var(--accent)' }))),
+  ptrPull >= ptrThreshold && !ptrRefreshing && /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 9, fontWeight: 800, letterSpacing: 3, color: '#555', marginTop: 4 }
+  }, "APEX")), /*#__PURE__*/React.createElement("div", {
     key: tab,
     style: { ...S.content, animation: 'apexPageIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)' }
   }, tab === 'workout' && /*#__PURE__*/React.createElement(WorkoutTab, {
@@ -7657,38 +7680,22 @@ function BottomTabs({
   tab,
   onChange
 }) {
-  return /*#__PURE__*/React.createElement("div", {
-    style: S.tabBar
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => onChange('workout'),
-    style: {
-      ...S.tabBtn,
-      color: tab === 'workout' ? '#fff' : '#555'
+  const navBtn = (id, icon, label) => {
+    const active = tab === id;
+    return /*#__PURE__*/React.createElement("button", {
+      onClick: () => onChange(id),
+      style: { ...S.tabBtn, color: active ? '#fff' : '#555', position: 'relative' },
+      className: "tab-btn"
     },
-    className: "tab-btn"
-  }, /*#__PURE__*/React.createElement(Icon.Dumbbell, null), /*#__PURE__*/React.createElement("span", {
-    style: S.tabLabel
-  }, t('tab_workout'))), /*#__PURE__*/React.createElement("button", {
-    onClick: () => onChange('progress'),
-    style: {
-      ...S.tabBtn,
-      color: tab === 'progress' ? '#fff' : '#555'
-    },
-    className: "tab-btn"
-  }, /*#__PURE__*/React.createElement(Icon.Chart, null), /*#__PURE__*/React.createElement("span", {
-    style: S.tabLabel
-  }, t('tab_progress'))), /*#__PURE__*/React.createElement("button", {
-    onClick: () => onChange('friends'),
-    style: {
-      ...S.tabBtn,
-      color: tab === 'friends' ? '#fff' : '#555'
-    },
-    className: "tab-btn"
-  }, /*#__PURE__*/React.createElement("span", {
-    style: { fontSize: 20, lineHeight: 1 }
-  }, "👥"), /*#__PURE__*/React.createElement("span", {
-    style: S.tabLabel
-  }, t('tab_friends'))));
+    active && /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', width: 48, height: 12, background: 'radial-gradient(ellipse,rgba(var(--accent-rgb),0.18),transparent)', borderRadius: '50%', pointerEvents: 'none' } }),
+    /*#__PURE__*/React.createElement(ApexIcon, { name: icon, size: 21, color: active ? 'var(--accent)' : '#555', strokeWidth: 2.2, style: { display: 'block' } }),
+    /*#__PURE__*/React.createElement("span", { style: { ...S.tabLabel, color: active ? 'var(--accent)' : '#555' } }, label),
+    active && /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', bottom: -2, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px rgba(var(--accent-rgb),0.6)' } }));
+  };
+  return /*#__PURE__*/React.createElement("div", { style: S.tabBar },
+    navBtn('workout', 'dumbbell', t('tab_workout')),
+    navBtn('progress', 'chart', t('tab_progress')),
+    navBtn('friends', 'users', t('tab_friends')));
 }
 
 // ═══════════════════════════════════════════
@@ -8967,7 +8974,7 @@ function computeInsights(data) {
   });
   if (neglected) {
     const nName = neglected.muscle.charAt(0).toUpperCase() + neglected.muscle.slice(1);
-    insights.push({ type: 'warn', icon: '⚠️', key: 'insight_neglect', vars: { muscle: nName, weeks: Math.floor(neglected.days / 7) } });
+    insights.push({ type: 'warn', icon: 'alert', key: 'insight_neglect', vars: { muscle: nName, weeks: Math.floor(neglected.days / 7) } });
   }
 
   // 2) EN HIZLI GELİŞEN: son 30 günde en çok ağırlık artışı olan egzersiz (rekor bazlı)
@@ -8984,7 +8991,7 @@ function computeInsights(data) {
     if (gain > 0 && (!fastest || gain > fastest.gain)) fastest = { ex, gain };
   });
   if (fastest && fastest.gain >= 2.5) {
-    insights.push({ type: 'good', icon: '📈', key: 'insight_fastest', vars: { ex: fastest.ex, gain: wFmt(fastest.gain), unit: wUnit() } });
+    insights.push({ type: 'good', icon: 'trending', key: 'insight_fastest', vars: { ex: fastest.ex, gain: wFmt(fastest.gain), unit: wUnit() } });
   }
 
   // 3) EN GÜÇLÜ/BASKIN KAS: toplam hacimde en büyük paya sahip kas grubu
@@ -9002,7 +9009,7 @@ function computeInsights(data) {
   if (top && totalVol > 0) {
     const pct = Math.round(top.v / totalVol * 100);
     const mName = top.m.charAt(0).toUpperCase() + top.m.slice(1);
-    if (pct >= 15) insights.push({ type: 'info', icon: '💪', key: 'insight_dominant', vars: { muscle: mName, pct } });
+    if (pct >= 15) insights.push({ type: 'info', icon: 'muscle', key: 'insight_dominant', vars: { muscle: mName, pct } });
   }
 
   return insights.slice(0, 3);
@@ -9223,13 +9230,14 @@ function HomeView({
       if (!insights.length) return null;
       const colors = { warn: { c: '#FFA726', bg: 'rgba(255,167,38,0.07)', bd: 'rgba(255,167,38,0.22)' }, good: { c: '#4CAF50', bg: 'rgba(76,175,80,0.07)', bd: 'rgba(76,175,80,0.22)' }, info: { c: 'var(--accent-light)', bg: 'rgba(var(--accent-rgb),0.07)', bd: 'rgba(var(--accent-rgb),0.22)' } };
       return /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, letterSpacing: 1, color: '#888', fontWeight: 700, marginBottom: 9, paddingLeft: 2 } }, '💡 ' + t('insights_title')),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, letterSpacing: 1, color: '#888', fontWeight: 700, marginBottom: 9, paddingLeft: 2, display: 'flex', alignItems: 'center', gap: 5 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'lightbulb', size: 13, color: '#888', strokeWidth: 2 }), t('insights_title')),
         insights.map((ins, i) => {
           const col = colors[ins.type] || colors.info;
           return /*#__PURE__*/React.createElement("div", {
             key: i,
             style: { display: 'flex', gap: 9, alignItems: 'center', background: col.bg, border: '1px solid ' + col.bd, borderRadius: 11, padding: '11px 12px', marginBottom: 8 }
-          }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 15, flexShrink: 0 } }, ins.icon),
+          }, /*#__PURE__*/React.createElement("div", { style: { width: 32, height: 32, borderRadius: 9, background: col.bg, border: '1px solid ' + col.bd, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
+               /*#__PURE__*/React.createElement(ApexIcon, { name: ins.icon, size: 16, color: col.c, strokeWidth: 2.2 })),
              /*#__PURE__*/React.createElement("div", { style: { color: col.c, fontSize: 12.5, fontWeight: 700, lineHeight: 1.35 } }, t(ins.key, ins.vars)));
         }));
     })(), weeklyUnseen && /*#__PURE__*/React.createElement("button", {
