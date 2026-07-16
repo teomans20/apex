@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.67'; // Fix: missing icons (lock/globe/mail), BACK button inside modal
+const APP_VERSION = '5.9.68'; // Settings V2 premium: each section = card with title + grouped rows (grouped cards)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -11077,6 +11077,50 @@ function hexRgbStr(hex) {
   return c.r + ',' + c.g + ',' + c.b;
 }
 
+// V2: section card wrapper — each section is its own card with title + rows inside
+function MenuSectionV2({ title, sectionIcon, danger, items }) {
+  const validItems = items.filter(Boolean);
+  if (validItems.length === 0) return null;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: 'linear-gradient(180deg,#0f0f0f,#0b0b0b)',
+      border: '1px solid ' + (danger ? 'rgba(244,67,54,0.15)' : '#1a1a1a'),
+      borderRadius: 16,
+      marginBottom: 12,
+      overflow: 'hidden',
+      position: 'relative'
+    }
+  },
+    /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)', pointerEvents: 'none' } }),
+    title && /*#__PURE__*/React.createElement("div", { style: { padding: '12px 14px 8px', display: 'flex', alignItems: 'center', gap: 8 } },
+      sectionIcon && /*#__PURE__*/React.createElement(ApexIcon, { name: sectionIcon, size: 12, color: danger ? '#f44336' : 'var(--accent)', strokeWidth: 2, style: { opacity: 0.6 } }),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, letterSpacing: 1.8, color: danger ? '#f44336' : '#888', textTransform: 'uppercase' } }, title)
+    ),
+    validItems.map((it, i) => /*#__PURE__*/React.createElement("button", {
+      key: i,
+      onClick: it.onClick,
+      disabled: it.disabled,
+      style: {
+        display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', width: '100%',
+        background: 'transparent', border: 'none',
+        borderTop: i > 0 ? '1px solid #131313' : 'none',
+        color: it.danger ? '#f44336' : '#fff',
+        cursor: it.disabled ? 'default' : 'pointer',
+        fontFamily: 'inherit', textAlign: 'left',
+        opacity: it.disabled ? 0.55 : 1
+      }
+    },
+      /*#__PURE__*/React.createElement("div", {
+        style: { width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: 'rgba(' + hexRgbStr(it.iconColor) + ',0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+      }, /*#__PURE__*/React.createElement(ApexIcon, { name: it.icon, size: 14, color: it.iconColor || 'var(--accent)', strokeWidth: 2 })),
+      /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, fontWeight: 600, letterSpacing: '-0.1px' } }, it.title),
+        it.subtitle && /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, color: it.danger ? '#f4433680' : '#666', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, it.subtitle)),
+      it.value && /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#888', fontWeight: 700, padding: '3px 8px', background: '#161616', borderRadius: 6, flexShrink: 0 } }, it.value),
+      /*#__PURE__*/React.createElement("div", { style: { color: '#333', fontSize: 14, flexShrink: 0 } }, '›')))
+  );
+}
+
 function MenuModal({
   onClose,
   onExport,
@@ -11228,85 +11272,93 @@ function MenuModal({
   menuView === 'main' && /*#__PURE__*/React.createElement(React.Fragment, null,
 
     // ─── HESAP ───
-    authUser && /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#555', fontWeight: 800, letterSpacing: 1.5, margin: '4px 2px 8px' } }, t('account_section').toUpperCase()),
-    authUser && !emailVerified && /*#__PURE__*/React.createElement(MenuItemA, {
-      icon: 'mail', iconColor: '#4A90E2',
-      title: verifySent ? t('verify_sent') : t('verify_email'),
-      subtitle: authUser.email,
-      onClick: sendVerify,
-      disabled: verifySent
-    }),
-    authUser && /*#__PURE__*/React.createElement(MenuItemA, {
-      icon: 'lock', iconColor: '#FF9800',
-      title: t('change_password'),
-      onClick: () => setAccountView('password')
+    authUser && /*#__PURE__*/React.createElement(MenuSectionV2, {
+      title: t('account_section'),
+      sectionIcon: 'lock',
+      items: [
+        (!emailVerified) && {
+          icon: 'mail', iconColor: '#4A90E2',
+          title: verifySent ? t('verify_sent') : t('verify_email'),
+          subtitle: authUser.email,
+          onClick: sendVerify,
+          disabled: verifySent
+        },
+        {
+          icon: 'lock', iconColor: '#FF9800',
+          title: t('change_password'),
+          onClick: () => setAccountView('password')
+        }
+      ]
     }),
 
     // ─── GÖRÜNÜM ───
-    /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#555', fontWeight: 800, letterSpacing: 1.5, margin: '14px 2px 8px' } }, t('section_appearance').toUpperCase()),
-    /*#__PURE__*/React.createElement(MenuItemA, {
-      icon: 'muscle', iconColor: 'var(--accent)',
-      title: t('theme'),
-      value: t('theme_' + loadTheme()),
-      onClick: () => setMenuView('theme')
-    }),
-    onChangeLang && /*#__PURE__*/React.createElement(MenuItemA, {
-      icon: 'globe', iconColor: '#4CAF50',
-      title: t('language'),
-      value: currentLang === 'en' ? 'EN' : 'TR',
-      onClick: () => setMenuView('lang')
-    }),
-    onChangeUnit && /*#__PURE__*/React.createElement(MenuItemA, {
-      icon: 'ruler', iconColor: '#A78BFA',
-      title: t('units'),
-      value: currentUnit === 'imperial' ? 'lb / in' : 'kg / cm',
-      onClick: () => setMenuView('unit')
+    /*#__PURE__*/React.createElement(MenuSectionV2, {
+      title: t('section_appearance'),
+      sectionIcon: 'globe',
+      items: [
+        {
+          icon: 'muscle', iconColor: 'var(--accent)',
+          title: t('theme'),
+          value: t('theme_' + loadTheme()),
+          onClick: () => setMenuView('theme')
+        },
+        onChangeLang && {
+          icon: 'globe', iconColor: '#4CAF50',
+          title: t('language'),
+          value: currentLang === 'en' ? 'EN' : 'TR',
+          onClick: () => setMenuView('lang')
+        },
+        onChangeUnit && {
+          icon: 'ruler', iconColor: '#A78BFA',
+          title: t('units'),
+          value: currentUnit === 'imperial' ? 'lb / in' : 'kg / cm',
+          onClick: () => setMenuView('unit')
+        }
+      ]
     }),
 
     // ─── ANTRENMAN ───
-    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#555', fontWeight: 800, letterSpacing: 1.5, margin: '14px 2px 8px' } }, t('section_workout').toUpperCase()),
-    timerSettings && onTimerSettingsChange && /*#__PURE__*/React.createElement(MenuItemA, {
-      icon: 'clock', iconColor: '#FFB74D',
-      title: t('timer_title'),
-      subtitle: timerSettings.enabled ? (timerSettings.defaultSec + 's' + (timerSettings.vibrate ? ' • ' + t('timer_vibrate').toLowerCase() : '')) : t('closed_status') || 'Kapalı',
-      onClick: () => setMenuView('timer')
+    (timerSettings && onTimerSettingsChange) && /*#__PURE__*/React.createElement(MenuSectionV2, {
+      title: t('section_workout'),
+      sectionIcon: 'muscle',
+      items: [{
+        icon: 'clock', iconColor: '#FFB74D',
+        title: t('timer_title'),
+        subtitle: timerSettings.enabled ? (timerSettings.defaultSec + 's' + (timerSettings.vibrate ? ' • ' + t('timer_vibrate').toLowerCase() : '')) : t('closed_status'),
+        onClick: () => setMenuView('timer')
+      }]
     }),
 
     // ─── VERİ ───
-    /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#555', fontWeight: 800, letterSpacing: 1.5, margin: '14px 2px 8px' } }, t('section_data').toUpperCase()),
-    /*#__PURE__*/React.createElement(MenuItemA, {
-      icon: 'export', iconColor: '#78909C',
-      title: t('export_backup'),
-      onClick: onExport
-    }),
-    /*#__PURE__*/React.createElement(MenuItemA, {
-      icon: 'import', iconColor: '#78909C',
-      title: t('import_backup'),
-      onClick: onImport
+    /*#__PURE__*/React.createElement(MenuSectionV2, {
+      title: t('section_data'),
+      sectionIcon: 'clipboard',
+      items: [
+        { icon: 'export', iconColor: '#78909C', title: t('export_backup'), onClick: onExport },
+        { icon: 'import', iconColor: '#78909C', title: t('import_backup'), onClick: onImport }
+      ]
     }),
 
     // ─── HAKKINDA ───
-    onReopenOnboarding && /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#555', fontWeight: 800, letterSpacing: 1.5, margin: '14px 2px 8px' } }, t('section_about').toUpperCase()),
-    onReopenOnboarding && /*#__PURE__*/React.createElement(MenuItemA, {
-      icon: 'info', iconColor: '#999',
-      title: t('show_intro'),
-      onClick: () => { onClose(); setTimeout(() => onReopenOnboarding(), 60); }
+    onReopenOnboarding && /*#__PURE__*/React.createElement(MenuSectionV2, {
+      title: t('section_about'),
+      sectionIcon: 'info',
+      items: [{
+        icon: 'info', iconColor: '#999',
+        title: t('show_intro'),
+        onClick: () => { onClose(); setTimeout(() => onReopenOnboarding(), 60); }
+      }]
     }),
 
     // ─── TEHLİKELİ BÖLGE ───
-    authUser && /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#f44336', fontWeight: 800, letterSpacing: 1.5, margin: '14px 2px 8px' } }, t('section_danger').toUpperCase()),
-    authUser && /*#__PURE__*/React.createElement(MenuItemA, {
-      icon: 'logout', iconColor: '#f44336',
-      title: t('logout'),
+    authUser && /*#__PURE__*/React.createElement(MenuSectionV2, {
+      title: t('section_danger'),
+      sectionIcon: 'alert',
       danger: true,
-      onClick: logout
-    }),
-    authUser && /*#__PURE__*/React.createElement(MenuItemA, {
-      icon: 'trash', iconColor: '#f44336',
-      title: t('delete_account'),
-      subtitle: t('delete_account_warn').split('.')[0],
-      danger: true,
-      onClick: () => setAccountView('delete')
+      items: [
+        { icon: 'logout', iconColor: '#f44336', title: t('logout'), danger: true, onClick: logout },
+        { icon: 'trash', iconColor: '#f44336', title: t('delete_account'), subtitle: t('delete_account_warn').split('.')[0], danger: true, onClick: () => setAccountView('delete') }
+      ]
     }),
 
     // ─── Footer ───
