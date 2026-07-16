@@ -136,6 +136,10 @@
   @keyframes calSlideOutR { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(30px); opacity: 0; } }
   @keyframes calSlideInR { 0% { transform: translateX(30px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
   @keyframes calSlideInL { 0% { transform: translateX(-30px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+  @keyframes prMedalSpin { to { transform: rotate(360deg); } }
+  @keyframes prMedalIn { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes prRayOut { 0% { opacity: 0; height: 0; } 30% { opacity: 1; height: 110px; } 100% { opacity: 0; height: 130px; } }
+  @keyframes prTextUp { 0% { transform: translateY(24px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
   .apex-page-anim { animation: apexPageIn 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
   /* Kart giriş animasyonu (liste elemanları) */
   @keyframes apexCardIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -1275,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.63'; // Feed skeleton, Friends full skeleton, calendar today pulse + swipe
+const APP_VERSION = '5.9.64'; // PR celebration V1 GRAND: rays + spinning medal + bounce text
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -2764,7 +2768,7 @@ function PRCelebration({
 }) {
   useEffect(() => {
     haptic([50, 50, 100]);
-    const t = setTimeout(onClose, 3000);
+    const t = setTimeout(onClose, 3500);
     return () => clearTimeout(t);
   }, [onClose]);
   const isTop = type === 'top';
@@ -2773,20 +2777,36 @@ function PRCelebration({
     className: "pr-overlay",
     onClick: onClose,
     style: S.prOverlay
-  }, /*#__PURE__*/React.createElement(Confetti, null), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(Confetti, null),
+  /*#__PURE__*/React.createElement("div", {
+    style: { position: 'absolute', top: '38%', left: '50%', transform: 'translate(-50%, -50%)', width: 0, height: 0, pointerEvents: 'none' }
+  }, Array.from({ length: 12 }).map((_, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: { position: 'absolute', top: 0, left: 0, width: 2, height: 0, background: 'linear-gradient(180deg,#FFD700,transparent)', transformOrigin: 'top center', transform: 'translate(-50%,0) rotate(' + (i * 30) + 'deg)', opacity: 0, animation: 'prRayOut 0.9s cubic-bezier(0.16,1,0.3,1) ' + (0.2 + i * 0.02) + 's forwards' }
+  }))),
+  /*#__PURE__*/React.createElement("div", {
     className: "pr-content",
     style: S.prContent
   }, /*#__PURE__*/React.createElement("div", {
-    style: S.prStar
-  }, "★"), /*#__PURE__*/React.createElement("div", {
-    style: S.prTitle
+    style: { width: 130, height: 130, margin: '0 auto 20px', position: 'relative', animation: 'prMedalIn 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.3s both' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { position: 'absolute', inset: 0, borderRadius: '50%', background: 'conic-gradient(from 0deg,#FFD700,#FF9800,#FFD700,#FF9800,#FFD700)', animation: 'prMedalSpin 4s linear infinite', padding: 4 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { width: '100%', height: '100%', borderRadius: '50%', background: 'linear-gradient(135deg,#141414,#0a0a0a)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 20px rgba(255,215,0,0.15)' }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: 60, height: 60, viewBox: '0 0 24 24', fill: '#FFD700'
+  }, /*#__PURE__*/React.createElement("path", { d: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' }))))),
+  /*#__PURE__*/React.createElement("div", {
+    style: { animation: 'prTextUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.8s both' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { ...S.prTitle, fontSize: 36 }
   }, title), /*#__PURE__*/React.createElement("div", {
     style: S.prExercise
   }, exerciseName), /*#__PURE__*/React.createElement("div", {
     style: S.prValue
   }, wFmt(weight), wUnit() + " × ", reps), /*#__PURE__*/React.createElement("div", {
     style: S.prHint
-  }, t('tap_to_continue'))));
+  }, t('tap_to_continue')))));
 }
 
 // ═══════════════════════════════════════════
