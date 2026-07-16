@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.66'; // Settings sub-views: swipe-right to go back + "Ayarlara Dön" bottom button
+const APP_VERSION = '5.9.67'; // Fix: missing icons (lock/globe/mail), BACK button inside modal
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -2123,7 +2123,10 @@ const APEX_ICON_PATHS = {
   clipboard: 'M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1zM8 6H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-2M9 11h6M9 15h4',
   alert: 'M12 9v4M12 17h.01M10.3 3.2L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.2a2 2 0 00-3.4 0z',
   trending: 'M22 7l-8.5 8.5-5-5L2 17M16 7h6v6',
-  lightbulb: 'M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17a1 1 0 001 1h6a1 1 0 001-1v-2.3A7 7 0 0012 2z'
+  lightbulb: 'M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17a1 1 0 001 1h6a1 1 0 001-1v-2.3A7 7 0 0012 2z',
+  lock: 'M5 11h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zM7 11V7a5 5 0 0 1 10 0v4',
+  globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18',
+  mail: 'M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM3 7l9 6 9-6'
 };
 const SK_BG = { background: 'linear-gradient(90deg,#161616 25%,#232323 50%,#161616 75%)', backgroundSize: '200% 100%', animation: 'apexShimmer 1.4s infinite' };
 function SkeletonFeed({ rows }) {
@@ -11372,13 +11375,13 @@ function MenuModal({
         /*#__PURE__*/React.createElement("div", {
           onClick: () => onTimerSettingsChange({ ...timerSettings, vibrate: !timerSettings.vibrate }),
           style: { width: 44, height: 26, borderRadius: 13, background: timerSettings.vibrate ? 'var(--accent)' : '#2a2a2a', position: 'relative', flexShrink: 0, cursor: 'pointer' }
-        }, /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 3, left: timerSettings.vibrate ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff' } })))))),
+        }, /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 3, left: timerSettings.vibrate ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff' } }))))),
 
   // ═════════ BACK BUTTON (all sub-views) ═════════
   menuView !== 'main' && /*#__PURE__*/React.createElement("button", {
     onClick: () => setMenuView('main'),
     style: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px', marginTop: 14, background: '#141414', border: '1px solid #262626', color: '#eee', fontSize: 13, fontWeight: 800, letterSpacing: 1, borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', transform: swipeDx > 0 ? 'translateX(' + Math.min(swipeDx, 200) + 'px)' : 'none', transition: swipeDx > 0 ? 'none' : 'transform 0.25s cubic-bezier(0.16,1,0.3,1)', opacity: swipeDx > 0 ? Math.max(0.3, 1 - swipeDx / 300) : 1 }
-  }, /*#__PURE__*/React.createElement("svg", { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: '#eee', strokeWidth: 2, strokeLinecap: 'round' }, /*#__PURE__*/React.createElement("polyline", { points: "15 18 9 12 15 6" })), t('settings_back_to_menu')),
+  }, /*#__PURE__*/React.createElement("svg", { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: '#eee', strokeWidth: 2, strokeLinecap: 'round' }, /*#__PURE__*/React.createElement("polyline", { points: "15 18 9 12 15 6" })), t('settings_back_to_menu'))),
 
   showAvatars && /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: e => { if (e.target === e.currentTarget) setShowAvatars(false); } },
     /*#__PURE__*/React.createElement("div", { style: { ...S.modal, maxWidth: 300, padding: 16 } },
