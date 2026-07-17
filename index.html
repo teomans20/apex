@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.70'; // JournalDetailView premium: day gradient banner, SÜRE/SET/HACİM stats, TOP+BACK-OFF rekor cards, PR-colored stripes, T/B badge set list
+const APP_VERSION = '5.9.72'; // Revert JournalDetailView to original (v5.9.70 changes rolled back); DayDetailModal premium stays
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1441,7 +1441,7 @@ const I18N = {
     account_section: 'Hesap', verify_email: 'E-postanı doğrula', verify_sent: 'Doğrulama e-postası gönderildi', change_password: 'Şifre Değiştir', delete_account: 'Hesabı Sil',
     section_appearance: 'Görünüm', section_workout: 'Antrenman', section_data: 'Veri', section_about: 'Hakkında', section_danger: 'Tehlikeli Bölge',
     photo_setting: 'Profil Fotoğrafı', timer_setting_desc: 'Setler arası dinlenme', menu_back: 'Geri', closed_status: 'Kapalı', settings_back_to_menu: 'Ayarlara Dön',
-    minutes_short: 'dk', volume_cap: 'HACİM', workout_word: 'Antrenman', top_records_label: 'TOP', backoff_records_label: 'BACK-OFF', records_count: '{count} REKOR', first_short: 'İLK',
+    minutes_short: 'dk', volume_cap: 'HACİM', workout_word: 'Antrenman', top_records_label: 'TOP', backoff_records_label: 'BACK-OFF', records_count: '{count} REKOR', first_short: 'İLK', targets_hit_label: 'hedef tutturuldu',
     change_pass_desc: 'Güvenlik için mevcut şifreni gir, sonra yeni şifreni belirle.', current_password: 'Mevcut şifre', new_password: 'Yeni şifre (en az 6 karakter)',
     delete_account_warn: 'Bu işlem geri alınamaz. Hesabın, bulut verilerin, arkadaşlıkların ve kullanıcı adın kalıcı olarak silinir. Onaylamak için mevcut şifreni gir.', delete_account_confirm: 'HESABI KALICI OLARAK SİL',
     pass_changed: 'Şifre değiştirildi', pass_changed_desc: 'Yeni şifrenle giriş yapabilirsin.', err_enter_cur_pass: 'Mevcut şifreni gir', err_wrong_cur_pass: 'Mevcut şifre yanlış',
@@ -1711,7 +1711,7 @@ const I18N = {
     account_section: 'Account', verify_email: 'Verify your email', verify_sent: 'Verification email sent', change_password: 'Change Password', delete_account: 'Delete Account',
     section_appearance: 'Appearance', section_workout: 'Workout', section_data: 'Data', section_about: 'About', section_danger: 'Danger Zone',
     photo_setting: 'Profile Photo', timer_setting_desc: 'Rest between sets', menu_back: 'Back', closed_status: 'Off', settings_back_to_menu: 'Back to Settings',
-    minutes_short: 'min', volume_cap: 'VOLUME', workout_word: 'Workout', top_records_label: 'TOP', backoff_records_label: 'BACK-OFF', records_count: '{count} RECORDS', first_short: '1ST',
+    minutes_short: 'min', volume_cap: 'VOLUME', workout_word: 'Workout', top_records_label: 'TOP', backoff_records_label: 'BACK-OFF', records_count: '{count} RECORDS', first_short: '1ST', targets_hit_label: 'targets hit',
     change_pass_desc: 'For security, enter your current password, then set a new one.', current_password: 'Current password', new_password: 'New password (min 6 characters)',
     delete_account_warn: 'This cannot be undone. Your account, cloud data, friendships and username will be permanently deleted. Enter your current password to confirm.', delete_account_confirm: 'PERMANENTLY DELETE ACCOUNT',
     pass_changed: 'Password changed', pass_changed_desc: 'You can sign in with your new password.', err_enter_cur_pass: 'Enter your current password', err_wrong_cur_pass: 'Current password is incorrect',
@@ -2130,7 +2130,8 @@ const APEX_ICON_PATHS = {
   globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18',
   mail: 'M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM3 7l9 6 9-6',
   trophy: 'M8 21h8M12 17v4M17 4h4v3a4 4 0 0 1-4 4M7 4H3v3a4 4 0 0 0 4 4M6 4h12v6a6 6 0 0 1-12 0V4z',
-  book: 'M4 4h11a3 3 0 0 1 3 3v14a2 2 0 0 0-2-2H4V4zM4 4v16M4 20h13'
+  book: 'M4 4h11a3 3 0 0 1 3 3v14a2 2 0 0 0-2-2H4V4zM4 4v16M4 20h13',
+  target: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'
 };
 const SK_BG = { background: 'linear-gradient(90deg,#161616 25%,#232323 50%,#161616 75%)', backgroundSize: '200% 100%', animation: 'apexShimmer 1.4s infinite' };
 function SkeletonFeed({ rows }) {
@@ -3569,34 +3570,42 @@ function JournalDetailView({ entry, onBack }) {
     const isPRtop = s.prType === 'top';
     const isPRback = s.prType === 'backoff';
     const isDrop = s.delta && s.delta.dir === 'down';
-    const badgeText = s.isTop ? 'T' : (isPRback ? 'B' : String(idx + 1));
-    const badgeColor = s.isTop ? '#FFB74D' : (isPRback ? '#4A90E2' : '#777');
-    const badgeBg = s.isTop ? 'rgba(255,183,77,0.15)' : (isPRback ? 'rgba(74,144,226,0.15)' : '#1a1a1a');
-    const rowBg = (isPRtop || s.firstEver) ? 'linear-gradient(90deg,rgba(255,183,77,0.08),transparent 70%)'
-      : isPRback ? 'linear-gradient(90deg,rgba(74,144,226,0.08),transparent 70%)'
-      : '#0d0d0d';
-    const rowBorder = (isPRtop || s.firstEver) ? 'rgba(255,183,77,0.25)'
-      : isPRback ? 'rgba(74,144,226,0.25)'
-      : '#1a1a1a';
+    let borderColor = '#1a1a1a', bg = '#0c0c0c';
+    if (isPRtop || s.firstEver) { borderColor = '#FFB74D'; bg = 'linear-gradient(180deg,rgba(255,183,77,0.08),transparent)'; }
+    else if (isPRback) { borderColor = '#4A90E2'; bg = 'linear-gradient(180deg,rgba(74,144,226,0.08),transparent)'; }
+    else if (isDrop) { borderColor = 'rgba(var(--accent-rgb),0.3)'; }
+    else if (s.isTop) { borderColor = 'rgba(255,183,77,0.35)'; }
 
     return /*#__PURE__*/React.createElement("div", {
       key: idx,
-      style: { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', marginBottom: 5, borderRadius: 9, background: rowBg, border: '1px solid ' + rowBorder }
+      style: { flex: 1, minWidth: 'calc(50% - 4px)', background: bg, border: '1px solid ' + borderColor, borderRadius: 11, padding: '16px 8px 12px', textAlign: 'center', position: 'relative' }
     },
-      /*#__PURE__*/React.createElement("div", { style: { width: 20, height: 20, borderRadius: 5, background: badgeBg, color: badgeColor, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, badgeText),
-      /*#__PURE__*/React.createElement("div", { style: { flex: 1, fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 15, fontWeight: 800 } },
-        wFmt(s.weight),
-        /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666', fontWeight: 700, fontFamily: "'Manrope'" } }, wUnit()),
-        /*#__PURE__*/React.createElement("span", { style: { color: '#555', margin: '0 4px' } }, '×'),
-        s.reps),
-      s.firstEver && /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 6, background: 'rgba(76,175,80,0.12)', color: '#4CAF50', letterSpacing: 0.5 } }, t('first_short')),
-      (!s.firstEver && s.delta && s.delta.dir !== 'same') && /*#__PURE__*/React.createElement("span", {
-        style: { fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 6,
-          background: s.delta.dir === 'down' ? 'rgba(255,82,82,0.12)' : (isPRback ? 'rgba(74,144,226,0.12)' : 'rgba(76,175,80,0.12)'),
-          color: s.delta.dir === 'down' ? '#FF5252' : (isPRback ? '#4A90E2' : '#4CAF50') }
-      }, (s.delta.dir === 'down' ? '−' : '+') + (s.delta.type === 'kg' ? wFmt(s.delta.kg) : s.delta.reps + 'r')),
-      (isPRtop || s.firstEver) && /*#__PURE__*/React.createElement(ApexIcon, { name: 'trophy', size: 12, color: '#FFB74D', strokeWidth: 2.4 }),
-      isPRback && /*#__PURE__*/React.createElement(ApexIcon, { name: 'star', size: 12, color: '#4A90E2', strokeWidth: 2.2 }));
+    /*#__PURE__*/React.createElement("span", {
+      style: { position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', fontSize: 8, fontWeight: 800, padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap', background: s.isTop ? 'linear-gradient(135deg,#FFB74D,#F57C00)' : '#1e1e1e', color: s.isTop ? '#1a1a1a' : '#888' }
+    }, s.isTop ? 'TOP' : 'SET ' + (idx + 1)),
+    (isPRtop || s.firstEver) && /*#__PURE__*/React.createElement("span", { style: { position: 'absolute', top: 6, right: 6 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'medal', size: 14, color: '#FFB74D' })),
+    isPRback && /*#__PURE__*/React.createElement("span", { style: { position: 'absolute', top: 6, right: 6, display: 'flex' } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'star', size: 12, color: '#4A90E2', strokeWidth: 2.2 })),
+    /*#__PURE__*/React.createElement("div", {
+      style: { fontSize: 20, fontWeight: 800, marginTop: 6, fontFamily: "'Big Shoulders Display',sans-serif" }
+    }, wFmt(s.weight), /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: '#888', fontFamily: "'Manrope'" } }, wUnit())),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#999', marginTop: 2 } }, s.reps, ' tekrar'),
+    // karşılaştırma
+    s.firstEver ? /*#__PURE__*/React.createElement("div", {
+      style: { marginTop: 8, paddingTop: 8, borderTop: '1px solid #1a1a1a' }
+    }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#4CAF50', fontWeight: 800 } }, t('first_record')))
+    : s.prev ? /*#__PURE__*/React.createElement("div", {
+      style: { marginTop: 8, paddingTop: 8, borderTop: '1px solid #1a1a1a' }
+    },
+    /*#__PURE__*/React.createElement("div", {
+      style: { fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }
+    },
+    /*#__PURE__*/React.createElement("span", { style: { color: '#666' } }, s.prev.weight + '×' + s.prev.reps),
+    s.delta && s.delta.dir === 'same' ? /*#__PURE__*/React.createElement("span", { style: { color: '#666' } }, '=') : /*#__PURE__*/React.createElement("span", { style: { fontWeight: 800, color: s.delta && s.delta.dir === 'down' ? '#FF5252' : '#4CAF50' } }, '→'),
+    /*#__PURE__*/React.createElement("span", {
+      style: { fontWeight: 800, color: s.delta && s.delta.dir === 'same' ? '#888' : isPRback ? '#4A90E2' : (s.delta && s.delta.dir === 'down' ? '#fff' : '#FFB74D') }
+    }, s.delta && s.delta.dir === 'same' ? t('same_lower') : s.weight + '×' + s.reps)),
+    (s.delta && s.delta.dir !== 'same') && /*#__PURE__*/React.createElement("div", { style: { marginTop: 4 } }, gt(s.delta, s.prType)))
+    : null);
   };
 
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -3612,9 +3621,12 @@ function JournalDetailView({ entry, onBack }) {
     style: { width: 36, height: 36, borderRadius: 11, background: '#141414', border: '1px solid #262626', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 16, cursor: 'pointer' }
   }, '←'), /*#__PURE__*/React.createElement("span", { style: { fontSize: 13, color: '#888' } }, t('tab_journal_short'))),
   // hero
-  /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', marginBottom: 14 } },
+  /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', marginBottom: 18 } },
+    /*#__PURE__*/React.createElement("div", {
+      style: { display: 'inline-block', padding: '3px 12px', borderRadius: 20, fontSize: 10, fontWeight: 800, letterSpacing: 1, background: 'linear-gradient(135deg,' + entry.accent + ',' + entry.accent + '99)', marginBottom: 10 }
+    }, (entry.dayName || '').toUpperCase()),
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 32, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.day + ' ' + entry.monthFull.toUpperCase()),
-    /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, flexWrap: 'wrap' } },
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' } },
       /*#__PURE__*/React.createElement("span", null, entry.weekday),
       entry.timeRange && /*#__PURE__*/React.createElement(React.Fragment, null,
         /*#__PURE__*/React.createElement("span", { style: { color: '#555' } }, '·'),
@@ -3622,61 +3634,21 @@ function JournalDetailView({ entry, onBack }) {
         /*#__PURE__*/React.createElement("span", null, entry.timeRange)),
       entry.durationMin && /*#__PURE__*/React.createElement(React.Fragment, null,
         /*#__PURE__*/React.createElement("span", { style: { color: '#555' } }, '·'),
-        /*#__PURE__*/React.createElement("span", null, entry.durationMin + ' ' + t('minutes_short'))))),
-
-  // day-name gradient banner
-  /*#__PURE__*/React.createElement("div", {
-    style: { background: 'linear-gradient(135deg,' + entry.accent + ',' + entry.accent + 'aa)', borderRadius: 16, padding: '14px 16px', marginBottom: 14, position: 'relative', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }
-  },
-    /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)' } }),
-    /*#__PURE__*/React.createElement("div", { style: { fontSize: 20, fontWeight: 900, letterSpacing: 0.5, color: '#0d0a05', fontFamily: "'Big Shoulders Display',sans-serif" } }, (entry.dayName || t('workout_word')).toUpperCase())),
-
-  // stat row (SÜRE/SET/HACİM) — 3 stats
-  /*#__PURE__*/React.createElement("div", { style: { display: 'flex', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: 14, padding: '12px 0', marginBottom: 14 } },
-    /*#__PURE__*/React.createElement("div", { style: { flex: 1, textAlign: 'center', borderRight: '1px solid #171717' } },
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.durationMin || '—', entry.durationMin && /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#888', fontFamily: "'Manrope'", fontWeight: 700 } }, 'dk')),
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#666', letterSpacing: 1.2, marginTop: 5, fontWeight: 800 } }, t('duration_cap'))),
-    /*#__PURE__*/React.createElement("div", { style: { flex: 1, textAlign: 'center', borderRight: '1px solid #171717' } },
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.totalSets),
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#666', letterSpacing: 1.2, marginTop: 5, fontWeight: 800 } }, 'SET')),
-    /*#__PURE__*/React.createElement("div", { style: { flex: 1, textAlign: 'center' } },
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, (entry.totalVolume / 1000).toFixed(1), /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#888', fontFamily: "'Manrope'", fontWeight: 700 } }, 't')),
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#666', letterSpacing: 1.2, marginTop: 5, fontWeight: 800 } }, t('volume_cap')))),
-  // ═══════════ REKOR KARTLARI ═══════════
-  entry.exercises.filter(e => e.topPR && !e.topPR.firstEver).length > 0 && /*#__PURE__*/React.createElement("div", {
-    style: { background: 'linear-gradient(180deg,#141414,#0d0d0d)', border: '1px solid #1e1e1e', borderRadius: 14, padding: '12px 12px 10px', marginBottom: 10, position: 'relative', overflow: 'hidden' }
-  },
-    /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,transparent,#FFB74D,transparent)' } }),
-    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 } },
-      /*#__PURE__*/React.createElement("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 800, letterSpacing: 1, background: 'rgba(255,183,77,0.15)', color: '#FFB74D', border: '1px solid rgba(255,183,77,0.3)' } },
-        /*#__PURE__*/React.createElement(ApexIcon, { name: 'trophy', size: 10, color: '#FFB74D', strokeWidth: 2.4 }),
-        t('top_records_label')),
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#888', fontWeight: 800, letterSpacing: 1 } }, t('records_count', { count: entry.exercises.filter(e => e.topPR && !e.topPR.firstEver).length }))),
-    ...entry.exercises.filter(e => e.topPR && !e.topPR.firstEver).map((e, i) => /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderTop: i > 0 ? '1px solid #171717' : 'none' }
-    },
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 12.5, fontWeight: 600 } }, e.name),
-      /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 15, fontWeight: 800, color: '#FFB74D' } },
-        wFmt(e.topPR.weight), /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666', fontWeight: 700, fontFamily: "'Manrope'" } }, wUnit() + ' × ' + e.topPR.reps))))),
-
-  entry.exercises.filter(e => e.backoffPR).length > 0 && /*#__PURE__*/React.createElement("div", {
-    style: { background: 'linear-gradient(180deg,#141414,#0d0d0d)', border: '1px solid #1e1e1e', borderRadius: 14, padding: '12px 12px 10px', marginBottom: 14, position: 'relative', overflow: 'hidden' }
-  },
-    /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,transparent,#4A90E2,transparent)' } }),
-    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 } },
-      /*#__PURE__*/React.createElement("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 800, letterSpacing: 1, background: 'rgba(74,144,226,0.15)', color: '#4A90E2', border: '1px solid rgba(74,144,226,0.3)' } },
-        /*#__PURE__*/React.createElement(ApexIcon, { name: 'star', size: 10, color: '#4A90E2', strokeWidth: 2.2 }),
-        t('backoff_records_label')),
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#888', fontWeight: 800, letterSpacing: 1 } }, t('records_count', { count: entry.exercises.filter(e => e.backoffPR).length }))),
-    ...entry.exercises.filter(e => e.backoffPR).map((e, i) => /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderTop: i > 0 ? '1px solid #171717' : 'none' }
-    },
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 12.5, fontWeight: 600 } }, e.name),
-      /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 15, fontWeight: 800, color: '#4A90E2' } },
-        wFmt(e.backoffPR.weight), /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666', fontWeight: 700, fontFamily: "'Manrope'" } }, wUnit() + ' × ' + e.backoffPR.reps))))),
-
+        /*#__PURE__*/React.createElement("span", null, entry.durationMin + ' dakika')))),
+  // stat row
+  /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginBottom: 18 } },
+    entry.durationMin && /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '12px 6px', textAlign: 'center' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.durationMin, /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: '#888', fontFamily: "'Manrope'" } }, 'dk')),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, t('duration_cap'))),
+    /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '12px 6px', textAlign: 'center' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.totalSets),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, 'SET')),
+    /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '12px 6px', textAlign: 'center' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.totalReps),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, 'TEKRAR')),
+    entry.prCount > 0 && /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '12px 6px', textAlign: 'center' } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 800, color: '#FFB74D', fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.prCount),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, t('records_label')))),
   // egzersiz kartları
   ...entry.exercises.map((ex, i) => {
     const chip = ex.topPR && !ex.topPR.firstEver && ex.backoffPR ? { icons: ['trophy', 'star'], txt: t('double_badge').replace(/[🏆⭐]/g, '').trim(), bg: 'linear-gradient(135deg,rgba(255,183,77,0.15),rgba(74,144,226,0.15))', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
@@ -3688,13 +3660,13 @@ function JournalDetailView({ entry, onBack }) {
       key: i,
       style: { position: 'relative', background: 'linear-gradient(180deg,#121212,#0b0b0b)', border: '1px solid #1e1e1e', borderRadius: 16, padding: '15px 15px 15px 22px', marginBottom: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.3)', overflow: 'hidden' }
     },
-    /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', left: 0, top: 12, bottom: 12, width: 4, borderRadius: 3, background: 'linear-gradient(180deg,' + (ex.topPR && !ex.topPR.firstEver ? '#FFB74D' : ex.backoffPR ? '#4A90E2' : entry.accent) + ',' + (ex.topPR && !ex.topPR.firstEver ? '#F57C00' : ex.backoffPR ? '#1E5F9E' : entry.accent + '66') + ')' } }),
+    /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', left: 0, top: 12, bottom: 12, width: 4, borderRadius: 3, background: 'linear-gradient(180deg,' + entry.accent + ',' + entry.accent + '66)' } }),
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 800, flex: 1, minWidth: 0 } }, ex.name),
       chip && /*#__PURE__*/React.createElement("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0, background: chip.bg, color: chip.c, border: '1px solid ' + chip.bc } },
         ...chip.icons.map((n, ii) => /*#__PURE__*/React.createElement(ApexIcon, { key: ii, name: n, size: 11, color: n === 'trophy' ? '#FFB74D' : '#4A90E2', strokeWidth: 2.2 })),
         chip.txt)),
-    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 0 } }, ...ex.sets.map((s, si) => renderSet(s, si))));
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, ...ex.sets.map((s, si) => renderSet(s, si))));
   }))), ReactDOM.createPortal(/*#__PURE__*/React.createElement("button", {
     onClick: handleShare,
     disabled: sharing,
@@ -4416,81 +4388,84 @@ function DayDetailModal({
     }, t('volume_label')))), (dayStats.topPRs.length > 0 || dayStats.backoffPRs.length > 0 || dayStats.targetsTotal > 0) && /*#__PURE__*/React.createElement("div", {
       style: S.dayDetailHighlights
     }, dayStats.topPRs.length > 0 && /*#__PURE__*/React.createElement("div", {
-      style: {
-        ...S.dayPRBlock,
-        background: 'rgba(255,215,0,0.08)',
-        borderColor: 'rgba(255,215,0,0.35)'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        ...S.dayPRBlockLabel,
-        color: '#FFD700'
-      }
-    }, "★ TOP REKORLAR (", dayStats.topPRs.length, ")"), dayStats.topPRs.map((pr, i) => /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: S.dayPRBlockRow
-    }, /*#__PURE__*/React.createElement("span", {
-      style: S.dayPRExName
-    }, pr.exercise), /*#__PURE__*/React.createElement("span", {
-      style: {
-        ...S.dayPRExVal,
-        color: '#FFD700'
-      }
-    }, wFmt(pr.weight), wUnit() + " × ", pr.reps)))), dayStats.backoffPRs.length > 0 && /*#__PURE__*/React.createElement("div", {
-      style: {
-        ...S.dayPRBlock,
-        background: 'rgba(192,192,192,0.06)',
-        borderColor: 'rgba(192,192,192,0.25)'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        ...S.dayPRBlockLabel,
-        color: '#C0C0C0'
-      }
-    }, "★ BACK-OFF REKORLAR (", dayStats.backoffPRs.length, ")"), dayStats.backoffPRs.map((pr, i) => /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: S.dayPRBlockRow
-    }, /*#__PURE__*/React.createElement("span", {
-      style: S.dayPRExName
-    }, pr.exercise), /*#__PURE__*/React.createElement("span", {
-      style: {
-        ...S.dayPRExVal,
-        color: '#C0C0C0'
-      }
-    }, wFmt(pr.weight), wUnit() + " × ", pr.reps)))), dayStats.targetsTotal > 0 && /*#__PURE__*/React.createElement("div", {
-      style: {
-        ...S.dayTargetChip,
-        background: dayStats.targetsHit === dayStats.targetsTotal ? 'rgba(76,175,80,0.12)' : '#1a1a1a',
-        borderColor: dayStats.targetsHit === dayStats.targetsTotal ? '#4CAF50' : '#2a2a2a',
-        color: dayStats.targetsHit === dayStats.targetsTotal ? '#4CAF50' : '#aaa'
-      }
-    }, "🎯 ", dayStats.targetsHit, "/", dayStats.targetsTotal, " hedef tutturuldu")), /*#__PURE__*/React.createElement("div", {
+      style: { background: 'linear-gradient(180deg,#141414,#0d0d0d)', border: '1px solid #1e1e1e', borderRadius: 14, padding: '12px 12px 10px', marginBottom: 8, position: 'relative', overflow: 'hidden' }
+    },
+      /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,transparent,#FFB74D,transparent)' } }),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 } },
+        /*#__PURE__*/React.createElement("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 800, letterSpacing: 1, background: 'rgba(255,183,77,0.15)', color: '#FFB74D', border: '1px solid rgba(255,183,77,0.3)' } },
+          /*#__PURE__*/React.createElement(ApexIcon, { name: 'trophy', size: 10, color: '#FFB74D', strokeWidth: 2.4 }),
+          t('top_records_label')),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#888', fontWeight: 800, letterSpacing: 1 } }, t('records_count', { count: dayStats.topPRs.length }))),
+      ...dayStats.topPRs.map((pr, i) => /*#__PURE__*/React.createElement("div", {
+        key: i,
+        style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderTop: i > 0 ? '1px solid #171717' : 'none' }
+      },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 12.5, fontWeight: 600 } }, pr.exercise),
+        /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 15, fontWeight: 800, color: '#FFB74D' } },
+          wFmt(pr.weight), /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666', fontWeight: 700, fontFamily: "'Manrope'" } }, wUnit() + ' × ' + pr.reps))))),
+    dayStats.backoffPRs.length > 0 && /*#__PURE__*/React.createElement("div", {
+      style: { background: 'linear-gradient(180deg,#141414,#0d0d0d)', border: '1px solid #1e1e1e', borderRadius: 14, padding: '12px 12px 10px', marginBottom: 8, position: 'relative', overflow: 'hidden' }
+    },
+      /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,transparent,#4A90E2,transparent)' } }),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 } },
+        /*#__PURE__*/React.createElement("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 9, fontWeight: 800, letterSpacing: 1, background: 'rgba(74,144,226,0.15)', color: '#4A90E2', border: '1px solid rgba(74,144,226,0.3)' } },
+          /*#__PURE__*/React.createElement(ApexIcon, { name: 'star', size: 10, color: '#4A90E2', strokeWidth: 2.2 }),
+          t('backoff_records_label')),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#888', fontWeight: 800, letterSpacing: 1 } }, t('records_count', { count: dayStats.backoffPRs.length }))),
+      ...dayStats.backoffPRs.map((pr, i) => /*#__PURE__*/React.createElement("div", {
+        key: i,
+        style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderTop: i > 0 ? '1px solid #171717' : 'none' }
+      },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 12.5, fontWeight: 600 } }, pr.exercise),
+        /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 15, fontWeight: 800, color: '#4A90E2' } },
+          wFmt(pr.weight), /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666', fontWeight: 700, fontFamily: "'Manrope'" } }, wUnit() + ' × ' + pr.reps))))),
+    dayStats.targetsTotal > 0 && /*#__PURE__*/React.createElement("div", {
+      style: { display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(180deg,#0f0f0f,#0a0a0a)', border: '1px solid ' + (dayStats.targetsHit === dayStats.targetsTotal ? 'rgba(76,175,80,0.35)' : '#1e1e1e'), borderRadius: 12, padding: '11px 12px' }
+    },
+      /*#__PURE__*/React.createElement("div", { style: { width: 26, height: 26, borderRadius: 8, background: dayStats.targetsHit === dayStats.targetsTotal ? 'rgba(76,175,80,0.15)' : 'rgba(255,183,77,0.12)', border: '1px solid ' + (dayStats.targetsHit === dayStats.targetsTotal ? 'rgba(76,175,80,0.3)' : 'rgba(255,183,77,0.25)'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
+        /*#__PURE__*/React.createElement(ApexIcon, { name: 'target', size: 14, color: dayStats.targetsHit === dayStats.targetsTotal ? '#4CAF50' : '#FFB74D', strokeWidth: 2.2 })),
+      /*#__PURE__*/React.createElement("div", { style: { flex: 1, fontSize: 11.5, color: '#ccc', fontWeight: 700 } },
+        /*#__PURE__*/React.createElement("b", { style: { color: dayStats.targetsHit === dayStats.targetsTotal ? '#4CAF50' : '#FFB74D', fontWeight: 800 } }, dayStats.targetsHit + ' / ' + dayStats.targetsTotal),
+        ' ' + t('targets_hit_label')),
+      /*#__PURE__*/React.createElement("div", { style: { width: 64, height: 5, background: '#1a1a1a', borderRadius: 3, overflow: 'hidden', flexShrink: 0 } },
+        /*#__PURE__*/React.createElement("div", { style: { height: '100%', width: (dayStats.targetsHit / dayStats.targetsTotal * 100) + '%', background: dayStats.targetsHit === dayStats.targetsTotal ? 'linear-gradient(90deg,#4CAF50,#2E7D32)' : 'linear-gradient(90deg,#FFB74D,#F57C00)', borderRadius: 3 } })))), /*#__PURE__*/React.createElement("div", {
       style: S.dayDetailExercises
-    }, Object.entries(byExercise).map(([name, list]) => /*#__PURE__*/React.createElement("div", {
-      key: name,
-      style: S.dayDetailExercise
-    }, /*#__PURE__*/React.createElement("div", {
-      style: S.dayDetailExName
-    }, name), /*#__PURE__*/React.createElement("div", {
-      style: S.dayDetailExSetList
-    }, list.map((l, idx) => /*#__PURE__*/React.createElement("div", {
-      key: l.id,
-      style: S.dayDetailExSetItem
-    }, /*#__PURE__*/React.createElement("div", {
-      style: S.dayDetailSetLeft
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        ...S.dayDetailSetIdx,
-        color: idx === 0 ? '#FFD700' : '#666'
-      }
-    }, idx === 0 ? 'T' : idx + 1), /*#__PURE__*/React.createElement("span", {
-      style: S.dayDetailSetVal
-    }, wFmt(l.weight), /*#__PURE__*/React.createElement("span", {
-      style: S.dayDetailSetUnit
-    }, wUnit()), " × ", l.reps)), /*#__PURE__*/React.createElement("button", {
-      onClick: () => onDeleteLog(l.id),
-      style: S.dayDetailSetDel
-    }, "×"))))))));
+    }, Object.entries(byExercise).map(([name, list]) => {
+      const hasTopPR = dayStats.topPRs.some(p => p.exercise === name);
+      const hasBackPR = dayStats.backoffPRs.some(p => p.exercise === name);
+      const stripeColor = hasTopPR ? '#FFB74D' : hasBackPR ? '#4A90E2' : cfg.accent;
+      return /*#__PURE__*/React.createElement("div", {
+        key: name,
+        style: { position: 'relative', padding: '12px 12px 10px 18px', marginBottom: 8, background: 'linear-gradient(180deg,#101010,#0a0a0a)', border: '1px solid #1e1e1e', borderRadius: 12, overflow: 'hidden' }
+      },
+        /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', left: 0, top: 12, bottom: 12, width: 3, background: 'linear-gradient(180deg,' + stripeColor + ',' + stripeColor + '66)', borderRadius: 2 } }),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 700, marginBottom: 8 } }, name),
+        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 4 } },
+          list.map((l, idx) => {
+            const isTopSet = idx === 0;
+            const isTopPRSet = isTopSet && hasTopPR && dayStats.topPRs.some(p => p.exercise === name && p.weight === l.weight && p.reps === l.reps);
+            const isBackPRSet = !isTopSet && hasBackPR && dayStats.backoffPRs.some(p => p.exercise === name && p.weight === l.weight && p.reps === l.reps);
+            const badgeText = isTopSet ? 'T' : (isBackPRSet ? 'B' : String(idx + 1));
+            const badgeColor = isTopSet ? '#FFB74D' : (isBackPRSet ? '#4A90E2' : '#777');
+            const badgeBg = isTopSet ? 'rgba(255,183,77,0.15)' : (isBackPRSet ? 'rgba(74,144,226,0.15)' : '#1a1a1a');
+            const rowBg = isTopPRSet ? 'linear-gradient(90deg,rgba(255,183,77,0.08),transparent 70%)' : (isBackPRSet ? 'linear-gradient(90deg,rgba(74,144,226,0.08),transparent 70%)' : '#0d0d0d');
+            const rowBorder = isTopPRSet ? 'rgba(255,183,77,0.25)' : (isBackPRSet ? 'rgba(74,144,226,0.25)' : '#1a1a1a');
+            return /*#__PURE__*/React.createElement("div", {
+              key: l.id,
+              style: { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 9, background: rowBg, border: '1px solid ' + rowBorder }
+            },
+              /*#__PURE__*/React.createElement("div", { style: { width: 20, height: 20, borderRadius: 5, background: badgeBg, color: badgeColor, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, badgeText),
+              /*#__PURE__*/React.createElement("div", { style: { flex: 1, fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 15, fontWeight: 800 } },
+                wFmt(l.weight),
+                /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#666', fontWeight: 700, fontFamily: "'Manrope'" } }, wUnit()),
+                /*#__PURE__*/React.createElement("span", { style: { color: '#555', margin: '0 4px' } }, '×'),
+                l.reps),
+              isTopPRSet && /*#__PURE__*/React.createElement(ApexIcon, { name: 'trophy', size: 12, color: '#FFB74D', strokeWidth: 2.4 }),
+              isBackPRSet && /*#__PURE__*/React.createElement(ApexIcon, { name: 'star', size: 12, color: '#4A90E2', strokeWidth: 2.2 }),
+              /*#__PURE__*/React.createElement("button", { onClick: () => onDeleteLog(l.id), style: { background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', fontSize: 16, padding: '0 4px', lineHeight: 1 } }, "×")
+            );
+          })));
+    })));
   }), /*#__PURE__*/React.createElement("div", {
     style: S.addWorkoutSection
   }, /*#__PURE__*/React.createElement("div", {
