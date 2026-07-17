@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.68'; // Settings V2 premium: each section = card with title + grouped rows (grouped cards)
+const APP_VERSION = '5.9.69'; // Journal: emoji → SVG (clock, trophy, star, book); PR badges use SVG icons
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -2126,7 +2126,9 @@ const APEX_ICON_PATHS = {
   lightbulb: 'M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17a1 1 0 001 1h6a1 1 0 001-1v-2.3A7 7 0 0012 2z',
   lock: 'M5 11h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zM7 11V7a5 5 0 0 1 10 0v4',
   globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18',
-  mail: 'M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM3 7l9 6 9-6'
+  mail: 'M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM3 7l9 6 9-6',
+  trophy: 'M8 21h8M12 17v4M17 4h4v3a4 4 0 0 1-4 4M7 4H3v3a4 4 0 0 0 4 4M6 4h12v6a6 6 0 0 1-12 0V4z',
+  book: 'M4 4h11a3 3 0 0 1 3 3v14a2 2 0 0 0-2-2H4V4zM4 4v16M4 20h13'
 };
 const SK_BG = { background: 'linear-gradient(90deg,#161616 25%,#232323 50%,#161616 75%)', backgroundSize: '200% 100%', animation: 'apexShimmer 1.4s infinite' };
 function SkeletonFeed({ rows }) {
@@ -3579,7 +3581,7 @@ function JournalDetailView({ entry, onBack }) {
       style: { position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', fontSize: 8, fontWeight: 800, padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap', background: s.isTop ? 'linear-gradient(135deg,#FFB74D,#F57C00)' : '#1e1e1e', color: s.isTop ? '#1a1a1a' : '#888' }
     }, s.isTop ? 'TOP' : 'SET ' + (idx + 1)),
     (isPRtop || s.firstEver) && /*#__PURE__*/React.createElement("span", { style: { position: 'absolute', top: 6, right: 6 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'medal', size: 14, color: '#FFB74D' })),
-    isPRback && /*#__PURE__*/React.createElement("span", { style: { position: 'absolute', top: 7, right: 7, fontSize: 11 } }, '⭐'),
+    isPRback && /*#__PURE__*/React.createElement("span", { style: { position: 'absolute', top: 6, right: 6, display: 'flex' } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'star', size: 12, color: '#4A90E2', strokeWidth: 2.2 })),
     /*#__PURE__*/React.createElement("div", {
       style: { fontSize: 20, fontWeight: 800, marginTop: 6, fontFamily: "'Big Shoulders Display',sans-serif" }
     }, wFmt(s.weight), /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: '#888', fontFamily: "'Manrope'" } }, wUnit())),
@@ -3621,7 +3623,15 @@ function JournalDetailView({ entry, onBack }) {
       style: { display: 'inline-block', padding: '3px 12px', borderRadius: 20, fontSize: 10, fontWeight: 800, letterSpacing: 1, background: 'linear-gradient(135deg,' + entry.accent + ',' + entry.accent + '99)', marginBottom: 10 }
     }, (entry.dayName || '').toUpperCase()),
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 32, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, entry.day + ' ' + entry.monthFull.toUpperCase()),
-    /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 6 } }, entry.weekday + (entry.timeRange ? ' · 🕐 ' + entry.timeRange : '') + (entry.durationMin ? ' · ' + entry.durationMin + ' dakika' : ''))),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' } },
+      /*#__PURE__*/React.createElement("span", null, entry.weekday),
+      entry.timeRange && /*#__PURE__*/React.createElement(React.Fragment, null,
+        /*#__PURE__*/React.createElement("span", { style: { color: '#555' } }, '·'),
+        /*#__PURE__*/React.createElement(ApexIcon, { name: 'clock', size: 12, color: '#888', strokeWidth: 2, style: { verticalAlign: '-2px' } }),
+        /*#__PURE__*/React.createElement("span", null, entry.timeRange)),
+      entry.durationMin && /*#__PURE__*/React.createElement(React.Fragment, null,
+        /*#__PURE__*/React.createElement("span", { style: { color: '#555' } }, '·'),
+        /*#__PURE__*/React.createElement("span", null, entry.durationMin + ' dakika')))),
   // stat row
   /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, marginBottom: 18 } },
     entry.durationMin && /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 13, padding: '12px 6px', textAlign: 'center' } },
@@ -3638,10 +3648,10 @@ function JournalDetailView({ entry, onBack }) {
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#777', letterSpacing: 0.4, marginTop: 4 } }, t('records_label')))),
   // egzersiz kartları
   ...entry.exercises.map((ex, i) => {
-    const chip = ex.topPR && !ex.topPR.firstEver && ex.backoffPR ? { txt: t('double_badge'), bg: 'linear-gradient(135deg,rgba(255,183,77,0.15),rgba(74,144,226,0.15))', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
-      : ex.topPR && ex.topPR.firstEver ? { txt: t('first_badge'), bg: 'rgba(255,183,77,0.15)', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
-      : ex.topPR ? { txt: '🏆 PR', bg: 'rgba(255,183,77,0.15)', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
-      : ex.backoffPR ? { txt: '⭐ PR', bg: 'rgba(74,144,226,0.15)', c: '#4A90E2', bc: 'rgba(74,144,226,0.3)' }
+    const chip = ex.topPR && !ex.topPR.firstEver && ex.backoffPR ? { icons: ['trophy', 'star'], txt: t('double_badge').replace(/[🏆⭐]/g, '').trim(), bg: 'linear-gradient(135deg,rgba(255,183,77,0.15),rgba(74,144,226,0.15))', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
+      : ex.topPR && ex.topPR.firstEver ? { icons: [], txt: t('first_badge'), bg: 'rgba(255,183,77,0.15)', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
+      : ex.topPR ? { icons: ['trophy'], txt: 'PR', bg: 'rgba(255,183,77,0.15)', c: '#FFB74D', bc: 'rgba(255,183,77,0.3)' }
+      : ex.backoffPR ? { icons: ['star'], txt: 'PR', bg: 'rgba(74,144,226,0.15)', c: '#4A90E2', bc: 'rgba(74,144,226,0.3)' }
       : null;
     return /*#__PURE__*/React.createElement("div", {
       key: i,
@@ -3650,7 +3660,9 @@ function JournalDetailView({ entry, onBack }) {
     /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', left: 0, top: 12, bottom: 12, width: 4, borderRadius: 3, background: 'linear-gradient(180deg,' + entry.accent + ',' + entry.accent + '66)' } }),
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 800, flex: 1, minWidth: 0 } }, ex.name),
-      chip && /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0, background: chip.bg, color: chip.c, border: '1px solid ' + chip.bc } }, chip.txt)),
+      chip && /*#__PURE__*/React.createElement("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, padding: '4px 9px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0, background: chip.bg, color: chip.c, border: '1px solid ' + chip.bc } },
+        ...chip.icons.map((n, ii) => /*#__PURE__*/React.createElement(ApexIcon, { key: ii, name: n, size: 11, color: n === 'trophy' ? '#FFB74D' : '#4A90E2', strokeWidth: 2.2 })),
+        chip.txt)),
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, ...ex.sets.map((s, si) => renderSet(s, si))));
   }))), ReactDOM.createPortal(/*#__PURE__*/React.createElement("button", {
     onClick: handleShare,
@@ -3785,7 +3797,7 @@ function JournalModal({ data, myUsername, onClose }) {
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: 'var(--accent-light)', marginTop: 8, fontWeight: 700 } }, t('detail_arrow')))))),
   // boş durum
   entries.length === 0 ? /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', padding: '50px 20px', color: '#555' } },
-    /*#__PURE__*/React.createElement("div", { style: { fontSize: 34, marginBottom: 10 } }, '📔'),
+    /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'center', marginBottom: 14 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'book', size: 44, color: '#3a3a3a', strokeWidth: 1.5 })),
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 14 } }, t('journal_empty')),
     /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, opacity: 0.7, marginTop: 4 } }, t('journal_empty_sub')))
   : byMonth.map((month, mi) => /*#__PURE__*/React.createElement("div", { key: mi },
@@ -3806,8 +3818,15 @@ function JournalModal({ data, myUsername, onClose }) {
           /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, fontWeight: 700, color: '#888', marginTop: 3, textTransform: 'uppercase' } }, e.monthShort)),
         /*#__PURE__*/React.createElement("div", { style: { flex: 1 } },
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 21, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, (e.dayName || '').toUpperCase()),
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 5 } }, e.weekday + (e.timeRange ? ' · 🕐 ' + e.timeRange : ''))),
-        e.prCount > 0 && /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, fontWeight: 800, padding: '5px 10px', borderRadius: 20, background: 'linear-gradient(135deg,#FFB74D,#F57C00)', color: '#1a1a1a', whiteSpace: 'nowrap', boxShadow: '0 2px 10px rgba(255,183,77,0.25)' } }, '🏆 ' + e.prCount + ' ' + t('records_label'))),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: '#888', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' } },
+            /*#__PURE__*/React.createElement("span", null, e.weekday),
+            e.timeRange && /*#__PURE__*/React.createElement(React.Fragment, null,
+              /*#__PURE__*/React.createElement("span", { style: { color: '#555' } }, '·'),
+              /*#__PURE__*/React.createElement(ApexIcon, { name: 'clock', size: 12, color: '#888', strokeWidth: 2 }),
+              /*#__PURE__*/React.createElement("span", null, e.timeRange)))),
+        e.prCount > 0 && /*#__PURE__*/React.createElement("span", { style: { display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, padding: '5px 10px', borderRadius: 20, background: 'linear-gradient(135deg,#FFB74D,#F57C00)', color: '#1a1a1a', whiteSpace: 'nowrap', boxShadow: '0 2px 10px rgba(255,183,77,0.25)' } },
+          /*#__PURE__*/React.createElement(ApexIcon, { name: 'trophy', size: 11, color: '#1a1a1a', strokeWidth: 2.4 }),
+          e.prCount + ' ' + t('records_label'))),
       // stats
       /*#__PURE__*/React.createElement("div", { style: { display: 'flex', background: '#0c0c0c', border: '1px solid #181818', borderRadius: 13, padding: '12px 0', marginBottom: e.muscleDist.length ? 14 : (e.volCompare ? 14 : 4) } },
         e.durationMin && /*#__PURE__*/React.createElement("div", { style: { flex: 1, textAlign: 'center', borderRight: '1px solid #1e1e1e' } },
