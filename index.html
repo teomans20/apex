@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.72'; // Revert JournalDetailView to original (v5.9.70 changes rolled back); DayDetailModal premium stays
+const APP_VERSION = '5.9.75'; // Fixes: past-date logs no longer attach to active session; first-ever record no longer counted as PR (countPRs + HomeView)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -3213,14 +3213,17 @@ function generateWeeklyImage(s, myUsername) {
       ctx.fillStyle = '#fff'; ctx.font = '800 ' + S(14) + "px Manrope,sans-serif";
       // isim + değer, gerekirse kısalt
       let prText = s.bestPR.name + ' · ' + wFmt(s.bestPR.weight) + wUnit() + '×' + s.bestPR.reps;
-      const gainW = s.bestPR.gain > 0 ? S(60) : S(10);
+      const gainStr = s.bestPR.gain && s.bestPR.gain.value > 0
+        ? (s.bestPR.gain.type === 'weight' ? '+' + wFmt(s.bestPR.gain.value) + wUnit() : '+' + s.bestPR.gain.value + 'r')
+        : null;
+      const gainW = gainStr ? S(60) : S(10);
       const maxW = boxW - S(48) - gainW - S(14);
       while (ctx.measureText(prText).width > maxW && prText.length > 6) prText = prText.slice(0, -1);
       if (prText !== s.bestPR.name + ' · ' + wFmt(s.bestPR.weight) + wUnit() + '×' + s.bestPR.reps) prText = prText.trim() + '…';
       ctx.fillText(prText, PAD + S(48), y + S(37));
-      if (s.bestPR.gain > 0) {
+      if (gainStr) {
         ctx.font = '800 ' + S(11) + "px Manrope,sans-serif";
-        const gt = '+' + wFmt(s.bestPR.gain) + wUnit();
+        const gt = gainStr;
         const gw = ctx.measureText(gt).width + S(14);
         ctx.fillStyle = 'rgba(76,175,80,0.15)';
         rr(W - PAD - S(14) - gw, y + pH / 2 - S(11), gw, S(22), S(9)); ctx.fill();
@@ -3963,7 +3966,7 @@ function WeeklySummaryModal({ summary, myUsername, onClose }) {
       /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#FFB74D', textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 800 } }, t('best_record_week')),
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 15, fontWeight: 800, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.bestPR.name + ' · ' + wFmt(s.bestPR.weight) + wUnit() + '×' + s.bestPR.reps)),
-      s.bestPR.gain > 0 && /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: '#4CAF50', background: 'rgba(76,175,80,0.15)', padding: '3px 9px', borderRadius: 9, flexShrink: 0 } }, '+' + wFmt(s.bestPR.gain) + wUnit())),
+      s.bestPR.gain && s.bestPR.gain.value > 0 && /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: '#4CAF50', background: 'rgba(76,175,80,0.15)', padding: '3px 9px', borderRadius: 9, flexShrink: 0 } }, s.bestPR.gain.type === 'weight' ? '+' + wFmt(s.bestPR.gain.value) + wUnit() : '+' + s.bestPR.gain.value + 'r')),
     // motivasyon mesajı
     /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', fontSize: 13, fontWeight: 700, padding: 12, borderRadius: 13, background: 'linear-gradient(135deg,rgba(76,175,80,0.1),rgba(76,175,80,0.02))', border: '1px solid rgba(76,175,80,0.2)', color: '#7ed88a' } }, s.msg),
     // paylaş butonu
@@ -5136,32 +5139,39 @@ function computeWeekSummary(data, mondayTs) {
     logsByEx[name].forEach(l => { const k = dateKey(l.timestamp); if (!byDay[k] || l.timestamp < byDay[k].timestamp) byDay[k] = l; });
     daysByEx[name] = Object.values(byDay).sort((a, b) => a.timestamp - b.timestamp);
   });
-  const countPRs = (targetLogs) => {
+  const countPRs = (targetLogs, rangeStart, rangeEnd) => {
     const exNames = [...new Set(targetLogs.map(l => l.exerciseName))];
     let prs = 0;
     const best = {};
     exNames.forEach(name => {
       const days = daysByEx[name] || [];
-      let runningBest = 0;
+      let runningBest = null; // { weight, reps } | null
       days.forEach(d => {
-        if (d.weight > runningBest) {
-          if (inWeek(d.timestamp, weekStart, weekEnd)) {
+        const isBetter = !runningBest || d.weight > runningBest.weight || (d.weight === runningBest.weight && d.reps > runningBest.reps);
+        if (isBetter) {
+          // İlk kayıt rekor sayılmaz — geçilecek bir önceki rekor olmalı
+          if (runningBest && inWeek(d.timestamp, rangeStart, rangeEnd)) {
             prs++;
-            const gain = runningBest > 0 ? d.weight - runningBest : 0;
-            if (!best[name] || gain > best[name].gain) best[name] = { name, weight: d.weight, reps: d.reps, gain };
+            const gain = d.weight > runningBest.weight
+              ? { type: 'weight', value: d.weight - runningBest.weight }
+              : { type: 'reps', value: d.reps - runningBest.reps };
+            // "En büyük" iyileşme sıralaması: weight > reps, tie'da value karşılaştır
+            const rank = g => g.type === 'weight' ? 100 + g.value : 50 + g.value;
+            if (!best[name] || rank(gain) > rank(best[name].gain)) best[name] = { name, weight: d.weight, reps: d.reps, gain };
           }
-          runningBest = d.weight;
+          runningBest = { weight: d.weight, reps: d.reps };
         }
       });
     });
     return { count: prs, bestMap: best };
   };
-  const weekPR = countPRs(weekLogs);
+  const weekPR = countPRs(weekLogs, weekStart, weekEnd);
   const prCount = weekPR.count;
-  const prevPrCount = countPRs(prevLogs).count;
+  const prevPrCount = countPRs(prevLogs, prevStart, weekStart).count;
 
   let bestPR = null;
-  Object.values(weekPR.bestMap).forEach(p => { if (!bestPR || p.gain > bestPR.gain) bestPR = p; });
+  const gainRank = g => g && g.type === 'weight' ? 100 + g.value : (g && g.type === 'reps' ? 50 + g.value : 0);
+  Object.values(weekPR.bestMap).forEach(p => { if (!bestPR || gainRank(p.gain) > gainRank(bestPR.gain)) bestPR = p; });
 
   // Toplam süre (dakika)
   const sumMinutes = (s, e) => sessions
@@ -6625,40 +6635,56 @@ function computePublicStats(data, gymName) {
     const days = Object.values(byDay).sort((a, b) => a.timestamp - b.timestamp);
     if (days.length === 0) return;
 
-    // Toplam rekor sayısı (kümülatif iyileşmeler)
+    // Toplam rekor sayısı (kümülatif iyileşmeler — ağırlık VEYA aynı ağırlıkta daha çok tekrar)
+    // İlk kayıt rekor sayılmaz, sadece başlangıç referansı olur
     let improvements = 0;
-    let runningBest = 0;
+    let runningBest = null; // { weight, reps } | null
     days.forEach(d => {
-      if (d.weight > runningBest) {
-        runningBest = d.weight;
-        improvements++;
+      const isBetter = !runningBest || d.weight > runningBest.weight || (d.weight === runningBest.weight && d.reps > runningBest.reps);
+      if (isBetter) {
+        if (runningBest) improvements++;
+        runningBest = { weight: d.weight, reps: d.reps };
       }
     });
     prCount += improvements;
 
     // BU HAFTA GELİŞİM:
     // Hafta başından önceki en iyi rekoru bul (varsa)
-    let bestBeforeWeek = 0;
+    let bestBeforeWeek = null; // { weight, reps } | null
     days.forEach(d => {
-      if (d.timestamp < weekStart && d.weight > bestBeforeWeek) bestBeforeWeek = d.weight;
+      if (d.timestamp < weekStart) {
+        if (!bestBeforeWeek || d.weight > bestBeforeWeek.weight || (d.weight === bestBeforeWeek.weight && d.reps > bestBeforeWeek.reps)) {
+          bestBeforeWeek = { weight: d.weight, reps: d.reps };
+        }
+      }
     });
     // Bu hafta içindeki günler
     const thisWeekDays = days.filter(d => d.timestamp >= weekStart);
     if (thisWeekDays.length > 0) {
-      const bestThisWeek = Math.max(...thisWeekDays.map(d => d.weight));
-      if (bestBeforeWeek > 0) {
-        // Geçmiş rekor var → bu haftaki en iyi, ona göre ne kadar arttı
-        if (bestThisWeek > bestBeforeWeek) {
-          weeklyGain += bestThisWeek - bestBeforeWeek;
+      // Bu haftaki en iyi set (weight öncelikli, aynı weight'te en çok reps)
+      let bestThisWeekObj = null;
+      thisWeekDays.forEach(d => {
+        if (!bestThisWeekObj || d.weight > bestThisWeekObj.weight || (d.weight === bestThisWeekObj.weight && d.reps > bestThisWeekObj.reps)) {
+          bestThisWeekObj = { weight: d.weight, reps: d.reps };
+        }
+      });
+      const bestThisWeek = bestThisWeekObj.weight;
+      if (bestBeforeWeek) {
+        // Geçmiş rekor var → bu haftaki en iyi, ona göre gelişti mi?
+        const isBetter = bestThisWeekObj.weight > bestBeforeWeek.weight || (bestThisWeekObj.weight === bestBeforeWeek.weight && bestThisWeekObj.reps > bestBeforeWeek.reps);
+        if (isBetter) {
+          weeklyGain += Math.max(0, bestThisWeek - bestBeforeWeek.weight);
           weeklyPRs++;
         }
       } else {
-        // Bu egzersizi ilk kez bu hafta yaptı → hafta içi ilk gün vs en iyi gün farkı
-        const firstThisWeek = thisWeekDays[0].weight;
-        if (bestThisWeek > firstThisWeek) {
-          weeklyGain += bestThisWeek - firstThisWeek;
+        // Bu egzersizi ilk kez bu hafta yaptı → ilk kayıt rekor değil,
+        // ama hafta içinde kendi ilk gününü geçtiyse rekor sayılır
+        const firstDay = thisWeekDays[0];
+        const improvedInWeek = bestThisWeekObj.weight > firstDay.weight || (bestThisWeekObj.weight === firstDay.weight && bestThisWeekObj.reps > firstDay.reps);
+        if (improvedInWeek) {
+          weeklyGain += Math.max(0, bestThisWeek - firstDay.weight);
+          weeklyPRs++;
         }
-        weeklyPRs++;
       }
     }
 
@@ -8244,8 +8270,11 @@ function WorkoutTab({
     } else {
       timestamp = Date.now();
     }
+    // Geçmiş tarihe kayıt yapılıyorsa bugünkü açık oturuma bağlama
+    const active = logDate ? null : getActiveSession();
     const newLog = {
       id: Date.now().toString() + Math.random(),
+      sessionId: active ? active.id : null,
       exerciseName,
       dayType: currentDay,
       weight: w,
