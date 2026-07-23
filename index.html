@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.82'; // Measurements V2: all fields full-width, per-field mini goal bar; measure-goal no longer auto-completes without measurement; detail modal chart bars → area chart with dots
+const APP_VERSION = '5.9.83'; // Revert detail modal chart back to original bar chart (per Dostum)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -12606,34 +12606,10 @@ function MeasurementDetailModal({ field, onClose, onChanged }) {
       label ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: labelColor, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 } },
         label, /*#__PURE__*/React.createElement("span", { style: { color: '#fff', fontSize: 15, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif" } }, mFmt(field, s.value) + ' ' + mUnit(field))) : null,
       hist.length >= 2 ? /*#__PURE__*/React.createElement("div", { style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 14, marginBottom: 10 } },
-        (function() {
-          const W = 300, H = 90, padTop = 10, padBot = 20;
-          const areaH = H - padTop - padBot;
-          const gradId = 'measArea_' + subfield;
-          const points = hist.map((h, i) => ({
-            x: hist.length === 1 ? W / 2 : (i / (hist.length - 1)) * W,
-            y: padTop + (1 - (h.val - min) / range) * areaH,
-            val: h.val
-          }));
-          const lineD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' ');
-          const areaD = lineD + ' L ' + W + ' ' + (H - padBot) + ' L 0 ' + (H - padBot) + ' Z';
-          return /*#__PURE__*/React.createElement("svg", { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'none', style: { width: '100%', height: 90, display: 'block' } },
-            /*#__PURE__*/React.createElement("defs", null,
-              /*#__PURE__*/React.createElement("linearGradient", { id: gradId, x1: '0', y1: '0', x2: '0', y2: '1' },
-                /*#__PURE__*/React.createElement("stop", { offset: '0%', stopColor: 'var(--accent)', stopOpacity: 0.35 }),
-                /*#__PURE__*/React.createElement("stop", { offset: '100%', stopColor: 'var(--accent)', stopOpacity: 0 }))),
-            /*#__PURE__*/React.createElement("path", { d: areaD, fill: 'url(#' + gradId + ')' }),
-            /*#__PURE__*/React.createElement("path", { d: lineD, fill: 'none', stroke: 'var(--accent-light)', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }),
-            ...points.map((p, i) => /*#__PURE__*/React.createElement("circle", {
-              key: i,
-              cx: p.x,
-              cy: p.y,
-              r: i === points.length - 1 ? 4 : 3,
-              fill: 'var(--accent-light)',
-              stroke: '#0f0f0f',
-              strokeWidth: i === points.length - 1 ? 2 : 1.5
-            })));
-        })(),
+        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'flex-end', gap: 5, height: 80 } },
+          hist.map((h, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' } },
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 8, color: '#888', fontWeight: 700, marginBottom: 3 } }, mFmt(field, h.val)),
+            /*#__PURE__*/React.createElement("div", { style: { width: '100%', height: (12 + (h.val - min) / range * 68) + '%', background: 'linear-gradient(180deg,var(--accent),var(--accent-deep))', borderRadius: '4px 4px 0 0', minHeight: 8 } })))),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 5, marginTop: 5 } },
           hist.map((h, i) => /*#__PURE__*/React.createElement("span", { key: i, style: { flex: 1, textAlign: 'center', fontSize: 8, color: '#666', fontWeight: 700 } }, fmtMeasDate(h.date))))) :
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#666', textAlign: 'center', padding: '12px 0', marginBottom: 6 } }, t('meas_chart_need')),
