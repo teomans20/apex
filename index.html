@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.83'; // Revert detail modal chart back to original bar chart (per Dostum)
+const APP_VERSION = '5.9.84'; // Goal completion: instant toast feedback + haptic; notification panel falls back to storage read if state prop stale
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -4038,9 +4038,10 @@ function NotificationPanel({
   onAcceptProgram,
   onDismissProgram
 }) {
-  const iconFor = t => t === 'poke' ? '👊' : t === 'clap' ? '👏' : t === 'gym' ? '🏋️' : t === 'goalCompleted' ? 'trophy-svg' : '🔔';
+  const iconFor = t => t === 'poke' ? '👊' : t === 'clap' ? '👏' : t === 'gym' ? '🏋️' : '🔔';
   const iconBg = t => t === 'poke' ? 'linear-gradient(135deg,rgba(255,167,38,0.2),rgba(255,167,38,0.05))' : t === 'clap' ? 'linear-gradient(135deg,rgba(76,175,80,0.2),rgba(76,175,80,0.05))' : t === 'gym' ? 'linear-gradient(135deg,rgba(74,144,226,0.2),rgba(74,144,226,0.05))' : t === 'goalCompleted' ? 'linear-gradient(135deg,rgba(255,183,77,0.25),rgba(245,124,0,0.05))' : 'linear-gradient(135deg,rgba(var(--accent-rgb),0.2),rgba(var(--accent-rgb),0.05))';
-  const _localNotifs = localNotifs || [];
+  // Prop öncelikli, boşsa doğrudan storage'dan oku (state timing için yedek)
+  const _localNotifs = (localNotifs && localNotifs.length > 0) ? localNotifs : loadLocalNotifs();
   const total = notifs.length + progReqs.length + _localNotifs.length;
   return /*#__PURE__*/React.createElement("div", {
     style: S.modalOverlay,
@@ -7941,17 +7942,20 @@ function WorkoutTab({
     if (goals.length === 0) return;
     const measurements = loadMeasurements();
     let changed = false;
+    let lastCompletedTitle = null;
     const now = Date.now();
     const updated = goals.map(g => {
       if (g.completedAt) return g;
       const p = computeGoalProgress(g, { ...data, measurements });
       if (p.done) {
         changed = true;
+        const title = goalTitleFor(g);
+        lastCompletedTitle = title;
         addLocalNotif({
           type: 'goalCompleted',
           goalId: g.id,
           goalType: g.type,
-          title: goalTitleFor(g),
+          title: title,
           createdAt: now
         });
         return { ...g, completedAt: now };
@@ -7961,6 +7965,11 @@ function WorkoutTab({
     if (changed) {
       saveGoals(gymId, updated);
       setLocalNotifs(loadLocalNotifs());
+      // Anlık görsel geri bildirim — kullanıcı hemen görsün
+      if (lastCompletedTitle) {
+        setToast(t('goal_completed_notif_title') + ' · ' + lastCompletedTitle);
+        haptic([30, 30, 60]);
+      }
     }
   }, [activeGym, data]);
 
