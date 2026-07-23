@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.78'; // Session-scoped set typing: 2nd workout's first set is top again; getCategorizedSets + computeDayStats + session summary all session-aware; bestDay respects reps
+const APP_VERSION = '5.9.79'; // Measurements V1: weight hero (large value + trend area chart + prev-measurement delta), goal progress bar for weight, mini cards with spark chart + trend chip for other fields
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1442,6 +1442,7 @@ const I18N = {
     section_appearance: 'Görünüm', section_workout: 'Antrenman', section_data: 'Veri', section_about: 'Hakkında', section_danger: 'Tehlikeli Bölge',
     photo_setting: 'Profil Fotoğrafı', timer_setting_desc: 'Setler arası dinlenme', menu_back: 'Geri', closed_status: 'Kapalı', settings_back_to_menu: 'Ayarlara Dön',
     minutes_short: 'dk', volume_cap: 'HACİM', workout_word: 'Antrenman', top_records_label: 'TOP', backoff_records_label: 'BACK-OFF', records_count: '{count} REKOR', first_short: 'İLK', targets_hit_label: 'hedef tutturuldu',
+    meas_since_prev: 'bir önceki ölçüme göre', meas_first_entry: 'İlk kayıt', meas_goal_label: 'Hedef', goal_completed_short: 'Tamamlandı', meas_remaining: 'kaldı', meas_balanced_short: 'Dengeli', meas_no_change_short: 'değişim yok',
     change_pass_desc: 'Güvenlik için mevcut şifreni gir, sonra yeni şifreni belirle.', current_password: 'Mevcut şifre', new_password: 'Yeni şifre (en az 6 karakter)',
     delete_account_warn: 'Bu işlem geri alınamaz. Hesabın, bulut verilerin, arkadaşlıkların ve kullanıcı adın kalıcı olarak silinir. Onaylamak için mevcut şifreni gir.', delete_account_confirm: 'HESABI KALICI OLARAK SİL',
     pass_changed: 'Şifre değiştirildi', pass_changed_desc: 'Yeni şifrenle giriş yapabilirsin.', err_enter_cur_pass: 'Mevcut şifreni gir', err_wrong_cur_pass: 'Mevcut şifre yanlış',
@@ -1712,6 +1713,7 @@ const I18N = {
     section_appearance: 'Appearance', section_workout: 'Workout', section_data: 'Data', section_about: 'About', section_danger: 'Danger Zone',
     photo_setting: 'Profile Photo', timer_setting_desc: 'Rest between sets', menu_back: 'Back', closed_status: 'Off', settings_back_to_menu: 'Back to Settings',
     minutes_short: 'min', volume_cap: 'VOLUME', workout_word: 'Workout', top_records_label: 'TOP', backoff_records_label: 'BACK-OFF', records_count: '{count} RECORDS', first_short: '1ST', targets_hit_label: 'targets hit',
+    meas_since_prev: 'since last measurement', meas_first_entry: 'First entry', meas_goal_label: 'Goal', goal_completed_short: 'Complete', meas_remaining: 'to go', meas_balanced_short: 'Balanced', meas_no_change_short: 'no change',
     change_pass_desc: 'For security, enter your current password, then set a new one.', current_password: 'Current password', new_password: 'New password (min 6 characters)',
     delete_account_warn: 'This cannot be undone. Your account, cloud data, friendships and username will be permanently deleted. Enter your current password to confirm.', delete_account_confirm: 'PERMANENTLY DELETE ACCOUNT',
     pass_changed: 'Password changed', pass_changed_desc: 'You can sign in with your new password.', err_enter_cur_pass: 'Enter your current password', err_wrong_cur_pass: 'Current password is incorrect',
@@ -2032,7 +2034,11 @@ function measurementStatRaw(subfield) {
   }
   if (!past) past = all.length > 1 ? all[0] : null;
   const delta = past ? (latestVal - parseFloat(past[subfield])) : 0;
-  return { value: latestVal, delta: delta, date: latest.date, history: all.map(m => ({ date: m.date, val: parseFloat(m[subfield]) })) };
+  // Bir önceki ölçüm (varsa) — hero + mini kartlarda "son değişim" için
+  const prev = all.length > 1 ? all[all.length - 2] : null;
+  const prevDelta = prev ? (latestVal - parseFloat(prev[subfield])) : null;
+  const prevDate = prev ? prev.date : null;
+  return { value: latestVal, delta: delta, prevDelta: prevDelta, prevDate: prevDate, date: latest.date, history: all.map(m => ({ date: m.date, val: parseFloat(m[subfield]) })) };
 }
 // Alan istatistiği — çift ise { dual:true, right, left, diff }, tek ise düz stat
 // Ölçü birim yardımcıları: weight alanı kg, diğerleri cm. Kullanıcı birimine göre çevrilir.
@@ -12124,11 +12130,13 @@ function AddGoalModal({ data, onClose, onSave }) {
       /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { ...S.modalCancel } }, t('close'))));
 }
 
-function MeasurementsSection() {
+function MeasurementsSection({ data, gymId }) {
   const [all, setAll] = useState(loadMeasurements);
   const [showAdd, setShowAdd] = useState(false);
   const [detailField, setDetailField] = useState(null);
-  // Hangi alanların verisi var — çekirdek 4 + veri girilmiş ekstralar
+  const refresh = () => setAll(loadMeasurements());
+
+  // Aktif alanlar: çekirdek 4 + veri girilmiş ekstralar
   const activeFields = useMemo(() => {
     const hasData = (f) => {
       const info = MEAS_FIELDS[f];
@@ -12141,8 +12149,72 @@ function MeasurementsSection() {
     });
     return fields;
   }, [all]);
-  const refresh = () => setAll(loadMeasurements());
+
+  // Kilo için measure-type hedef var mı?
+  const weightGoal = useMemo(() => {
+    const goals = loadGoals(gymId);
+    return goals.find(g => g.type === 'measure' && g.field === 'weight' && !g.completedAt) || null;
+  }, [gymId, all]);
+  const weightGoalProg = useMemo(() => {
+    if (!weightGoal) return null;
+    const measurements = all;
+    return computeGoalProgress(weightGoal, { ...(data || {}), measurements });
+  }, [weightGoal, all, data]);
+
+  const weightStat = measurementStat('weight');
+  const otherFields = activeFields.filter(f => f !== 'weight');
+
+  // Mini spark SVG — küçük trend çizgisi
+  const MiniSpark = ({ history, color, up }) => {
+    if (!history || history.length < 2) return null;
+    const vals = history.map(h => h.val);
+    const min = Math.min(...vals), max = Math.max(...vals), range = max - min || 1;
+    const pts = history.map((h, i) => {
+      const x = (i / (history.length - 1)) * 100;
+      const y = 18 - ((h.val - min) / range) * 14 - 2;
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    return /*#__PURE__*/React.createElement("svg", { viewBox: '0 0 100 18', preserveAspectRatio: 'none', style: { width: '100%', height: 18, marginTop: 6 } },
+      /*#__PURE__*/React.createElement("polyline", { points: pts, fill: 'none', stroke: color || 'var(--accent-light)', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+  };
+
+  // Kilo hero trend chart (60px) — area + line
+  const HeroChart = ({ history }) => {
+    if (!history || history.length < 2) return null;
+    const vals = history.map(h => h.val);
+    const min = Math.min(...vals), max = Math.max(...vals), range = max - min || 1;
+    const pts = history.map((h, i) => {
+      const x = (i / (history.length - 1)) * 300;
+      const y = 60 - ((h.val - min) / range) * 50 - 5;
+      return { x, y };
+    });
+    const line = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' ');
+    const area = line + ' L 300 60 L 0 60 Z';
+    const last = pts[pts.length - 1];
+    return /*#__PURE__*/React.createElement("svg", { viewBox: '0 0 300 60', preserveAspectRatio: 'none', style: { width: '100%', height: 60, marginTop: 12 } },
+      /*#__PURE__*/React.createElement("defs", null,
+        /*#__PURE__*/React.createElement("linearGradient", { id: 'measHeroGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
+          /*#__PURE__*/React.createElement("stop", { offset: '0%', stopColor: 'var(--accent)', stopOpacity: 0.35 }),
+          /*#__PURE__*/React.createElement("stop", { offset: '100%', stopColor: 'var(--accent)', stopOpacity: 0 }))),
+      /*#__PURE__*/React.createElement("path", { d: area, fill: 'url(#measHeroGrad)' }),
+      /*#__PURE__*/React.createElement("path", { d: line, fill: 'none', stroke: 'var(--accent-light)', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+      /*#__PURE__*/React.createElement("circle", { cx: last.x, cy: last.y, r: 3.5, fill: 'var(--accent-light)', stroke: '#0a0a0a', strokeWidth: 1.5 }));
+  };
+
+  // Bir önceki ölçüme göre delta chip
+  const prevDeltaChip = (stat, isWeight) => {
+    if (!stat || stat.prevDelta == null || Math.abs(stat.prevDelta) < 0.05) return null;
+    // Kilo: azalma iyi (yeşil), artma turuncu. Diğerleri (kas ölçüleri): tersi
+    const positiveIsGood = !isWeight;
+    const isPositive = stat.prevDelta > 0;
+    const good = positiveIsGood ? isPositive : !isPositive;
+    const color = good ? '#4CAF50' : '#FF8A65';
+    const arrow = isPositive ? '▲' : '▼';
+    return { txt: arrow + ' ' + mFmt('weight' /*field*/, Math.abs(stat.prevDelta)), color };
+  };
+
   return /*#__PURE__*/React.createElement(React.Fragment, null,
+    // ————— Başlık + Ekle butonu —————
     /*#__PURE__*/React.createElement("div", {
       style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '20px 2px 12px' }
     },
@@ -12151,6 +12223,8 @@ function MeasurementsSection() {
         onClick: () => setShowAdd(true),
         style: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 800, color: 'var(--accent-light)', background: 'rgba(var(--accent-rgb),0.1)', border: 'none', padding: '7px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }
       }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'plus', size: 13, color: 'var(--accent-light)', strokeWidth: 2.4 }), t("add_measurement"))),
+
+    // ————— Boş durum —————
     all.length === 0 ?
       /*#__PURE__*/React.createElement("div", {
         onClick: () => setShowAdd(true),
@@ -12159,53 +12233,110 @@ function MeasurementsSection() {
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'center', marginBottom: 8 } }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'ruler', size: 26, color: '#555', strokeWidth: 1.8 })),
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, color: '#888', fontWeight: 600 } }, t('meas_none')),
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#555', marginTop: 3 } }, t('meas_none_sub'))) :
-      /*#__PURE__*/React.createElement("div", {
-        style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }
-      }, activeFields.map(f => {
-        const stat = measurementStat(f);
-        if (!stat) return null;
-        const info = MEAS_FIELDS[f];
-        const isWeight = f === 'weight';
-        // ——— ÇİFT ALAN (sağ/sol yan yana + simetri) ———
-        if (info.dual) {
-          const r = stat.right, l = stat.left;
-          let sym;
-          if (stat.diff == null) sym = null;
-          else if (Math.abs(stat.diff) < 0.25) sym = { txt: '✓ Dengeli', col: '#4CAF50' };
-          else sym = { txt: (stat.diff > 0 ? t('meas_right')+' ' : t('meas_left')+' ') + '+' + mFmt(f, Math.abs(stat.diff)) + mUnit(f), col: '#FF8A65' };
-          return /*#__PURE__*/React.createElement("button", {
-            key: f, onClick: () => setDetailField(f),
-            style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 13, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
-          },
-            /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 } },
-              /*#__PURE__*/React.createElement(ApexIcon, { name: 'ruler', size: 14, color: 'var(--accent-light)', strokeWidth: 2 }),
-              /*#__PURE__*/React.createElement("span", { style: { fontSize: 10.5, color: '#999', textTransform: 'uppercase', letterSpacing: 0.3, fontWeight: 800 } }, t('meas_'+f))),
-            /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, alignItems: 'stretch' } },
-              /*#__PURE__*/React.createElement("div", { style: { flex: 1 } },
-                /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#FF6B6B', fontWeight: 800, letterSpacing: 0.3, textTransform: 'uppercase' } }, t('meas_right')),
-                /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1.15 } }, r ? mFmt(f, r.value) : '—', r ? /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888' } }, " " + mUnit(f)) : null)),
-              /*#__PURE__*/React.createElement("div", { style: { width: 1, background: '#242424' } }),
-              /*#__PURE__*/React.createElement("div", { style: { flex: 1 } },
-                /*#__PURE__*/React.createElement("div", { style: { fontSize: 8.5, color: '#4A90E2', fontWeight: 800, letterSpacing: 0.3, textTransform: 'uppercase' } }, t('meas_left')),
-                /*#__PURE__*/React.createElement("div", { style: { fontSize: 19, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1.15 } }, l ? mFmt(f, l.value) : '—', l ? /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888' } }, " " + mUnit(f)) : null))),
-            sym ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, fontWeight: 800, marginTop: 6, color: sym.col } }, sym.txt) : null);
-        }
-        // ——— TEK ALAN ———
-        const gain = stat.delta > 0.05, loss = stat.delta < -0.05;
-        const deltaColor = (isWeight ? loss : gain) ? '#4CAF50' : (isWeight ? gain : loss) ? '#FF8A65' : '#888';
-        return /*#__PURE__*/React.createElement("button", {
-          key: f,
-          onClick: () => setDetailField(f),
-          style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 13, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
+
+      /*#__PURE__*/React.createElement(React.Fragment, null,
+
+        // ═════════ KİLO HERO ═════════
+        weightStat && /*#__PURE__*/React.createElement("button", {
+          onClick: () => setDetailField('weight'),
+          style: { width: '100%', background: 'linear-gradient(180deg,#111,#0a0a0a)', border: '1px solid #1e1e1e', borderRadius: 16, padding: 16, marginBottom: 12, position: 'relative', overflow: 'hidden', cursor: 'pointer', fontFamily: 'inherit', color: '#fff', textAlign: 'left' }
         },
-          /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 } },
-            /*#__PURE__*/React.createElement(ApexIcon, { name: isWeight ? 'scale' : 'ruler', size: 14, color: 'var(--accent-light)', strokeWidth: 2 }),
-            /*#__PURE__*/React.createElement("span", { style: { fontSize: 10.5, color: '#999', textTransform: 'uppercase', letterSpacing: 0.3, fontWeight: 800 } }, t('meas_'+f))),
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 24, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif", lineHeight: 1 } }, mFmt(f, stat.value), /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#888', fontWeight: 700 } }, " " + mUnit(f))),
-          Math.abs(stat.delta) > 0.05 ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, fontWeight: 800, marginTop: 5, color: deltaColor, display: 'flex', alignItems: 'center', gap: 3 } },
-            (stat.delta > 0 ? '▲ ' : '▼ ') + mFmt(f, Math.abs(stat.delta)) + ' ' + mUnit(f) + ' (30' + (CURRENT_LANG==='en'?'d':'g') + ')') :
-            /*#__PURE__*/React.createElement("div", { style: { fontSize: 10.5, fontWeight: 700, marginTop: 5, color: '#666' } }, t('meas_no_change')));
-      })),
+          /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,transparent,var(--accent),transparent)' } }),
+          // Üst satır: label + tarih
+          /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 } },
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: 'var(--accent-light)', fontWeight: 800, letterSpacing: 2 } }, t('meas_weight').toUpperCase()),
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#666', fontWeight: 700 } }, fmtMeasDate(weightStat.date))),
+          // Değer
+          /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 2 } },
+            /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 48, fontWeight: 900, lineHeight: 1, letterSpacing: -1.5 } }, mFmt('weight', weightStat.value)),
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, color: '#888', fontWeight: 700 } }, mUnit('weight'))),
+          // Bir önceki ölçüme göre delta
+          weightStat.prevDelta != null && Math.abs(weightStat.prevDelta) >= 0.05 && /*#__PURE__*/React.createElement("div", {
+            style: { fontSize: 11, fontWeight: 800, marginTop: 4, color: weightStat.prevDelta < 0 ? '#4CAF50' : '#FF8A65', display: 'flex', alignItems: 'center', gap: 5 }
+          },
+            /*#__PURE__*/React.createElement("span", null, weightStat.prevDelta < 0 ? '▼' : '▲'),
+            /*#__PURE__*/React.createElement("span", null, mFmt('weight', Math.abs(weightStat.prevDelta)) + ' ' + mUnit('weight') + ' · ' + t('meas_since_prev'))),
+          // İlk kayıt (bir öncesi yoksa)
+          weightStat.prevDelta == null && /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#666', fontWeight: 700, marginTop: 4 } }, t('meas_first_entry')),
+          // Trend chart
+          /*#__PURE__*/React.createElement(HeroChart, { history: weightStat.history })),
+
+        // ═════════ HEDEF PROGRESS BAR (varsa) ═════════
+        weightGoalProg && /*#__PURE__*/React.createElement("div", {
+          style: { background: '#0d0d0d', border: '1px solid ' + (weightGoalProg.done ? 'rgba(76,175,80,0.3)' : '#1a1a1a'), borderRadius: 12, padding: 12, marginBottom: 12 }
+        },
+          /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 } },
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#aaa', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 } },
+              /*#__PURE__*/React.createElement(ApexIcon, { name: 'target', size: 12, color: weightGoalProg.done ? '#4CAF50' : '#FFB74D', strokeWidth: 2.2 }),
+              /*#__PURE__*/React.createElement("span", null, t('meas_goal_label') + ': '),
+              /*#__PURE__*/React.createElement("b", { style: { color: weightGoalProg.done ? '#4CAF50' : '#FFB74D', fontWeight: 800 } }, mFmt('weight', weightGoalProg.target) + ' ' + mUnit('weight'))),
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#666', fontWeight: 700 } },
+              weightGoalProg.done ? t('goal_completed_short')
+                : (weightGoal.direction === 'down'
+                    ? mFmt('weight', Math.max(0, weightGoalProg.current - weightGoalProg.target)) + ' ' + mUnit('weight') + ' ' + t('meas_remaining')
+                    : mFmt('weight', Math.max(0, weightGoalProg.target - weightGoalProg.current)) + ' ' + mUnit('weight') + ' ' + t('meas_remaining')))),
+          /*#__PURE__*/React.createElement("div", { style: { height: 6, background: '#1a1a1a', borderRadius: 3, overflow: 'hidden' } },
+            /*#__PURE__*/React.createElement("div", { style: { height: '100%', width: weightGoalProg.pct + '%', background: weightGoalProg.done ? 'linear-gradient(90deg,#4CAF50,#2E7D32)' : 'linear-gradient(90deg,#FFB74D,#F57C00)', borderRadius: 3 } }))),
+
+        // ═════════ DİĞER ÖLÇÜMLER GRID ═════════
+        otherFields.length > 0 && /*#__PURE__*/React.createElement("div", {
+          style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }
+        }, otherFields.map(f => {
+          const stat = measurementStat(f);
+          if (!stat) return null;
+          const info = MEAS_FIELDS[f];
+
+          // ————— ÇİFT ALAN (full-width) —————
+          if (info.dual) {
+            const r = stat.right, l = stat.left;
+            let sym;
+            if (stat.diff == null) sym = null;
+            else if (Math.abs(stat.diff) < 0.25) sym = { txt: '✓ ' + t('meas_balanced_short'), col: '#4CAF50' };
+            else sym = { txt: (stat.diff > 0 ? t('meas_right') : t('meas_left')) + ' +' + mFmt(f, Math.abs(stat.diff)) + mUnit(f), col: '#FF8A65' };
+            return /*#__PURE__*/React.createElement("button", {
+              key: f, onClick: () => setDetailField(f),
+              style: { gridColumn: 'span 2', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: 12, padding: 11, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
+            },
+              /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 } },
+                /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: '#999', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' } }, t('meas_' + f)),
+                sym && /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: sym.col, fontWeight: 800 } }, sym.txt)),
+              /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8, alignItems: 'stretch' } },
+                /*#__PURE__*/React.createElement("div", { style: { flex: 1, textAlign: 'center' } },
+                  /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#FF6B6B', fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 3 } }, t('meas_right')),
+                  /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 19, fontWeight: 900, lineHeight: 1.1 } },
+                    r ? mFmt(f, r.value) : '—',
+                    r && /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888', fontWeight: 700, fontFamily: "'Manrope'" } }, ' ' + mUnit(f)))),
+                /*#__PURE__*/React.createElement("div", { style: { width: 1, background: '#242424' } }),
+                /*#__PURE__*/React.createElement("div", { style: { flex: 1, textAlign: 'center' } },
+                  /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#4A90E2', fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 3 } }, t('meas_left')),
+                  /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 19, fontWeight: 900, lineHeight: 1.1 } },
+                    l ? mFmt(f, l.value) : '—',
+                    l && /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888', fontWeight: 700, fontFamily: "'Manrope'" } }, ' ' + mUnit(f))))));
+          }
+
+          // ————— TEK ALAN (mini kart) —————
+          // Bir önceki ölçüme göre trend
+          const pd = stat.prevDelta;
+          const hasPD = pd != null && Math.abs(pd) >= 0.05;
+          // Kas ölçüleri: artış iyi (yeşil). Kilo dışı hepsi böyle
+          const trendGood = hasPD ? pd > 0 : true;
+          const trendColor = hasPD ? (trendGood ? '#4CAF50' : '#FF8A65') : '#666';
+          const trendTxt = hasPD ? (pd > 0 ? '+' : '−') + mFmt(f, Math.abs(pd)) + ' ' + mUnit(f) : t('meas_no_change_short');
+          const sparkColor = hasPD ? (trendGood ? '#4CAF50' : '#FF8A65') : '#4A90E2';
+          return /*#__PURE__*/React.createElement("button", {
+            key: f,
+            onClick: () => setDetailField(f),
+            style: { background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: 12, padding: 11, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
+          },
+            /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
+              /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: '#999', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' } }, t('meas_' + f)),
+              /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, fontWeight: 800, color: trendColor } }, trendTxt)),
+            /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 900, lineHeight: 1 } },
+              mFmt(f, stat.value),
+              /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888', fontWeight: 700, fontFamily: "'Manrope'" } }, ' ' + mUnit(f))),
+            /*#__PURE__*/React.createElement(MiniSpark, { history: stat.history, color: sparkColor }));
+        }))),
+
     showAdd && /*#__PURE__*/React.createElement(AddMeasurementModal, { onClose: () => setShowAdd(false), onSaved: () => { refresh(); setShowAdd(false); } }),
     detailField && /*#__PURE__*/React.createElement(MeasurementDetailModal, { field: detailField, onClose: () => setDetailField(null), onChanged: refresh }));
 }
@@ -12987,7 +13118,7 @@ function ProgressTab({
     }
   }, es.isStuck ? t('weeks_stuck',{n:es.weeksSince}) : t('est_1rm_lower',{n:es.oneRM}))), /*#__PURE__*/React.createElement("div", {
     style: S.prRowWt
-  }, wFmt(es.weight), " " + wUnit()))))), subTab === 'olculer' && /*#__PURE__*/React.createElement(MeasurementsSection, null), subTab === 'hedefler' && /*#__PURE__*/React.createElement(GoalsSection, { data: data, gymId: activeGym && activeGym.id }));
+  }, wFmt(es.weight), " " + wUnit()))))), subTab === 'olculer' && /*#__PURE__*/React.createElement(MeasurementsSection, { data: data, gymId: activeGym && activeGym.id }), subTab === 'hedefler' && /*#__PURE__*/React.createElement(GoalsSection, { data: data, gymId: activeGym && activeGym.id }));
 }
 
 // Tek hareket derin grafik ekranı
