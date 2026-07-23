@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.81'; // Goal completion notifications: app-level detection + local notif storage; bell shows goalCompleted with trophy icon + gold stripe; works while GoalsSection is closed
+const APP_VERSION = '5.9.82'; // Measurements V2: all fields full-width, per-field mini goal bar; measure-goal no longer auto-completes without measurement; detail modal chart bars → area chart with dots
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -9178,7 +9178,11 @@ function computeGoalProgress(goal, data) {
     // ölçünün en son değeri (metrik) — data.measurements yoksa direkt localStorage'dan oku
     const meas = (data && data.measurements) || loadMeasurements();
     const sorted = meas.slice().filter(m => m[goal.field] != null).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-    if (sorted.length) current = parseFloat(sorted[0][goal.field]) || 0;
+    if (sorted.length === 0) {
+      // Ölçüm hiç girilmediyse hedef değerlendirilemez — done=false zorla
+      return { current: 0, target, pct: 0, done: false };
+    }
+    current = parseFloat(sorted[0][goal.field]) || 0;
   }
 
   let pct, done;
@@ -12271,18 +12275,23 @@ function MeasurementsSection({ data, gymId }) {
     return fields;
   }, [all]);
 
-  // Kilo için measure-type hedef var mı?
-  const weightGoal = useMemo(() => {
+  // Her alan için (kilo dahil) measure-type hedef var mı?
+  const goalsByField = useMemo(() => {
     const goals = loadGoals(gymId);
-    return goals.find(g => g.type === 'measure' && g.field === 'weight' && !g.completedAt) || null;
+    const map = {};
+    goals.forEach(g => {
+      if (g.type === 'measure' && !g.completedAt && g.field) map[g.field] = g;
+    });
+    return map;
   }, [gymId, all]);
-  const weightGoalProg = useMemo(() => {
-    if (!weightGoal) return null;
-    const measurements = all;
-    return computeGoalProgress(weightGoal, { ...(data || {}), measurements });
-  }, [weightGoal, all, data]);
+  const progressFor = (field) => {
+    const g = goalsByField[field];
+    if (!g) return null;
+    return { goal: g, prog: computeGoalProgress(g, { ...(data || {}), measurements: all }) };
+  };
 
   const weightStat = measurementStat('weight');
+  const weightGoalInfo = progressFor('weight');
   const otherFields = activeFields.filter(f => f !== 'weight');
 
   // Mini spark SVG — küçük trend çizgisi
@@ -12383,31 +12392,57 @@ function MeasurementsSection({ data, gymId }) {
           /*#__PURE__*/React.createElement(HeroChart, { history: weightStat.history })),
 
         // ═════════ HEDEF PROGRESS BAR (varsa) ═════════
-        weightGoalProg && /*#__PURE__*/React.createElement("div", {
-          style: { background: '#0d0d0d', border: '1px solid ' + (weightGoalProg.done ? 'rgba(76,175,80,0.3)' : '#1a1a1a'), borderRadius: 12, padding: 12, marginBottom: 12 }
-        },
-          /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 } },
-            /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#aaa', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 } },
-              /*#__PURE__*/React.createElement(ApexIcon, { name: 'target', size: 12, color: weightGoalProg.done ? '#4CAF50' : '#FFB74D', strokeWidth: 2.2 }),
-              /*#__PURE__*/React.createElement("span", null, t('meas_goal_label') + ': '),
-              /*#__PURE__*/React.createElement("b", { style: { color: weightGoalProg.done ? '#4CAF50' : '#FFB74D', fontWeight: 800 } }, mFmt('weight', weightGoalProg.target) + ' ' + mUnit('weight'))),
-            /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#666', fontWeight: 700 } },
-              weightGoalProg.done ? t('goal_completed_short')
-                : (weightGoal.direction === 'down'
-                    ? mFmt('weight', Math.max(0, weightGoalProg.current - weightGoalProg.target)) + ' ' + mUnit('weight') + ' ' + t('meas_remaining')
-                    : mFmt('weight', Math.max(0, weightGoalProg.target - weightGoalProg.current)) + ' ' + mUnit('weight') + ' ' + t('meas_remaining')))),
-          /*#__PURE__*/React.createElement("div", { style: { height: 6, background: '#1a1a1a', borderRadius: 3, overflow: 'hidden' } },
-            /*#__PURE__*/React.createElement("div", { style: { height: '100%', width: weightGoalProg.pct + '%', background: weightGoalProg.done ? 'linear-gradient(90deg,#4CAF50,#2E7D32)' : 'linear-gradient(90deg,#FFB74D,#F57C00)', borderRadius: 3 } }))),
+// ═════════ KİLO HEDEF BAR (büyük) ═════════
+        weightGoalInfo && (function() {
+          const { goal, prog } = weightGoalInfo;
+          const isDone = prog.done;
+          const remaining = goal.direction === 'down'
+            ? Math.max(0, prog.current - prog.target)
+            : Math.max(0, prog.target - prog.current);
+          return /*#__PURE__*/React.createElement("div", {
+            style: { background: '#0d0d0d', border: '1px solid ' + (isDone ? 'rgba(76,175,80,0.3)' : '#1a1a1a'), borderRadius: 12, padding: 12, marginBottom: 12 }
+          },
+            /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 } },
+              /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#aaa', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 } },
+                /*#__PURE__*/React.createElement(ApexIcon, { name: 'target', size: 12, color: isDone ? '#4CAF50' : '#FFB74D', strokeWidth: 2.2 }),
+                /*#__PURE__*/React.createElement("span", null, t('meas_goal_label') + ': '),
+                /*#__PURE__*/React.createElement("b", { style: { color: isDone ? '#4CAF50' : '#FFB74D', fontWeight: 800 } }, mFmt('weight', goal.target) + ' ' + mUnit('weight'))),
+              /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#666', fontWeight: 700 } },
+                isDone ? t('goal_completed_short')
+                  : mFmt('weight', remaining) + ' ' + mUnit('weight') + ' ' + t('meas_remaining'))),
+            /*#__PURE__*/React.createElement("div", { style: { height: 6, background: '#1a1a1a', borderRadius: 3, overflow: 'hidden' } },
+              /*#__PURE__*/React.createElement("div", { style: { height: '100%', width: prog.pct + '%', background: isDone ? 'linear-gradient(90deg,#4CAF50,#2E7D32)' : 'linear-gradient(90deg,#FFB74D,#F57C00)', borderRadius: 3 } })));
+        })(),
 
-        // ═════════ DİĞER ÖLÇÜMLER GRID ═════════
+        // ═════════ DİĞER ÖLÇÜMLER (full-width column) ═════════
         otherFields.length > 0 && /*#__PURE__*/React.createElement("div", {
-          style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }
+          style: { display: 'flex', flexDirection: 'column', gap: 8 }
         }, otherFields.map(f => {
           const stat = measurementStat(f);
           if (!stat) return null;
           const info = MEAS_FIELDS[f];
+          const gInfo = progressFor(f);
+          // Küçük hedef bar (varsa)
+          const miniGoalBar = gInfo && (function() {
+            const { goal, prog } = gInfo;
+            const isDone = prog.done;
+            const remaining = goal.direction === 'down'
+              ? Math.max(0, prog.current - prog.target)
+              : Math.max(0, prog.target - prog.current);
+            return /*#__PURE__*/React.createElement("div", { style: { marginTop: 9, paddingTop: 9, borderTop: '1px solid #171717' } },
+              /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 } },
+                /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#aaa', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 } },
+                  /*#__PURE__*/React.createElement(ApexIcon, { name: 'target', size: 10, color: isDone ? '#4CAF50' : '#FFB74D', strokeWidth: 2.2 }),
+                  /*#__PURE__*/React.createElement("span", null, t('meas_goal_label') + ': '),
+                  /*#__PURE__*/React.createElement("b", { style: { color: isDone ? '#4CAF50' : '#FFB74D', fontWeight: 800 } }, mFmt(f, goal.target) + ' ' + mUnit(f))),
+                /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#666', fontWeight: 700 } },
+                  isDone ? t('goal_completed_short')
+                    : mFmt(f, remaining) + ' ' + mUnit(f) + ' ' + t('meas_remaining'))),
+              /*#__PURE__*/React.createElement("div", { style: { height: 4, background: '#1a1a1a', borderRadius: 2, overflow: 'hidden' } },
+                /*#__PURE__*/React.createElement("div", { style: { height: '100%', width: prog.pct + '%', background: isDone ? 'linear-gradient(90deg,#4CAF50,#2E7D32)' : 'linear-gradient(90deg,#FFB74D,#F57C00)', borderRadius: 2 } })));
+          })();
 
-          // ————— ÇİFT ALAN (full-width) —————
+          // ————— ÇİFT ALAN (full-width, R/L) —————
           if (info.dual) {
             const r = stat.right, l = stat.left;
             let sym;
@@ -12416,7 +12451,7 @@ function MeasurementsSection({ data, gymId }) {
             else sym = { txt: (stat.diff > 0 ? t('meas_right') : t('meas_left')) + ' +' + mFmt(f, Math.abs(stat.diff)) + mUnit(f), col: '#FF8A65' };
             return /*#__PURE__*/React.createElement("button", {
               key: f, onClick: () => setDetailField(f),
-              style: { gridColumn: 'span 2', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: 12, padding: 11, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
+              style: { background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: 12, padding: 11, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
             },
               /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 } },
                 /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: '#999', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' } }, t('meas_' + f)),
@@ -12432,14 +12467,13 @@ function MeasurementsSection({ data, gymId }) {
                   /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#4A90E2', fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 3 } }, t('meas_left')),
                   /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 19, fontWeight: 900, lineHeight: 1.1 } },
                     l ? mFmt(f, l.value) : '—',
-                    l && /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888', fontWeight: 700, fontFamily: "'Manrope'" } }, ' ' + mUnit(f))))));
+                    l && /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888', fontWeight: 700, fontFamily: "'Manrope'" } }, ' ' + mUnit(f))))),
+              miniGoalBar);
           }
 
-          // ————— TEK ALAN (mini kart) —————
-          // Bir önceki ölçüme göre trend
+          // ————— TEK ALAN (full-width, kilo hero'nun küçük hali) —————
           const pd = stat.prevDelta;
           const hasPD = pd != null && Math.abs(pd) >= 0.05;
-          // Kas ölçüleri: artış iyi (yeşil). Kilo dışı hepsi böyle
           const trendGood = hasPD ? pd > 0 : true;
           const trendColor = hasPD ? (trendGood ? '#4CAF50' : '#FF8A65') : '#666';
           const trendTxt = hasPD ? (pd > 0 ? '+' : '−') + mFmt(f, Math.abs(pd)) + ' ' + mUnit(f) : t('meas_no_change_short');
@@ -12447,15 +12481,16 @@ function MeasurementsSection({ data, gymId }) {
           return /*#__PURE__*/React.createElement("button", {
             key: f,
             onClick: () => setDetailField(f),
-            style: { background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: 12, padding: 11, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
+            style: { width: '100%', background: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: 12, padding: 12, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
           },
             /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
-              /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, color: '#999', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' } }, t('meas_' + f)),
-              /*#__PURE__*/React.createElement("span", { style: { fontSize: 9, fontWeight: 800, color: trendColor } }, trendTxt)),
-            /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 22, fontWeight: 900, lineHeight: 1 } },
-              mFmt(f, stat.value),
-              /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#888', fontWeight: 700, fontFamily: "'Manrope'" } }, ' ' + mUnit(f))),
-            /*#__PURE__*/React.createElement(MiniSpark, { history: stat.history, color: sparkColor }));
+              /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: '#999', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' } }, t('meas_' + f)),
+              /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: trendColor } }, trendTxt)),
+            /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'baseline', gap: 4 } },
+              /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 28, fontWeight: 900, lineHeight: 1, letterSpacing: -0.5 } }, mFmt(f, stat.value)),
+              /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, color: '#888', fontWeight: 700 } }, mUnit(f))),
+            /*#__PURE__*/React.createElement("div", { style: { marginTop: 4 } }, /*#__PURE__*/React.createElement(MiniSpark, { history: stat.history, color: sparkColor })),
+            miniGoalBar);
         }))),
 
     showAdd && /*#__PURE__*/React.createElement(AddMeasurementModal, { onClose: () => setShowAdd(false), onSaved: () => { refresh(); setShowAdd(false); } }),
@@ -12571,10 +12606,34 @@ function MeasurementDetailModal({ field, onClose, onChanged }) {
       label ? /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: labelColor, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 } },
         label, /*#__PURE__*/React.createElement("span", { style: { color: '#fff', fontSize: 15, fontWeight: 900, fontFamily: "'Big Shoulders Display',sans-serif" } }, mFmt(field, s.value) + ' ' + mUnit(field))) : null,
       hist.length >= 2 ? /*#__PURE__*/React.createElement("div", { style: { background: '#0f0f0f', border: '1px solid #1c1c1c', borderRadius: 12, padding: 14, marginBottom: 10 } },
-        /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'flex-end', gap: 5, height: 80 } },
-          hist.map((h, i) => /*#__PURE__*/React.createElement("div", { key: i, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' } },
-            /*#__PURE__*/React.createElement("div", { style: { fontSize: 8, color: '#888', fontWeight: 700, marginBottom: 3 } }, mFmt(field, h.val)),
-            /*#__PURE__*/React.createElement("div", { style: { width: '100%', height: (12 + (h.val - min) / range * 68) + '%', background: 'linear-gradient(180deg,var(--accent),var(--accent-deep))', borderRadius: '4px 4px 0 0', minHeight: 8 } })))),
+        (function() {
+          const W = 300, H = 90, padTop = 10, padBot = 20;
+          const areaH = H - padTop - padBot;
+          const gradId = 'measArea_' + subfield;
+          const points = hist.map((h, i) => ({
+            x: hist.length === 1 ? W / 2 : (i / (hist.length - 1)) * W,
+            y: padTop + (1 - (h.val - min) / range) * areaH,
+            val: h.val
+          }));
+          const lineD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' ');
+          const areaD = lineD + ' L ' + W + ' ' + (H - padBot) + ' L 0 ' + (H - padBot) + ' Z';
+          return /*#__PURE__*/React.createElement("svg", { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'none', style: { width: '100%', height: 90, display: 'block' } },
+            /*#__PURE__*/React.createElement("defs", null,
+              /*#__PURE__*/React.createElement("linearGradient", { id: gradId, x1: '0', y1: '0', x2: '0', y2: '1' },
+                /*#__PURE__*/React.createElement("stop", { offset: '0%', stopColor: 'var(--accent)', stopOpacity: 0.35 }),
+                /*#__PURE__*/React.createElement("stop", { offset: '100%', stopColor: 'var(--accent)', stopOpacity: 0 }))),
+            /*#__PURE__*/React.createElement("path", { d: areaD, fill: 'url(#' + gradId + ')' }),
+            /*#__PURE__*/React.createElement("path", { d: lineD, fill: 'none', stroke: 'var(--accent-light)', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+            ...points.map((p, i) => /*#__PURE__*/React.createElement("circle", {
+              key: i,
+              cx: p.x,
+              cy: p.y,
+              r: i === points.length - 1 ? 4 : 3,
+              fill: 'var(--accent-light)',
+              stroke: '#0f0f0f',
+              strokeWidth: i === points.length - 1 ? 2 : 1.5
+            })));
+        })(),
         /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 5, marginTop: 5 } },
           hist.map((h, i) => /*#__PURE__*/React.createElement("span", { key: i, style: { flex: 1, textAlign: 'center', fontSize: 8, color: '#666', fontWeight: 700 } }, fmtMeasDate(h.date))))) :
         /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#666', textAlign: 'center', padding: '12px 0', marginBottom: 6 } }, t('meas_chart_need')),
