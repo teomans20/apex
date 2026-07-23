@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.75'; // Fixes: past-date logs no longer attach to active session; first-ever record no longer counted as PR (countPRs + HomeView)
+const APP_VERSION = '5.9.76'; // setType now persisted on logs; getCategorizedSets reads it with chronological fallback for legacy logs
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -8220,8 +8220,12 @@ function WorkoutTab({
       backoffSets = [];
     Object.values(byDay).forEach(dayLogs => {
       const sorted = [...dayLogs].sort((a, b) => a.timestamp - b.timestamp);
-      if (sorted[0]) topSets.push(sorted[0]);
-      sorted.slice(1).forEach(s => backoffSets.push(s));
+      // setType kayıtlıysa onu kullan; eski loglarda alan yok → kronolojik ilk set = top
+      const hasExplicitTop = sorted.some(s => s.setType === 'top');
+      sorted.forEach((s, i) => {
+        const type = s.setType || (!hasExplicitTop && i === 0 ? 'top' : 'backoff');
+        if (type === 'top') topSets.push(s); else backoffSets.push(s);
+      });
     });
     return {
       topSets,
@@ -8275,6 +8279,7 @@ function WorkoutTab({
     const newLog = {
       id: Date.now().toString() + Math.random(),
       sessionId: active ? active.id : null,
+      setType,
       exerciseName,
       dayType: currentDay,
       weight: w,
