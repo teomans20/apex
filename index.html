@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.76'; // setType now persisted on logs; getCategorizedSets reads it with chronological fallback for legacy logs
+const APP_VERSION = '5.9.78'; // Session-scoped set typing: 2nd workout's first set is top again; getCategorizedSets + computeDayStats + session summary all session-aware; bestDay respects reps
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -4200,22 +4200,27 @@ function DayDetailModal({
   } = useMemo(() => {
     const parts = targetDateKey.split('-').map(Number);
     const d = new Date(parts[0], parts[1], parts[2]);
+    const daySessions = data.sessions.filter(s => dateKey(s.startTime) === targetDateKey);
+    // Gruplama anahtarı: sessionId varsa o, yoksa gün tipi.
+    // sessionId'siz (eski/serbest) setler, o gün o tipte TEK seans varsa ona bağlanır —
+    // böylece eski davranış korunur, sadece gerçekten çok seanslı günler ayrılır.
+    const soleSessionFor = dayType => {
+      const matches = daySessions.filter(s => s.dayType === dayType);
+      return matches.length === 1 ? matches[0].id : null;
+    };
     const byType = {};
+    const ensure = (key, dayType) => {
+      if (!byType[key]) byType[key] = { logs: [], session: null, dayType };
+      return byType[key];
+    };
     data.logs.forEach(l => {
       if (dateKey(l.timestamp) !== targetDateKey) return;
-      if (!byType[l.dayType]) byType[l.dayType] = {
-        logs: [],
-        session: null
-      };
-      byType[l.dayType].logs.push(l);
+      const key = l.sessionId || soleSessionFor(l.dayType) || l.dayType;
+      ensure(key, l.dayType).logs.push(l);
     });
-    data.sessions.forEach(s => {
-      if (dateKey(s.startTime) !== targetDateKey) return;
-      if (!byType[s.dayType]) byType[s.dayType] = {
-        logs: [],
-        session: null
-      };
-      byType[s.dayType].session = s;
+    daySessions.forEach(s => {
+      const key = byType[s.id] ? s.id : s.dayType;
+      ensure(key, s.dayType).session = s;
     });
     return {
       date: d,
@@ -4239,8 +4244,9 @@ function DayDetailModal({
     const dayStart = new Date(date).setHours(0, 0, 0, 0);
     Object.entries(byExercise).forEach(([exName, exLogs]) => {
       const sorted = [...exLogs].sort((a, b) => a.timestamp - b.timestamp);
-      const todayTop = sorted[0];
-      const todayBackoffs = sorted.slice(1);
+      // setType kayıtlıysa onu kullan, yoksa kronolojik ilk set = top
+      const todayTop = sorted.find(s => s.setType === 'top') || sorted[0];
+      const todayBackoffs = sorted.filter(s => s !== todayTop);
       const todayBestBackoff = todayBackoffs.length ? bestOf(todayBackoffs) : null;
 
       // Prior logs (before this day)
@@ -4333,7 +4339,8 @@ function DayDetailModal({
       color: '#888',
       marginLeft: 8
     }
-  }, t('future_date')))), Object.entries(workouts).map(([dayType, w]) => {
+  }, t('future_date')))), Object.entries(workouts).map(([groupKey, w]) => {
+    const dayType = w.dayType;
     const cfg = dayConfig[dayType] || BUILTIN_DAYS.push;
     const duration = w.session?.endTime ? w.session.endTime - w.session.startTime : null;
     const volume = w.logs.reduce((s, l) => s + l.weight * l.reps, 0);
@@ -4346,7 +4353,7 @@ function DayDetailModal({
     // Sort by timestamp so sets are in order
     Object.values(byExercise).forEach(list => list.sort((a, b) => a.timestamp - b.timestamp));
     return /*#__PURE__*/React.createElement("div", {
-      key: dayType,
+      key: groupKey,
       style: {
         ...S.dayDetailSection,
         borderColor: cfg.accent
@@ -4365,7 +4372,7 @@ function DayDetailModal({
       style: { background: 'rgba(0,0,0,0.25)', border: 'none', borderRadius: 9, padding: '7px 13px', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', letterSpacing: 0.5 }
     }, t('edit_cap')), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
-        if (confirm(`${cfg.name} antrenmanını tamamen silmek istiyor musun?`)) onDeleteWorkout(targetDateKey, dayType);
+        if (confirm(`${cfg.name} antrenmanını tamamen silmek istiyor musun?`)) onDeleteWorkout(targetDateKey, dayType, w.session ? w.session.id : (w.logs[0] && w.logs[0].sessionId) || null);
       },
       style: S.dayDetailDel
     }, /*#__PURE__*/React.createElement(Icon.Trash, null)))), /*#__PURE__*/React.createElement("div", {
@@ -5283,14 +5290,18 @@ function buildJournalEntries(data) {
     const dayStart = new Date(parts[0], parts[1], parts[2]).setHours(0, 0, 0, 0);
     const dayEnd = dayStart + 86400000;
 
-    // Bu güne ait session (saat aralığı + süre)
-    const session = (data.sessions || []).find(s => dateKey(s.startTime) === dk && s.endTime);
+    // Bu güne ait seanslar — birden fazla antrenman varsa hepsini topla
+    const daySessions = (data.sessions || []).filter(s => dateKey(s.startTime) === dk && s.endTime);
+    const session = daySessions[0] || null;
     let timeRange = null, durationMin = null;
-    if (session && session.endTime) {
-      const st = new Date(session.startTime), en = new Date(session.endTime);
+    if (daySessions.length > 0) {
+      const firstStart = Math.min(...daySessions.map(s => s.startTime));
+      const lastEnd = Math.max(...daySessions.map(s => s.endTime));
+      const st = new Date(firstStart), en = new Date(lastEnd);
       const pad = n => String(n).padStart(2, '0');
       timeRange = pad(st.getHours()) + ':' + pad(st.getMinutes()) + '–' + pad(en.getHours()) + ':' + pad(en.getMinutes());
-      durationMin = Math.max(1, Math.round((session.endTime - session.startTime) / 60000));
+      // Süre: seansların toplamı (aradaki boşluk sayılmaz)
+      durationMin = Math.max(1, Math.round(daySessions.reduce((sum, s) => sum + (s.endTime - s.startTime), 0) / 60000));
     }
 
     // Gün tipi adı + renk
@@ -5312,8 +5323,9 @@ function buildJournalEntries(data) {
 
     Object.entries(byExercise).forEach(([exName, exLogs]) => {
       const sorted = [...exLogs].sort((a, b) => a.timestamp - b.timestamp);
-      const todayTop = sorted[0];
-      const todayBackoffs = sorted.slice(1);
+      // setType kayıtlıysa onu kullan, yoksa kronolojik ilk set = top
+      const todayTop = sorted.find(s => s.setType === 'top') || sorted[0];
+      const todayBackoffs = sorted.filter(s => s !== todayTop);
       const todayBestBackoff = todayBackoffs.length ? bestOf(todayBackoffs) : null;
 
       // Önceki günlerin verisi (bu günden önce)
@@ -6689,7 +6701,7 @@ function computePublicStats(data, gymName) {
     }
 
     // En iyi PR (top set)
-    const bestDay = days.reduce((b, d) => !b || d.weight > b.weight ? d : b, null);
+    const bestDay = days.reduce((best, cur) => !best || cur.weight > best.weight || (cur.weight === best.weight && cur.reps > best.reps) ? cur : best, null);
     if (bestDay) topPRs.push({
       exerciseName: name,
       weight: bestDay.weight,
@@ -8208,18 +8220,19 @@ function WorkoutTab({
   const isBetterSet = (a, b) => a.weight > b.weight || a.weight === b.weight && a.reps > b.reps;
   const bestOfSets = sets => sets.reduce((best, s) => !best || isBetterSet(s, best) ? s : best, null);
 
-  // Group an exercise's logs by day, return { topSets: [], backoffSets: [] } for all-time
+  // Group an exercise's logs by workout (session when available, else day), return { topSets, backoffSets } for all-time
   const getCategorizedSets = exerciseName => {
-    const byDay = {};
+    const groups = {};
     data.logs.filter(l => l.exerciseName === exerciseName).forEach(l => {
-      const k = dateKey(l.timestamp);
-      if (!byDay[k]) byDay[k] = [];
-      byDay[k].push(l);
+      // Seans bilgisi varsa seans bazlı grupla — aynı gün iki antrenman karışmasın
+      const k = l.sessionId ? 'session:' + l.sessionId : 'day:' + dateKey(l.timestamp);
+      if (!groups[k]) groups[k] = [];
+      groups[k].push(l);
     });
     const topSets = [],
       backoffSets = [];
-    Object.values(byDay).forEach(dayLogs => {
-      const sorted = [...dayLogs].sort((a, b) => a.timestamp - b.timestamp);
+    Object.values(groups).forEach(groupLogs => {
+      const sorted = [...groupLogs].sort((a, b) => a.timestamp - b.timestamp);
       // setType kayıtlıysa onu kullan; eski loglarda alan yok → kronolojik ilk set = top
       const hasExplicitTop = sorted.some(s => s.setType === 'top');
       sorted.forEach((s, i) => {
@@ -8258,8 +8271,16 @@ function WorkoutTab({
       r = parseInt(reps);
     let timestamp;
     const targetDayKey = logDate || dateKey(Date.now());
-    const existingSetsToday = data.logs.filter(l => l.exerciseName === exerciseName && dateKey(l.timestamp) === targetDayKey).length;
-    const setType = existingSetsToday === 0 ? 'top' : 'backoff';
+    // Geçmiş tarihe kayıt yapılıyorsa bugünkü açık oturuma bağlama
+    const active = logDate ? null : getActiveSession();
+    // Top/back-off ayrımı seans bazlı: aynı gün ikinci bir antrenman açılırsa
+    // o antrenmanın ilk seti yine top olur. Seans yoksa eski davranış (gün bazlı).
+    const existingSetsInGroup = data.logs.filter(l => {
+      if (l.exerciseName !== exerciseName) return false;
+      if (active) return l.sessionId === active.id;
+      return !l.sessionId && dateKey(l.timestamp) === targetDayKey;
+    }).length;
+    const setType = existingSetsInGroup === 0 ? 'top' : 'backoff';
 
     // Get the relevant PR BEFORE adding the new log
     const previousPR = setType === 'top' ? getTopPR(exerciseName) : getBackoffPR(exerciseName);
@@ -8274,8 +8295,6 @@ function WorkoutTab({
     } else {
       timestamp = Date.now();
     }
-    // Geçmiş tarihe kayıt yapılıyorsa bugünkü açık oturuma bağlama
-    const active = logDate ? null : getActiveSession();
     const newLog = {
       id: Date.now().toString() + Math.random(),
       sessionId: active ? active.id : null,
@@ -8341,9 +8360,17 @@ function WorkoutTab({
       logs: data.logs.filter(l => l.id !== id)
     });
   };
-  const deleteWorkoutDay = (targetDateKey, dayType) => {
-    const newLogs = data.logs.filter(l => !(dateKey(l.timestamp) === targetDateKey && l.dayType === dayType));
-    const newSessions = data.sessions.filter(s => !(dateKey(s.startTime) === targetDateKey && s.dayType === dayType));
+  const deleteWorkoutDay = (targetDateKey, dayType, sessionId) => {
+    let newLogs, newSessions;
+    if (sessionId) {
+      // Seans bazlı sil — aynı gün aynı tipte başka antrenman varsa ona dokunma
+      newLogs = data.logs.filter(l => l.sessionId !== sessionId);
+      newSessions = data.sessions.filter(s => s.id !== sessionId);
+    } else {
+      // Eski kayıtlar (sessionId yok) — tarih + gün tipi ile sil, ama seansa bağlı olanları koru
+      newLogs = data.logs.filter(l => !(dateKey(l.timestamp) === targetDateKey && l.dayType === dayType && !l.sessionId));
+      newSessions = data.sessions.filter(s => !(dateKey(s.startTime) === targetDateKey && s.dayType === dayType));
+    }
     saveData({
       ...data,
       logs: newLogs,
@@ -8510,7 +8537,11 @@ function WorkoutTab({
         backs
       };
     };
-    const sessionLogs = src.logs.filter(l => l.timestamp >= session.startTime && l.timestamp <= session.endTime);
+    // Seansın setleri: sessionId varsa ona göre, eski loglarda saat aralığına göre
+    const logsOfSession = (sess) => src.logs.filter(l => l.sessionId
+      ? l.sessionId === sess.id
+      : (l.timestamp >= sess.startTime && l.timestamp <= sess.endTime));
+    const sessionLogs = logsOfSession(session);
     const totalTonnage = sessionLogs.reduce((s, l) => s + l.weight * l.reps, 0);
     const duration = session.endTime - session.startTime;
 
@@ -8518,7 +8549,7 @@ function WorkoutTab({
     const previousSession = src.sessions.filter(s => s.dayType === session.dayType && s.id !== session.id && s.endTime).sort((a, b) => b.startTime - a.startTime)[0];
     let previousTonnage = null;
     if (previousSession) {
-      const prevLogs = src.logs.filter(l => l.timestamp >= previousSession.startTime && l.timestamp <= previousSession.endTime);
+      const prevLogs = logsOfSession(previousSession);
       previousTonnage = prevLogs.reduce((s, l) => s + l.weight * l.reps, 0);
     }
     const exercisesToday = [...new Set(sessionLogs.map(l => l.exerciseName))];
