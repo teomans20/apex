@@ -1101,7 +1101,7 @@ function vk(base) {
   return CURRENT_VAULT === 'legacy-unassigned' ? base : base + '::' + CURRENT_VAULT;
 }
 // Bir kasadan diğerine tüm veri anahtarlarını KOPYALA (asla silme). Hedef doluysa dokunma.
-const VAULT_BASE_KEYS = [GYMS_KEY, ACTIVE_GYM_KEY, 'apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise', 'apex-routines', 'apex-active-routine'];
+const VAULT_BASE_KEYS = [GYMS_KEY, ACTIVE_GYM_KEY, 'apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise', 'apex-routines', 'apex-active-routine', 'apex-local-notifs'];
 function _keyForVault(base, vaultId) {
   return vaultId === 'legacy-unassigned' ? base : base + '::' + vaultId;
 }
@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.80'; // Fix measure-type goal progress: computeGoalProgress + AddGoalModal now read measurements from storage when data.measurements missing (was always empty); "up" direction now uses startValue instead of raw current/target ratio
+const APP_VERSION = '5.9.81'; // Goal completion notifications: app-level detection + local notif storage; bell shows goalCompleted with trophy icon + gold stripe; works while GoalsSection is closed
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1442,7 +1442,7 @@ const I18N = {
     section_appearance: 'Görünüm', section_workout: 'Antrenman', section_data: 'Veri', section_about: 'Hakkında', section_danger: 'Tehlikeli Bölge',
     photo_setting: 'Profil Fotoğrafı', timer_setting_desc: 'Setler arası dinlenme', menu_back: 'Geri', closed_status: 'Kapalı', settings_back_to_menu: 'Ayarlara Dön',
     minutes_short: 'dk', volume_cap: 'HACİM', workout_word: 'Antrenman', top_records_label: 'TOP', backoff_records_label: 'BACK-OFF', records_count: '{count} REKOR', first_short: 'İLK', targets_hit_label: 'hedef tutturuldu',
-    meas_since_prev: 'bir önceki ölçüme göre', meas_first_entry: 'İlk kayıt', meas_goal_label: 'Hedef', goal_completed_short: 'Tamamlandı', meas_remaining: 'kaldı', meas_balanced_short: 'Dengeli', meas_no_change_short: 'değişim yok',
+    meas_since_prev: 'bir önceki ölçüme göre', meas_first_entry: 'İlk kayıt', meas_goal_label: 'Hedef', goal_completed_short: 'Tamamlandı', meas_remaining: 'kaldı', meas_balanced_short: 'Dengeli', meas_no_change_short: 'değişim yok', goal_completed_notif_title: 'Hedefini tamamladın',
     change_pass_desc: 'Güvenlik için mevcut şifreni gir, sonra yeni şifreni belirle.', current_password: 'Mevcut şifre', new_password: 'Yeni şifre (en az 6 karakter)',
     delete_account_warn: 'Bu işlem geri alınamaz. Hesabın, bulut verilerin, arkadaşlıkların ve kullanıcı adın kalıcı olarak silinir. Onaylamak için mevcut şifreni gir.', delete_account_confirm: 'HESABI KALICI OLARAK SİL',
     pass_changed: 'Şifre değiştirildi', pass_changed_desc: 'Yeni şifrenle giriş yapabilirsin.', err_enter_cur_pass: 'Mevcut şifreni gir', err_wrong_cur_pass: 'Mevcut şifre yanlış',
@@ -1713,7 +1713,7 @@ const I18N = {
     section_appearance: 'Appearance', section_workout: 'Workout', section_data: 'Data', section_about: 'About', section_danger: 'Danger Zone',
     photo_setting: 'Profile Photo', timer_setting_desc: 'Rest between sets', menu_back: 'Back', closed_status: 'Off', settings_back_to_menu: 'Back to Settings',
     minutes_short: 'min', volume_cap: 'VOLUME', workout_word: 'Workout', top_records_label: 'TOP', backoff_records_label: 'BACK-OFF', records_count: '{count} RECORDS', first_short: '1ST', targets_hit_label: 'targets hit',
-    meas_since_prev: 'since last measurement', meas_first_entry: 'First entry', meas_goal_label: 'Goal', goal_completed_short: 'Complete', meas_remaining: 'to go', meas_balanced_short: 'Balanced', meas_no_change_short: 'no change',
+    meas_since_prev: 'since last measurement', meas_first_entry: 'First entry', meas_goal_label: 'Goal', goal_completed_short: 'Complete', meas_remaining: 'to go', meas_balanced_short: 'Balanced', meas_no_change_short: 'no change', goal_completed_notif_title: 'Goal completed',
     change_pass_desc: 'For security, enter your current password, then set a new one.', current_password: 'Current password', new_password: 'New password (min 6 characters)',
     delete_account_warn: 'This cannot be undone. Your account, cloud data, friendships and username will be permanently deleted. Enter your current password to confirm.', delete_account_confirm: 'PERMANENTLY DELETE ACCOUNT',
     pass_changed: 'Password changed', pass_changed_desc: 'You can sign in with your new password.', err_enter_cur_pass: 'Enter your current password', err_wrong_cur_pass: 'Current password is incorrect',
@@ -2012,12 +2012,14 @@ function saveMeasurement(entry) {
   else all.push(entry);
   try { localStorage.setItem(vk(MEAS_KEY), JSON.stringify(all)); } catch (e) {}
   try { pushLocalProfile(); } catch (e) {}
+  try { document.dispatchEvent(new CustomEvent('apex:measurements-changed')); } catch (e) {}
   return all.sort((x, y) => x.date < y.date ? -1 : 1);
 }
 function deleteMeasurement(date) {
   const all = loadMeasurements().filter(m => m.date !== date);
   try { localStorage.setItem(vk(MEAS_KEY), JSON.stringify(all)); } catch (e) {}
   try { pushLocalProfile(); } catch (e) {}
+  try { document.dispatchEvent(new CustomEvent('apex:measurements-changed')); } catch (e) {}
   return all;
 }
 // Bir alan için: son değer + 30 gün önceye göre değişim
@@ -4029,15 +4031,17 @@ function NotificationPanel({
   me,
   notifs,
   progReqs,
+  localNotifs,
   onClose,
   onClearAll,
   onDismissOne,
   onAcceptProgram,
   onDismissProgram
 }) {
-  const iconFor = t => t === 'poke' ? '👊' : t === 'clap' ? '👏' : t === 'gym' ? '🏋️' : '🔔';
-  const iconBg = t => t === 'poke' ? 'linear-gradient(135deg,rgba(255,167,38,0.2),rgba(255,167,38,0.05))' : t === 'clap' ? 'linear-gradient(135deg,rgba(76,175,80,0.2),rgba(76,175,80,0.05))' : t === 'gym' ? 'linear-gradient(135deg,rgba(74,144,226,0.2),rgba(74,144,226,0.05))' : 'linear-gradient(135deg,rgba(var(--accent-rgb),0.2),rgba(var(--accent-rgb),0.05))';
-  const total = notifs.length + progReqs.length;
+  const iconFor = t => t === 'poke' ? '👊' : t === 'clap' ? '👏' : t === 'gym' ? '🏋️' : t === 'goalCompleted' ? 'trophy-svg' : '🔔';
+  const iconBg = t => t === 'poke' ? 'linear-gradient(135deg,rgba(255,167,38,0.2),rgba(255,167,38,0.05))' : t === 'clap' ? 'linear-gradient(135deg,rgba(76,175,80,0.2),rgba(76,175,80,0.05))' : t === 'gym' ? 'linear-gradient(135deg,rgba(74,144,226,0.2),rgba(74,144,226,0.05))' : t === 'goalCompleted' ? 'linear-gradient(135deg,rgba(255,183,77,0.25),rgba(245,124,0,0.05))' : 'linear-gradient(135deg,rgba(var(--accent-rgb),0.2),rgba(var(--accent-rgb),0.05))';
+  const _localNotifs = localNotifs || [];
+  const total = notifs.length + progReqs.length + _localNotifs.length;
   return /*#__PURE__*/React.createElement("div", {
     style: S.modalOverlay,
     onClick: onClose
@@ -4094,6 +4098,29 @@ function NotificationPanel({
   }, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 13.5, lineHeight: 1.4 }
   }, /*#__PURE__*/React.createElement("b", null, n.fromName), " ", n.type === 'clap' ? t('reacted_to_record') : n.type === 'gym' ? t('in_workout_status') : t('poked_you_msg'), n.message && n.type === 'poke' ? ': "' + n.message + '"' : n.message && n.type === 'clap' ? ' · ' + n.message : ''), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 11, color: '#666', marginTop: 3 }
+  }, feedTimeAgo(n.createdAt))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onDismissOne(n.id),
+    style: { padding: '6px 10px', borderRadius: 8, border: '1px solid #2a2a2a', fontSize: 15, fontWeight: 700, cursor: 'pointer', background: '#161616', color: '#666', flexShrink: 0, lineHeight: 1 }
+  }, "✕"))),
+  // Lokal bildirimler (hedef tamamlanma vb — Firebase gerekmez)
+  _localNotifs.map(n => /*#__PURE__*/React.createElement("div", {
+    key: n.id,
+    style: { display: 'flex', alignItems: 'center', gap: 13, padding: '14px 18px', borderBottom: '1px solid #141414', position: 'relative', background: n.read ? 'transparent' : 'rgba(255,183,77,0.05)' }
+  }, !n.read && /*#__PURE__*/React.createElement("div", {
+    style: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'linear-gradient(180deg,#FFB74D,#F57C00)' }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: { width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: iconBg(n.type) }
+  }, n.type === 'goalCompleted' ? /*#__PURE__*/React.createElement(ApexIcon, { name: 'trophy', size: 20, color: '#FFB74D', strokeWidth: 2.2 }) : /*#__PURE__*/React.createElement("span", { style: { fontSize: 19 } }, iconFor(n.type))), /*#__PURE__*/React.createElement("div", {
+    style: { flex: 1, minWidth: 0 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 13.5, lineHeight: 1.4 }
+  }, n.type === 'goalCompleted'
+      ? /*#__PURE__*/React.createElement(React.Fragment, null,
+          /*#__PURE__*/React.createElement("b", null, t('goal_completed_notif_title')),
+          " · ",
+          /*#__PURE__*/React.createElement("span", { style: { color: '#FFB74D', fontWeight: 700 } }, n.title))
+      : (n.title || '')), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 11, color: '#666', marginTop: 3 }
   }, feedTimeAgo(n.createdAt))), /*#__PURE__*/React.createElement("button", {
     onClick: () => onDismissOne(n.id),
@@ -7904,6 +7931,46 @@ function WorkoutTab({
   }, [showWeekly, (data.logs || []).length, (data.sessions || []).length]);
   const [notifs, setNotifs] = useState([]); // dürtme + alkış bildirimleri
   const [notifProgReqs, setNotifProgReqs] = useState([]); // program istekleri (bildirimde de göster)
+  const [localNotifs, setLocalNotifs] = useState(() => loadLocalNotifs()); // lokal bildirimler (hedef tamamlanma vb)
+
+  // ═══════ Hedef tamamlanma tespiti (App seviyesinde — GoalsSection açık olmasa da çalışır)
+  const checkGoalsCompleted = React.useCallback(() => {
+    if (!activeGym) return;
+    const gymId = activeGym.id;
+    const goals = loadGoals(gymId);
+    if (goals.length === 0) return;
+    const measurements = loadMeasurements();
+    let changed = false;
+    const now = Date.now();
+    const updated = goals.map(g => {
+      if (g.completedAt) return g;
+      const p = computeGoalProgress(g, { ...data, measurements });
+      if (p.done) {
+        changed = true;
+        addLocalNotif({
+          type: 'goalCompleted',
+          goalId: g.id,
+          goalType: g.type,
+          title: goalTitleFor(g),
+          createdAt: now
+        });
+        return { ...g, completedAt: now };
+      }
+      return g;
+    });
+    if (changed) {
+      saveGoals(gymId, updated);
+      setLocalNotifs(loadLocalNotifs());
+    }
+  }, [activeGym, data]);
+
+  React.useEffect(() => { checkGoalsCompleted(); }, [checkGoalsCompleted]);
+
+  React.useEffect(() => {
+    const onMeasChange = () => checkGoalsCompleted();
+    document.addEventListener('apex:measurements-changed', onMeasChange);
+    return () => document.removeEventListener('apex:measurements-changed', onMeasChange);
+  }, [checkGoalsCompleted]);
   const [dayEditMode, setDayEditMode] = useState(false); // gün düzenleme modu (egzersize girip çıkınca korunur)
   const [logDate, setLogDate] = useState(null); // null = today; "YYYY-M-D" string = backdated
   // Alt sekmeye tekrar basınca köke dön + en yukarı kaydır (Instagram gibi)
@@ -8741,7 +8808,7 @@ function WorkoutTab({
     onSaveMuscleMap: saveMuscleMap,
     activeGym: activeGym,
     userName: (authUser && authUser.displayName) || myUsername || '',
-    notifCount: notifs.filter(n => !n.read).length + notifProgReqs.length,
+    notifCount: notifs.filter(n => !n.read).length + notifProgReqs.length + localNotifs.filter(n => !n.read).length,
     onOpenNotifs: () => setShowNotifs(true),
     onOpenPrograms: () => setShowPrograms(true),
     onOpenRoutines: () => setShowRoutines(true),
@@ -8903,31 +8970,43 @@ function WorkoutTab({
       setShowWeekly(false);
     }
   }), showNotifs && /*#__PURE__*/React.createElement(NotificationPanel, {
-    me: { uid: authUser.uid, name: authUser.displayName },
+    me: authUser ? { uid: authUser.uid, name: authUser.displayName } : null,
     notifs: notifs,
     progReqs: notifProgReqs,
+    localNotifs: localNotifs,
     onClose: () => {
       // Panel kapanınca okunmamışları "okundu" işaretle (yerel + bulut)
       const unread = notifs.filter(n => !n.read);
-      if (unread.length > 0 && cloudReady) {
+      if (unread.length > 0 && cloudReady && authUser) {
         unread.forEach(n => {
           window.APEX_DB.collection('users').doc(authUser.uid).collection('notifications').doc(n.id).set({ read: true }, { merge: true }).catch(() => {});
         });
         setNotifs(prev => prev.map(n => ({ ...n, read: true })));
       }
+      // Lokal bildirimleri de okundu işaretle
+      if (localNotifs.some(n => !n.read)) {
+        setLocalNotifs(markLocalNotifsRead());
+      }
       setShowNotifs(false);
     },
     onClearAll: async () => {
-      await clearAllNotifications(authUser.uid, notifs.map(n => n.id));
-      setNotifs([]);
-      // Program isteklerini de temizle
-      for (const pr of notifProgReqs) { await dismissProgramRequest(authUser.uid, pr.id); }
-      setNotifProgReqs([]);
+      if (authUser) {
+        await clearAllNotifications(authUser.uid, notifs.map(n => n.id));
+        setNotifs([]);
+        for (const pr of notifProgReqs) { await dismissProgramRequest(authUser.uid, pr.id); }
+        setNotifProgReqs([]);
+      }
+      setLocalNotifs(clearLocalNotifs());
       setShowNotifs(false);
     },
     onDismissOne: async id => {
-      await dismissNotification(authUser.uid, id);
-      setNotifs(prev => prev.filter(n => n.id !== id));
+      // Lokal bildirim mi bulut bildirim mi?
+      if (localNotifs.some(n => n.id === id)) {
+        setLocalNotifs(dismissLocalNotif(id));
+      } else if (authUser) {
+        await dismissNotification(authUser.uid, id);
+        setNotifs(prev => prev.filter(n => n.id !== id));
+      }
     },
     onAcceptProgram: (dayName, fromName, exercises) => {
       onAcceptProgramToWorkout(dayName, fromName, exercises);
@@ -9021,6 +9100,49 @@ function saveGoals(gymId, goals) {
     localStorage.setItem(vk(GOALS_KEY), JSON.stringify(all));
     try { pushLocalProfile(); } catch (e) {}
   } catch (e) {}
+}
+
+// ═══════════ LOKAL BİLDİRİMLER (hedef tamamlanma vb — Firebase gerekmez) ═══════════
+const LOCAL_NOTIFS_KEY = 'apex-local-notifs';
+function loadLocalNotifs() {
+  try { return JSON.parse(localStorage.getItem(vk(LOCAL_NOTIFS_KEY)) || '[]'); } catch (e) { return []; }
+}
+function saveLocalNotifs(list) {
+  try { localStorage.setItem(vk(LOCAL_NOTIFS_KEY), JSON.stringify(list)); } catch (e) {}
+}
+function addLocalNotif(notif) {
+  const all = loadLocalNotifs();
+  all.unshift({ ...notif, id: notif.id || ('local-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)), createdAt: notif.createdAt || Date.now(), read: false });
+  if (all.length > 50) all.length = 50;
+  saveLocalNotifs(all);
+  return all;
+}
+function dismissLocalNotif(id) {
+  const list = loadLocalNotifs().filter(n => n.id !== id);
+  saveLocalNotifs(list);
+  return list;
+}
+function clearLocalNotifs() {
+  saveLocalNotifs([]);
+  return [];
+}
+function markLocalNotifsRead() {
+  const list = loadLocalNotifs().map(n => n.read ? n : ({ ...n, read: true }));
+  saveLocalNotifs(list);
+  return list;
+}
+
+// Hedefin ekranda gösterilen kısa başlığı (bildirim + kart)
+function goalTitleFor(g) {
+  if (!g) return '';
+  if (g.type === 'weight') {
+    const base = g.exercise + ' ' + wFmt(g.target) + ' ' + wUnit();
+    return g.targetReps ? base + ' × ' + g.targetReps : base;
+  }
+  if (g.type === 'workouts') return t('goal_period_' + (g.period || 'month')) + ' ' + g.target + ' ' + t('goal_workouts_unit');
+  if (g.type === 'streak') return g.target + ' ' + t('goal_weeks_unit');
+  if (g.type === 'measure') return t('meas_' + g.field) + ' ' + mFmt(g.field, g.target) + ' ' + mUnit(g.field);
+  return '';
 }
 // Bir hedefin şu anki ilerlemesini otomatik hesaplar → { current, target, pct, done }
 function computeGoalProgress(goal, data) {
@@ -11918,18 +12040,10 @@ function GoalsSection({ data, gymId }) {
   const active = goals.filter(g => !g.completedAt);
   const completed = goals.filter(g => g.completedAt);
 
-  // ilerlemeleri hesapla + otomatik tamamlanma işaretle
+  // ilerlemeleri hesapla (tamamlanma işaretleme + bildirim App seviyesinde yapılıyor)
   const withProgress = active.map(g => ({ goal: g, prog: computeGoalProgress(g, data) }));
-  React.useEffect(() => {
-    let changed = false;
-    const updated = goals.map(g => {
-      if (g.completedAt) return g;
-      const p = computeGoalProgress(g, data);
-      if (p.done) { changed = true; return { ...g, completedAt: Date.now() }; }
-      return g;
-    });
-    if (changed) { saveGoals(gymId, updated); setGoals(updated); }
-  }, [data]);
+  // Panel açılınca yeniden yükle — App tamamlanmaları işaretlemiş olabilir
+  React.useEffect(() => { refresh(); }, [data]);
 
   const deleteGoal = (id) => {
     if (!window.confirm(t('goal_delete_confirm'))) return;
