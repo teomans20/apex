@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.84'; // Goal completion: instant toast feedback + haptic; notification panel falls back to storage read if state prop stale
+const APP_VERSION = '5.9.86'; // Measurement dates: robust formatter with manual TR/EN month array fallback for older iOS Safari where toLocaleDateString returns blank
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -9497,11 +9497,15 @@ function HomeView({
       let resolvedDayType = (todayDay.srcKey && dayConfig[todayDay.srcKey]) ? todayDay.srcKey : null;
       if (!resolvedDayType) {
         const entries = Object.entries(dayConfig || {});
+        const nameLower = (todayDay.name || '').toLowerCase().trim();
         for (let i = 0; i < entries.length; i++) {
-          if (entries[i][1] && entries[i][1].name && entries[i][1].name.toLowerCase() === todayDay.name.toLowerCase()) {
-            resolvedDayType = entries[i][0];
-            break;
-          }
+          const [key, cfg] = entries[i];
+          // 1) mevcut dayConfig name'i (dile göre değişmiş olabilir)
+          if (cfg && cfg.name && cfg.name.toLowerCase().trim() === nameLower) { resolvedDayType = key; break; }
+          // 2) key'in kendisi (rutin day name direkt "push"/"pull"/"leg" olabilir)
+          if (key.toLowerCase() === nameLower) { resolvedDayType = key; break; }
+          // 3) built-in default name (rutin farklı dilde oluşturulmuş, dayConfig localize edilmiş)
+          if (BUILTIN_DAYS[key] && BUILTIN_DAYS[key].name && BUILTIN_DAYS[key].name.toLowerCase() === nameLower) { resolvedDayType = key; break; }
         }
       }
       // Bugün bu günde antrenman yapıldı mı?
@@ -12042,7 +12046,19 @@ function estimate1RM(weight, reps) {
 }
 // ————— VÜCUT ÖLÇÜLERİ BÖLÜMÜ (İLERLEME içinde) —————
 function fmtMeasDate(d) {
-  try { return new Date(d).toLocaleDateString((CURRENT_LANG === 'en' ? 'en-US' : 'tr-TR'), { day: 'numeric', month: 'short' }); } catch (e) { return d; }
+  if (!d) return '';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return String(d);
+  // Önce native toLocaleDateString dene
+  try {
+    const s = dt.toLocaleDateString((CURRENT_LANG === 'en' ? 'en-US' : 'tr-TR'), { day: 'numeric', month: 'short' });
+    if (s && s.trim() && s !== 'Invalid Date') return s;
+  } catch (e) {}
+  // Eski iOS Safari için manuel fallback
+  const monthsTR = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+  const monthsEN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = CURRENT_LANG === 'en' ? monthsEN : monthsTR;
+  return dt.getDate() + ' ' + months[dt.getMonth()];
 }
 // ————— HEDEFLER BÖLÜMÜ —————
 function GoalsSection({ data, gymId }) {
