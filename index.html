@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.86'; // Measurement dates: robust formatter with manual TR/EN month array fallback for older iOS Safari where toLocaleDateString returns blank
+const APP_VERSION = '5.9.87'; // Critical fix: dateKey used 0-indexed month + no zero-padding, causing measurement dates to display 1 month behind. dateKey now correct, all 9 consumers updated (parts[1]-1), legacy measurements auto-migrated once via flag
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -2001,7 +2001,39 @@ const MEAS_FIELDS = {
   calf:     { tr: 'Baldır', unit: 'cm', core: false, dual: true }
 };
 function loadMeasurements() {
-  try { const raw = localStorage.getItem(vk(MEAS_KEY)); if (raw) { const a = JSON.parse(raw); if (Array.isArray(a)) return a.sort((x, y) => x.date < y.date ? -1 : 1); } } catch (e) {}
+  try {
+    const raw = localStorage.getItem(vk(MEAS_KEY));
+    if (raw) {
+      let a = JSON.parse(raw);
+      if (Array.isArray(a)) {
+        // Migration: eski dateKey bug'ı (getMonth 0-idx + no zero-pad).
+        // Bir kere çalışır ve flag set eder — sonrasında yeni kayıtlar yeni format'ta gelir, dokunmaz.
+        const MIG_FLAG = 'apex-meas-datefixed-v1';
+        const flagKey = vk(MIG_FLAG);
+        let migrationDone = false;
+        try { migrationDone = localStorage.getItem(flagKey) === '1'; } catch (e) {}
+        if (!migrationDone) {
+          let migrated = false;
+          a = a.map(m => {
+            if (!m || !m.date || typeof m.date !== 'string') return m;
+            const parts = m.date.split('-');
+            if (parts.length !== 3) return m;
+            const y = parts[0], mo = parseInt(parts[1], 10), day = parseInt(parts[2], 10);
+            if (isNaN(mo) || isNaN(day)) return m;
+            // Eski format: month 0-indexed → +1, zero-pad
+            const fixed = `${y}-${String(mo + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            if (fixed !== m.date) migrated = true;
+            return { ...m, date: fixed };
+          });
+          if (migrated) {
+            try { localStorage.setItem(vk(MEAS_KEY), JSON.stringify(a)); } catch (e) {}
+          }
+          try { localStorage.setItem(flagKey, '1'); } catch (e) {}
+        }
+        return a.sort((x, y) => x.date < y.date ? -1 : 1);
+      }
+    }
+  } catch (e) {}
   return [];
 }
 function saveMeasurement(entry) {
@@ -2442,7 +2474,9 @@ const haptic = (ms = 30) => {
 };
 const dateKey = ts => {
   const d = new Date(ts);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
 };
 
 // ═══════════════════════════════════════════
@@ -4233,7 +4267,7 @@ function DayDetailModal({
     workouts
   } = useMemo(() => {
     const parts = targetDateKey.split('-').map(Number);
-    const d = new Date(parts[0], parts[1], parts[2]);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
     const daySessions = data.sessions.filter(s => dateKey(s.startTime) === targetDateKey);
     // Gruplama anahtarı: sessionId varsa o, yoksa gün tipi.
     // sessionId'siz (eski/serbest) setler, o gün o tipte TEK seans varsa ona bağlanır —
@@ -5320,8 +5354,8 @@ function buildJournalEntries(data) {
   const entries = [];
   Object.entries(dayGroups).forEach(([dk, grp]) => {
     const parts = dk.split('-').map(Number);
-    const dateObj = new Date(parts[0], parts[1], parts[2]);
-    const dayStart = new Date(parts[0], parts[1], parts[2]).setHours(0, 0, 0, 0);
+    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+    const dayStart = new Date(parts[0], parts[1] - 1, parts[2]).setHours(0, 0, 0, 0);
     const dayEnd = dayStart + 86400000;
 
     // Bu güne ait seanslar — birden fazla antrenman varsa hepsini topla
@@ -5381,7 +5415,7 @@ function buildJournalEntries(data) {
       // Son antrenman günü (karşılaştırma için)
       const priorDayKeys = Object.keys(priorByDay).sort((a, b) => {
         const pa = a.split('-').map(Number), pb = b.split('-').map(Number);
-        return new Date(pb[0], pb[1], pb[2]) - new Date(pa[0], pa[1], pa[2]);
+        return new Date(pb[0], pb[1] - 1, pb[2]) - new Date(pa[0], pa[1] - 1, pa[2]);
       });
       const lastDayKey = priorDayKeys[0];
       let lastTop = null, lastBackoff = null;
@@ -5468,7 +5502,7 @@ function buildJournalEntries(data) {
       });
       const priorKeys = Object.keys(priorSameType).sort((a, b) => {
         const pa = a.split('-').map(Number), pb = b.split('-').map(Number);
-        return new Date(pb[0], pb[1], pb[2]) - new Date(pa[0], pa[1], pa[2]);
+        return new Date(pb[0], pb[1] - 1, pb[2]) - new Date(pa[0], pa[1] - 1, pa[2]);
       });
       if (priorKeys[0]) {
         const prevVol = priorSameType[priorKeys[0]];
@@ -8370,7 +8404,7 @@ function WorkoutTab({
       const parts = logDate.split('-').map(Number);
       // O gün bu harekette zaten kayıtlı setlerin en son timestamp'ini bul — yeni set ondan SONRA gelsin
       const sameDaySets = data.logs.filter(l => l.exerciseName === exerciseName && dateKey(l.timestamp) === targetDayKey);
-      const noon = new Date(parts[0], parts[1], parts[2], 12, 0, 0).getTime();
+      const noon = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0).getTime();
       const lastTs = sameDaySets.length ? Math.max(...sameDaySets.map(l => l.timestamp)) : noon;
       // Mevcut en son setten 1 dk sonra (ilk set ise öğlen 12:00'dan başla)
       timestamp = (sameDaySets.length ? lastTs : noon) + 60000 + Math.floor(Math.random() * 1000);
@@ -10319,7 +10353,7 @@ function DayView({
   let backdatedLabel = '';
   if (isBackdated) {
     const parts = logDate.split('-').map(Number);
-    const d = new Date(parts[0], parts[1], parts[2]);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
     const wd = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'][d.getDay()];
     backdatedLabel = `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${wd}`;
   }
@@ -10517,7 +10551,7 @@ function ExerciseView({
   let backdatedLabel = '';
   if (isBackdated) {
     const parts = logDate.split('-').map(Number);
-    const d = new Date(parts[0], parts[1], parts[2]);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
     backdatedLabel = `${d.getDate()} ${TR_MONTHS[d.getMonth()]}`;
   }
 
@@ -10542,7 +10576,7 @@ function ExerciseView({
   const todayOrLogKey = logDate || dateKey(Date.now());
   const targetTimestamp = logDate ? (() => {
     const p = logDate.split('-').map(Number);
-    return new Date(p[0], p[1], p[2]).setHours(0, 0, 0, 0);
+    return new Date(p[0], p[1] - 1, p[2]).setHours(0, 0, 0, 0);
   })() : new Date().setHours(0, 0, 0, 0);
   const previousEntry = history.find(h => h.timestamp < targetTimestamp);
   let targetTop = null,
