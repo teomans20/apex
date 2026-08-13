@@ -1279,7 +1279,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.87'; // Critical fix: dateKey used 0-indexed month + no zero-padding, causing measurement dates to display 1 month behind. dateKey now correct, all 9 consumers updated (parts[1]-1), legacy measurements auto-migrated once via flag
+const APP_VERSION = '5.9.88'; // Fix: monthly calendar cell keys were still using old dateKey format (0-idx month, no pad) after v5.9.87 change, so no workouts displayed. Now zero-padded 1-idx to match
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -3000,7 +3000,7 @@ function MonthlyCalendar({
   for (let i = 0; i < startOffset; i++) cells.push(null);
   for (let d = 1; d <= lastDay.getDate(); d++) {
     const date = new Date(year, monthIdx, d);
-    const k = `${year}-${monthIdx}-${d}`;
+    const k = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     cells.push({
       date,
       day: d,
