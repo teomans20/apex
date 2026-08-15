@@ -1333,7 +1333,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.90'; // Home B redesign: today-routine now big hero (42px + corner glow + Başla CTA), insights with left color stripe + gradient, stat boxes gradient + top-line (volume gold+glow) + count-up animation + entry stagger
+const APP_VERSION = '5.9.91'; // Measurements no longer round to whole: mFmt defaults to 2 decimals so 79.95 shows as 79.95 (trailing zeros still stripped, so 80 stays 80)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -2141,7 +2141,9 @@ function mIn(field, val) {
 }
 function mFmt(field, val, dec) {
   const info = MEAS_FIELDS[field] || {};
-  return info.unit === 'kg' ? wFmt(val, dec) : lFmt(val, dec);
+  // Ölçümlerde varsayılan 2 ondalık — kullanıcı 79.95 girdiyse 80'e yuvarlanmasın (sondaki sıfırlar atılır)
+  const d = dec == null ? 2 : dec;
+  return info.unit === 'kg' ? wFmt(val, d) : lFmt(val, d);
 }
 function mUnit(field) {
   const info = MEAS_FIELDS[field] || {};
