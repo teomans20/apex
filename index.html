@@ -1155,7 +1155,7 @@ function vk(base) {
   return CURRENT_VAULT === 'legacy-unassigned' ? base : base + '::' + CURRENT_VAULT;
 }
 // Bir kasadan diğerine tüm veri anahtarlarını KOPYALA (asla silme). Hedef doluysa dokunma.
-const VAULT_BASE_KEYS = [GYMS_KEY, ACTIVE_GYM_KEY, 'apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise', 'apex-routines', 'apex-active-routine', 'apex-local-notifs'];
+const VAULT_BASE_KEYS = [GYMS_KEY, ACTIVE_GYM_KEY, 'apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise', 'apex-routines', 'apex-active-routine', 'apex-local-notifs', 'apex-ex-archive'];
 function _keyForVault(base, vaultId) {
   return vaultId === 'legacy-unassigned' ? base : base + '::' + vaultId;
 }
@@ -1232,7 +1232,7 @@ function _clearGuestVault() {
 // Ölçü, hedef, egzersiz notları, timer tercihleri → users/{uid}/data/local_profile_v1
 // Push: mutasyon sonrası (debounced). Restore: login sonrası tek sefer.
 // Restore ASLA dolu kasa slotunu ezmez (copyVault ile aynı felsefe).
-const LOCAL_PROFILE_KEYS = ['apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise', 'apex-routines', 'apex-active-routine', 'apex-blocked'];
+const LOCAL_PROFILE_KEYS = ['apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise', 'apex-routines', 'apex-active-routine', 'apex-blocked', 'apex-ex-archive'];
 function _readVaultProfile() {
   const out = {};
   LOCAL_PROFILE_KEYS.forEach(base => {
@@ -1333,7 +1333,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.91'; // Measurements no longer round to whole: mFmt defaults to 2 decimals so 79.95 shows as 79.95 (trailing zeros still stripped, so 80 stays 80)
+const APP_VERSION = '5.9.92'; // Exercise archive: exercises not done in 2 weeks move to a collapsible "Arşiv" section (with last-done date + restore); restore gives 2 more weeks; manual archive button in edit mode. Keeps exercise list clean
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1497,6 +1497,7 @@ const I18N = {
     photo_setting: 'Profil Fotoğrafı', timer_setting_desc: 'Setler arası dinlenme', menu_back: 'Geri', closed_status: 'Kapalı', settings_back_to_menu: 'Ayarlara Dön',
     minutes_short: 'dk', volume_cap: 'HACİM', workout_word: 'Antrenman', top_records_label: 'TOP', backoff_records_label: 'BACK-OFF', records_count: '{count} REKOR', first_short: 'İLK', targets_hit_label: 'hedef tutturuldu',
     meas_since_prev: 'bir önceki ölçüme göre', meas_first_entry: 'İlk kayıt', meas_goal_label: 'Hedef', goal_completed_short: 'Tamamlandı', meas_remaining: 'kaldı', meas_balanced_short: 'Dengeli', meas_no_change_short: 'değişim yok', goal_completed_notif_title: 'Hedefini tamamladın',
+    archive_label: 'Arşiv', archive_sub: '2 haftadır yapılmadı', archive_last_done: '{days} gün önce', archive_never: 'hiç yapılmadı', archive_to_archive: 'Arşive at', archived_toast: '{ex} arşive taşındı', unarchived_toast: '{ex} geri getirildi',
     change_pass_desc: 'Güvenlik için mevcut şifreni gir, sonra yeni şifreni belirle.', current_password: 'Mevcut şifre', new_password: 'Yeni şifre (en az 6 karakter)',
     delete_account_warn: 'Bu işlem geri alınamaz. Hesabın, bulut verilerin, arkadaşlıkların ve kullanıcı adın kalıcı olarak silinir. Onaylamak için mevcut şifreni gir.', delete_account_confirm: 'HESABI KALICI OLARAK SİL',
     pass_changed: 'Şifre değiştirildi', pass_changed_desc: 'Yeni şifrenle giriş yapabilirsin.', err_enter_cur_pass: 'Mevcut şifreni gir', err_wrong_cur_pass: 'Mevcut şifre yanlış',
@@ -1768,6 +1769,7 @@ const I18N = {
     photo_setting: 'Profile Photo', timer_setting_desc: 'Rest between sets', menu_back: 'Back', closed_status: 'Off', settings_back_to_menu: 'Back to Settings',
     minutes_short: 'min', volume_cap: 'VOLUME', workout_word: 'Workout', top_records_label: 'TOP', backoff_records_label: 'BACK-OFF', records_count: '{count} RECORDS', first_short: '1ST', targets_hit_label: 'targets hit',
     meas_since_prev: 'since last measurement', meas_first_entry: 'First entry', meas_goal_label: 'Goal', goal_completed_short: 'Complete', meas_remaining: 'to go', meas_balanced_short: 'Balanced', meas_no_change_short: 'no change', goal_completed_notif_title: 'Goal completed',
+    archive_label: 'Archive', archive_sub: 'Not done in 2 weeks', archive_last_done: '{days} days ago', archive_never: 'never done', archive_to_archive: 'Archive', archived_toast: '{ex} archived', unarchived_toast: '{ex} restored',
     change_pass_desc: 'For security, enter your current password, then set a new one.', current_password: 'Current password', new_password: 'New password (min 6 characters)',
     delete_account_warn: 'This cannot be undone. Your account, cloud data, friendships and username will be permanently deleted. Enter your current password to confirm.', delete_account_confirm: 'PERMANENTLY DELETE ACCOUNT',
     pass_changed: 'Password changed', pass_changed_desc: 'You can sign in with your new password.', err_enter_cur_pass: 'Enter your current password', err_wrong_cur_pass: 'Current password is incorrect',
@@ -2041,6 +2043,30 @@ function saveExerciseNote(dayKey, name, text) {
 // ————— VÜCUT ÖLÇÜLERİ —————
 // localStorage: apex-measurements = [ { date: 'YYYY-MM-DD', weight, arm, chest, waist, hip, leg, shoulder }, ... ]
 const MEAS_KEY = 'apex-measurements';
+
+// ═══════════ EGZERSİZ ARŞİV DURUMU ═══════════
+// Bir hareketin, bir gün-tipinde arşiv/aktif durumunu yöneten zaman damgaları.
+// Yapı: { [dayType]: { [exName]: { unarchivedAt?: ms, archivedAt?: ms } } }
+// Aktiflik kuralı (loglarla birlikte, DayView'da hesaplanır):
+//   sonReferans = max(bu day'de son yapılış, unarchivedAt || 0)
+//   arşivde mi? = archivedAt > sonReferans  VEYA  (kaydı var && sonReferans < 14 gün önce)
+const EX_ARCHIVE_KEY = 'apex-ex-archive';
+const EX_ARCHIVE_WINDOW_MS = 14 * 86400000; // 2 hafta
+function loadExArchive() {
+  try { return JSON.parse(localStorage.getItem(vk(EX_ARCHIVE_KEY)) || '{}'); } catch (e) { return {}; }
+}
+function saveExArchive(obj) {
+  try { localStorage.setItem(vk(EX_ARCHIVE_KEY), JSON.stringify(obj)); } catch (e) {}
+  try { pushLocalProfile(); } catch (e) {}
+}
+function setExArchiveState(dayType, exName, patch) {
+  const all = loadExArchive();
+  if (!all[dayType]) all[dayType] = {};
+  all[dayType][exName] = { ...(all[dayType][exName] || {}), ...patch };
+  saveExArchive(all);
+  return all;
+}
+
 // Sabit 4 alan + opsiyonel ekstralar
 const MEAS_FIELDS = {
   weight:   { tr: 'Kilo',   unit: 'kg', core: true,  dual: false },
@@ -2227,7 +2253,8 @@ const APEX_ICON_PATHS = {
   mail: 'M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM3 7l9 6 9-6',
   trophy: 'M8 21h8M12 17v4M17 4h4v3a4 4 0 0 1-4 4M7 4H3v3a4 4 0 0 0 4 4M6 4h12v6a6 6 0 0 1-12 0V4z',
   book: 'M4 4h11a3 3 0 0 1 3 3v14a2 2 0 0 0-2-2H4V4zM4 4v16M4 20h13',
-  target: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'
+  target: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  archive: 'M21 8v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8M2 4h20v4H2zM10 12h4'
 };
 const SK_BG = { background: 'linear-gradient(90deg,#161616 25%,#232323 50%,#161616 75%)', backgroundSize: '200% 100%', animation: 'apexShimmer 1.4s infinite' };
 function SkeletonFeed({ rows }) {
@@ -10405,6 +10432,37 @@ function DayView({
 }) {
   const isBackdated = !!logDate;
 
+  // ═══ Egzersiz arşiv ayrımı: son 2 haftada yapılmayanlar arşive düşer ═══
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveState, setArchiveState] = useState(() => loadExArchive());
+  const nowMs = Date.now();
+  const lastDoneInDay = (exName) => {
+    let max = 0;
+    (logsForDay || []).forEach(l => {
+      if (l.exerciseName === exName && l.dayType === dayType && l.timestamp > max) max = l.timestamp;
+    });
+    return max || null;
+  };
+  const dayArchive = archiveState[dayType] || {};
+  const isArchived = (exName) => {
+    const st = dayArchive[exName] || {};
+    const done = lastDoneInDay(exName);
+    const ref = Math.max(done || 0, st.unarchivedAt || 0);
+    if (st.archivedAt && st.archivedAt >= ref) return true;
+    if (!ref) return false;
+    return (nowMs - ref) > EX_ARCHIVE_WINDOW_MS;
+  };
+  const activeExercises = editMode ? exercises : exercises.filter(e => !isArchived(e));
+  const archivedExercises = editMode ? [] : exercises.filter(e => isArchived(e));
+  const unarchiveExercise = (exName) => {
+    const next = setExArchiveState(dayType, exName, { unarchivedAt: Date.now(), archivedAt: 0 });
+    setArchiveState(JSON.parse(JSON.stringify(next)));
+  };
+  const archiveExercise = (exName) => {
+    const next = setExArchiveState(dayType, exName, { archivedAt: Date.now() });
+    setArchiveState(JSON.parse(JSON.stringify(next)));
+  };
+
   // Count today's (or logDate's) sets per exercise
   const targetDayKey = logDate || dateKey(Date.now());
   const setsCountToday = exName => (logsForDay || []).filter(l => l.exerciseName === exName && l.dayType === dayType && dateKey(l.timestamp) === targetDayKey).length;
@@ -10489,10 +10547,10 @@ function DayView({
     }
   }, /*#__PURE__*/React.createElement(Icon.Play, null), ' ' + t('start_workout'))), editMode && /*#__PURE__*/React.createElement("div", {
     style: S.hintBox
-  }, t('reorder_hint')), !editMode && exercises.length > 1 && /*#__PURE__*/React.createElement("div", {
+  }, t('reorder_hint')), !editMode && activeExercises.length > 1 && /*#__PURE__*/React.createElement("div", {
     style: S.hintBoxSmall
   }, t('reorder_hint2')), /*#__PURE__*/React.createElement(ReorderableList, {
-    items: exercises,
+    items: activeExercises,
     getKey: name => name,
     onReorder: onReorderExercises,
     renderItem: (name, idx, isDragging) => {
@@ -10558,12 +10616,44 @@ function DayView({
           }
         },
         style: { ...S.removeBtn, marginRight: 8 }
-      }, "✏️"), editMode && /*#__PURE__*/React.createElement("button", {
+      }, "✏️"), editMode && !isArchived(name) && /*#__PURE__*/React.createElement("button", {
+        onClick: () => archiveExercise(name),
+        style: { ...S.removeBtn, marginRight: 8 },
+        title: t('archive_to_archive')
+      }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'archive', size: 16, color: '#888', strokeWidth: 2 })), editMode && /*#__PURE__*/React.createElement("button", {
         onClick: () => onRemoveExercise(name),
         style: S.removeBtn
       }, /*#__PURE__*/React.createElement(Icon.Trash, null)));
     }
-  }), exercises.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }),
+  /* ═══ ARŞİV BÖLÜMÜ ═══ */
+  !editMode && archivedExercises.length > 0 && /*#__PURE__*/React.createElement("div", { style: { marginTop: 6 } },
+    /*#__PURE__*/React.createElement("button", {
+      onClick: () => setArchiveOpen(o => !o),
+      style: { width: '100%', padding: '13px 14px', borderRadius: 13, background: '#0e0e0e', border: '1px solid #222', color: '#aaa', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, cursor: 'pointer', fontFamily: 'inherit' }
+    },
+      /*#__PURE__*/React.createElement(ApexIcon, { name: 'archive', size: 15, color: '#999', strokeWidth: 2 }),
+      /*#__PURE__*/React.createElement("span", null, t('archive_label')),
+      /*#__PURE__*/React.createElement("span", { style: { background: 'rgba(var(--accent-rgb),0.15)', color: 'var(--accent-light)', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 10 } }, archivedExercises.length),
+      /*#__PURE__*/React.createElement("span", { style: { color: '#555', fontSize: 12, transform: archiveOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' } }, '\u25be')),
+    archiveOpen && /*#__PURE__*/React.createElement("div", { style: { marginTop: 10, background: '#0c0c0c', border: '1px solid #1e1e1e', borderTop: '2px solid rgba(var(--accent-rgb),0.3)', borderRadius: 14, padding: 12 } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, letterSpacing: 1, color: '#888', marginBottom: 10, textTransform: 'uppercase' } }, t('archive_sub')),
+      archivedExercises.map((exName, i) => {
+        const done = lastDoneInDay(exName);
+        const daysAgo = done ? Math.floor((nowMs - done) / 86400000) : null;
+        return /*#__PURE__*/React.createElement("div", {
+          key: exName,
+          style: { display: 'flex', alignItems: 'center', gap: 11, padding: 11, borderRadius: 11, background: '#111', marginBottom: i === archivedExercises.length - 1 ? 0 : 6 }
+        },
+          /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: '#ddd' } }, exName),
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#666', fontWeight: 600, marginTop: 2 } }, daysAgo != null ? t('archive_last_done', { days: daysAgo }) : t('archive_never'))),
+          /*#__PURE__*/React.createElement("button", {
+            onClick: () => unarchiveExercise(exName),
+            style: { width: 32, height: 32, borderRadius: 9, background: 'rgba(var(--accent-rgb),0.12)', border: '1px solid rgba(var(--accent-rgb),0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }
+          }, /*#__PURE__*/React.createElement(ApexIcon, { name: 'plus', size: 15, color: 'var(--accent-light)', strokeWidth: 2.6 })));
+      }))),
+  exercises.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: S.emptyState
   }, t('no_exercises'), /*#__PURE__*/React.createElement("br", null), t('no_exercises_sub')), /*#__PURE__*/React.createElement("button", {
     onClick: onAddExercise,
