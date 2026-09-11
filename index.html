@@ -1333,7 +1333,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.95'; // Routine banner 3-state: idle (Başla) → inProgress (green pulse dot + "DEVAM EDİYOR"/In Progress + live WorkoutTimerDisplay + "Devam Et"/Resume button, stronger accent bg/border) → done (green + Tamamlandı + check). inProgress = active (unfinished) session exists for that dayType today. New i18n keys routine_ongoing/routine_resume (tr+en)
+const APP_VERSION = '5.9.96'; // Duplicate-exercise guard in addExercise: normalizes name (trim + collapse spaces + lowercase), compares against ALL days' exercises + all log names. Exact dup in current day → blocked (alert). Same exercise on another day/history with DIFFERENT spelling (case/whitespace) → confirm offering the existing canonical name so PR history stays unified; reusing identical spelling on another day is silent. Catches accidental case/whitespace variants, not synonyms. New i18n key ex_similar_confirm (tr+en)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1538,7 +1538,7 @@ const I18N = {
     pd_gunA: 'GÜN A', pd_gunB: 'GÜN B', pd_gunC: 'GÜN C', pd_upper: 'Üst Vücut', pd_lower: 'Alt Vücut', pd_guc: 'Güç',
     sub_chest_sh_tri: 'Göğüs · Omuz · Triceps', sub_back_bi: 'Sırt · Biceps', sub_leg_glute: 'Bacak · Kalça', sub_chest_back: 'Göğüs · Sırt',
     same_lower: 'aynı', notifications_title: 'Bildirimler', reacted_to_record: 'rekoruna tepki verdi', clap_for_record: '{ex} {w}kg rekorun için', clap_for_plato: 'plato kartı', refresh: '↻ Yenile', refreshing: '↻ Yenileniyor...', ready_q: 'HAZIR MISIN?', workout_active: 'ANTRENMAN', month_workouts: 'BU AY ANTRENMAN', est_1rm_lower: 'tahmini 1RM ~{n}kg', weeks_stuck: '⏳ {n} haftadır takılı', volume_lower: 'hacim', vs_prev_day: '% önceki {day} gününe göre', imbalance_msg: '{a}, {b} kasından ~{x}x fazla çalışılmış',
-    program_sent_to: ' arkadaşına ', program_went: ' programı gitti', exercises_will_send: ' egzersiz gönderilecek. Ağırlıkların gitmez — arkadaşın kendi verilerini girer.', day_prefix: 'Bu günde "', ex_exists: '" adlı bir egzersiz zaten var.',
+    program_sent_to: ' arkadaşına ', program_went: ' programı gitti', exercises_will_send: ' egzersiz gönderilecek. Ağırlıkların gitmez — arkadaşın kendi verilerini girer.', day_prefix: 'Bu günde "', ex_exists: '" adlı bir egzersiz zaten var.', ex_similar_confirm: 'Buna çok benzer bir hareket zaten var:\n\n"{name}"\n\nAynı hareket mi?\n\nTamam = mevcut ismi kullan (geçmişin birleşik kalır)\nİptal = yine de yeni olarak ekle',
     poked_excl: 'Dürtüldü!',
     notif_will_see: ' bildirimini görecek',
     poking: ' dürtülüyor',
@@ -1807,7 +1807,7 @@ const I18N = {
     pd_gunA: 'DAY A', pd_gunB: 'DAY B', pd_gunC: 'DAY C', pd_upper: 'Upper Body', pd_lower: 'Lower Body', pd_guc: 'Strength',
     sub_chest_sh_tri: 'Chest · Shoulder · Triceps', sub_back_bi: 'Back · Biceps', sub_leg_glute: 'Legs · Glutes', sub_chest_back: 'Chest · Back',
     same_lower: 'same', notifications_title: 'Notifications', reacted_to_record: 'reacted to your record', clap_for_record: 'for {ex} {w}kg record', clap_for_plato: 'plateau card', refresh: '↻ Refresh', refreshing: '↻ Refreshing...', ready_q: 'READY?', workout_active: 'WORKOUT', month_workouts: 'WORKOUTS THIS MONTH', est_1rm_lower: 'est. 1RM ~{n}kg', weeks_stuck: '⏳ stuck for {n} weeks', volume_lower: 'volume', vs_prev_day: '% vs previous {day} day', imbalance_msg: '{a} worked ~{x}x more than {b}',
-    program_sent_to: ' to ', program_went: ' program sent', exercises_will_send: " exercises will be sent. Your weights won't go — your friend enters their own.", day_prefix: 'An exercise named "', ex_exists: '" already exists.',
+    program_sent_to: ' to ', program_went: ' program sent', exercises_will_send: " exercises will be sent. Your weights won't go — your friend enters their own.", day_prefix: 'An exercise named "', ex_exists: '" already exists.', ex_similar_confirm: 'A very similar exercise already exists:\n\n"{name}"\n\nSame exercise?\n\nOK = use the existing name (keeps your history unified)\nCancel = add as new anyway',
     poked_excl: 'Poked!',
     notif_will_see: ' will get the notification',
     poking: ' being poked',
@@ -8576,13 +8576,35 @@ function WorkoutTab({
       sessions: newSessions
     });
   };
+  // Hareket adını karşılaştırma için normalize et (boşluk + büyük/küçük harf farkını yok say)
+  const normExName = s => (s || '').trim().replace(/\s+/g, ' ').toLowerCase();
   const addExercise = name => {
-    if (!name.trim()) return;
+    const trimmed = (name || '').trim();
+    if (!trimmed) return;
+    const norm = normExName(trimmed);
+    // Tüm günlerdeki + loglardaki mevcut hareket adları
+    const allNames = new Set();
+    Object.values(data.exercises || {}).forEach(list => (list || []).forEach(e => allNames.add(e)));
+    (data.logs || []).forEach(l => { if (l.exerciseName) allNames.add(l.exerciseName); });
+    const match = [...allNames].find(e => normExName(e) === norm);
+    let finalName = trimmed;
+    if (match) {
+      // Bu günde birebir (normalize) aynısı zaten varsa → gerçek çift, ekleme
+      const dayList = data.exercises[currentDay] || [];
+      if (dayList.some(e => normExName(e) === norm)) {
+        alert(t('day_prefix') + trimmed + t('ex_exists'));
+        return;
+      }
+      // Başka günde/geçmişte FARKLI yazımla var → uyar, mevcut ismi öner (geçmiş bölünmesin)
+      if (match !== trimmed) {
+        if (confirm(t('ex_similar_confirm', { name: match }))) finalName = match;
+      }
+    }
     saveData({
       ...data,
       exercises: {
         ...data.exercises,
-        [currentDay]: [...(data.exercises[currentDay] || []), name.trim()]
+        [currentDay]: [...(data.exercises[currentDay] || []), finalName]
       }
     });
   };
