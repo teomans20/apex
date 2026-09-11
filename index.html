@@ -1333,7 +1333,8 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.96'; // Duplicate-exercise guard in addExercise: normalizes name (trim + collapse spaces + lowercase), compares against ALL days' exercises + all log names. Exact dup in current day → blocked (alert). Same exercise on another day/history with DIFFERENT spelling (case/whitespace) → confirm offering the existing canonical name so PR history stays unified; reusing identical spelling on another day is silent. Catches accidental case/whitespace variants, not synonyms. New i18n key ex_similar_confirm (tr+en)
+const APP_VERSION = '5.9.97'; // Calendar Ay/Yıl toggle: MonthlyCalendar now has calView state + toggle top-right. 'Yıl' = GitHub-style year heatmap (53 weeks, intensity=daily volume quartiles, --accent tinted) + streak counters (current/longest weekly streak + total active days); tap an active cell → onTapDay (day detail). 'Ay' = existing monthly calendar unchanged. New i18n keys cal_month/cal_year/streak_current/streak_longest/streak_total_days/streak_weeks/heatmap_less/heatmap_more
+// Duplicate-exercise guard in addExercise: normalizes name (trim + collapse spaces + lowercase), compares against ALL days' exercises + all log names. Exact dup in current day → blocked (alert). Same exercise on another day/history with DIFFERENT spelling (case/whitespace) → confirm offering the existing canonical name so PR history stays unified; reusing identical spelling on another day is silent. Catches accidental case/whitespace variants, not synonyms. New i18n key ex_similar_confirm (tr+en)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1484,7 +1485,7 @@ const I18N = {
     date_min_ago: '{n} dk önce', date_hr_ago: '{n} saat önce', date_days_ago: '{n} gün önce', date_yesterday: 'dün', date_yesterday_cap: 'Dün', date_today_cap: 'Bugün',
     next_label: 'Sıradaki: {name}', last_label: 'Son: {n} gün önce', never_done: 'Henüz hiç yapılmadı — başla!', today_chart: 'bugün',
     // Ekran başlıkları / çeşitli
-    calendar: 'TAKVİM', last_6_months: 'SON 6 AY', tap_month_detail: 'Detay için bir aya dokun', muscle_map: 'KAS HARİTASI · SON 7 GÜN', front: 'ÖN', back: 'ARKA', set_label: 'SET', volume_label: 'HACİM', my_gym: 'Salonum', friends_need_online: 'Arkadaşlar için internet', friends_need_online2: 've giriş gerekli 🌐', firebase_offline: 'Firebase yüklenemedi - offline modda çalışılıyor',
+    calendar: 'TAKVİM', cal_month: 'Ay', cal_year: 'Yıl', streak_current: 'GÜNCEL SERİ', streak_longest: 'EN UZUN', streak_total_days: 'TOPLAM GÜN', streak_weeks: 'hafta', heatmap_less: 'az', heatmap_more: 'çok', last_6_months: 'SON 6 AY', tap_month_detail: 'Detay için bir aya dokun', muscle_map: 'KAS HARİTASI · SON 7 GÜN', front: 'ÖN', back: 'ARKA', set_label: 'SET', volume_label: 'HACİM', my_gym: 'Salonum', friends_need_online: 'Arkadaşlar için internet', friends_need_online2: 've giriş gerekli 🌐', firebase_offline: 'Firebase yüklenemedi - offline modda çalışılıyor',
     // Yerleşik gün isimleri + alt başlıkları
     day_push: 'İTİŞ', day_pull: 'ÇEKİŞ', day_upper: 'ÜST', day_leg: 'BACAK',
     day_push_sub: 'Göğüs · Omuz · Triceps', day_pull_sub: 'Sırt · Biceps', day_upper_sub: 'Tüm üst vücut', day_leg_sub: 'Bacak · Kalça · Baldır',
@@ -1758,7 +1759,7 @@ const I18N = {
     muscle_chest: 'Chest', muscle_frontDelts: 'Front Delts', muscle_sideDelts: 'Side Delts', muscle_rearDelts: 'Rear Delts', muscle_biceps: 'Biceps', muscle_triceps: 'Triceps', muscle_forearms: 'Forearms', muscle_abs: 'Abs', muscle_lats: 'Lats', muscle_traps: 'Traps', muscle_lowerBack: 'Lower Back', muscle_quads: 'Quads', muscle_hamstrings: 'Hamstrings', muscle_glutes: 'Glutes', muscle_calves: 'Calves',
     date_min_ago: '{n} min ago', date_hr_ago: '{n} hr ago', date_days_ago: '{n} days ago', date_yesterday: 'yesterday', date_yesterday_cap: 'Yesterday', date_today_cap: 'Today',
     next_label: 'Next up: {name}', last_label: 'Last: {n} days ago', never_done: 'Never done yet — start!', today_chart: 'today',
-    calendar: 'CALENDAR', last_6_months: 'LAST 6 MONTHS', tap_month_detail: 'Tap a month for details', muscle_map: 'MUSCLE MAP · LAST 7 DAYS', front: 'FRONT', back: 'BACK', set_label: 'SETS', volume_label: 'VOLUME', my_gym: 'My Gym', friends_need_online: 'Friends need internet', friends_need_online2: 'and sign-in 🌐', firebase_offline: 'Firebase could not load - working offline',
+    calendar: 'CALENDAR', cal_month: 'Month', cal_year: 'Year', streak_current: 'CURRENT STREAK', streak_longest: 'LONGEST', streak_total_days: 'TOTAL DAYS', streak_weeks: 'wk', heatmap_less: 'less', heatmap_more: 'more', last_6_months: 'LAST 6 MONTHS', tap_month_detail: 'Tap a month for details', muscle_map: 'MUSCLE MAP · LAST 7 DAYS', front: 'FRONT', back: 'BACK', set_label: 'SETS', volume_label: 'VOLUME', my_gym: 'My Gym', friends_need_online: 'Friends need internet', friends_need_online2: 'and sign-in 🌐', firebase_offline: 'Firebase could not load - working offline',
     day_push: 'PUSH', day_pull: 'PULL', day_upper: 'UPPER', day_leg: 'LEGS',
     day_push_sub: 'Chest · Shoulders · Triceps', day_pull_sub: 'Back · Biceps', day_upper_sub: 'Full upper body', day_leg_sub: 'Legs · Glutes · Calves',
     set_photo_remove: 'Remove photo', user_label: 'User', cloud_sync_on: '☁ Cloud sync on', theme: 'Theme', data_label: 'Data',
@@ -3074,6 +3075,50 @@ function MonthlyCalendar({
     });
     return map;
   }, [logs, sessions]);
+  // — YIL GÖRÜNÜMÜ (heatmap + seri) —
+  const [calView, setCalView] = useState('month'); // 'month' | 'year'
+  const DAY_MS = 86400000;
+  const yearData = useMemo(() => {
+    // Gün başına hacim (weight×reps)
+    const volByDay = {};
+    logs.forEach(l => { const k = dateKey(l.timestamp); volByDay[k] = (volByDay[k] || 0) + (l.weight || 0) * (l.reps || 0); });
+    const activeDays = Object.keys(volByDay).filter(k => volByDay[k] > 0);
+    const totalDays = activeDays.length;
+    // Yoğunluk için çeyreklik eşikleri (kullanıcının kendi dağılımına göre)
+    const vols = activeDays.map(k => volByDay[k]).sort((a, b) => a - b);
+    const q = p => vols.length ? vols[Math.min(vols.length - 1, Math.floor(p * vols.length))] : 0;
+    const t1 = q(0.25), t2 = q(0.5), t3 = q(0.75);
+    const levelFor = v => v <= 0 ? 0 : v <= t1 ? 1 : v <= t2 ? 2 : v <= t3 ? 3 : 4;
+    const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+    const thisMon = weekMondayStart(today0.getTime());
+    const WEEKS = 53;
+    const startMon = thisMon - (WEEKS - 1) * 7 * DAY_MS;
+    const columns = [], monthLabels = [];
+    let lastMonth = -1;
+    for (let w = 0; w < WEEKS; w++) {
+      const colStart = startMon + w * 7 * DAY_MS;
+      const col = [];
+      for (let d = 0; d < 7; d++) {
+        const ts = colStart + d * DAY_MS;
+        const k = dateKey(ts);
+        col.push({ k, level: ts > today0.getTime() ? -1 : levelFor(volByDay[k] || 0) });
+      }
+      const m = new Date(colStart).getMonth();
+      if (m !== lastMonth) { monthLabels.push({ w, m }); lastMonth = m; }
+      columns.push(col);
+    }
+    // Haftalık seri (üst üste antrenman yapılan haftalar)
+    const weekHas = {};
+    activeDays.forEach(k => { const [y, mo, da] = k.split('-').map(Number); weekHas[weekMondayStart(new Date(y, mo - 1, da).getTime())] = true; });
+    let current = 0, cursor = thisMon;
+    if (!weekHas[cursor]) cursor -= 7 * DAY_MS; // bu hafta henüz yapılmadıysa geçen haftadan say
+    while (weekHas[cursor]) { current++; cursor -= 7 * DAY_MS; }
+    const weekKeys = Object.keys(weekHas).map(Number).sort((a, b) => a - b);
+    let longest = 0, run = 0, prev = null;
+    weekKeys.forEach(wk => { run = (prev !== null && wk - prev === 7 * DAY_MS) ? run + 1 : 1; longest = Math.max(longest, run); prev = wk; });
+    return { columns, monthLabels, totalDays, current, longest };
+  }, [logs]);
+  const HEAT_LV = ['#161616', 'rgba(var(--accent-rgb),0.32)', 'rgba(var(--accent-rgb),0.55)', 'rgba(var(--accent-rgb),0.78)', 'var(--accent)'];
   const year = month.getFullYear(),
     monthIdx = month.getMonth();
   const firstDay = new Date(year, monthIdx, 1);
@@ -3093,9 +3138,14 @@ function MonthlyCalendar({
   }
   while (cells.length % 7 !== 0) cells.push(null);
   const todayKey = dateKey(Date.now());
-  return /*#__PURE__*/React.createElement("div", {
-    style: S.calendarCard
-  }, /*#__PURE__*/React.createElement("div", {
+  const toggle = /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', gap: 3, background: '#0d0d0d', border: '1px solid #1c1c1c', borderRadius: 10, padding: 3 }
+  }, ['month', 'year'].map(v => /*#__PURE__*/React.createElement("button", {
+    key: v,
+    onClick: () => setCalView(v),
+    style: { border: 'none', background: calView === v ? 'linear-gradient(135deg,var(--accent),var(--accent-deep))' : 'transparent', color: calView === v ? '#fff' : '#888', fontFamily: 'inherit', fontSize: 10.5, fontWeight: 800, padding: '5px 13px', borderRadius: 7, cursor: 'pointer' }
+  }, t(v === 'month' ? 'cal_month' : 'cal_year'))));
+  const monthBlock = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: S.calendarHeader
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => changeMonth(-1),
@@ -3146,6 +3196,41 @@ function MonthlyCalendar({
       }
     }))));
   })));
+  // YIL GÖRÜNÜMÜ: seri sayaçları + heatmap
+  const monthLabelMap = {};
+  yearData.monthLabels.forEach(ml => { monthLabelMap[ml.w] = ml.m; });
+  const yearBlock = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', gap: 18, marginBottom: 13 }
+  }, [{ n: yearData.current, l: t('streak_current'), u: ' ' + t('streak_weeks'), c: 'var(--accent-light)' }, { n: yearData.longest, l: t('streak_longest'), u: ' ' + t('streak_weeks'), c: '#fff' }, { n: yearData.totalDays, l: t('streak_total_days'), u: '', c: '#fff' }].map((s, i) => /*#__PURE__*/React.createElement("div", {
+    key: i
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 24, color: s.c, lineHeight: 1 }
+  }, s.n, s.u && /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: '#888', fontWeight: 700 } }, s.u)), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 8.5, color: '#888', fontWeight: 700, letterSpacing: 0.4, marginTop: 3 }
+  }, s.l)))), /*#__PURE__*/React.createElement("div", {
+    style: { overflowX: 'auto', paddingBottom: 4 }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', gap: 0, fontSize: 8, color: '#666', marginBottom: 4 }
+  }, yearData.columns.map((col, w) => /*#__PURE__*/React.createElement("div", {
+    key: w,
+    style: { minWidth: 14, fontWeight: 700 }
+  }, monthLabelMap[w] !== undefined ? TR_MONTHS_SHORT[monthLabelMap[w]] : ''))), /*#__PURE__*/React.createElement("div", {
+    style: { display: 'grid', gridAutoFlow: 'column', gridTemplateRows: 'repeat(7, 11px)', gap: 3 }
+  }, yearData.columns.map((col, w) => col.map((cell, d) => /*#__PURE__*/React.createElement(cell.level >= 1 ? 'button' : 'div', {
+    key: w + '-' + d,
+    onClick: cell.level >= 1 ? (() => onTapDay(cell.k)) : undefined,
+    style: { width: 11, height: 11, borderRadius: 3, padding: 0, border: cell.k === todayKey ? '1px solid var(--accent-light)' : 'none', background: cell.level < 0 ? 'transparent' : HEAT_LV[cell.level], cursor: cell.level >= 1 ? 'pointer' : 'default' }
+  }))))), /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 4, marginTop: 8, fontSize: 9, color: '#666' }
+  }, /*#__PURE__*/React.createElement("span", null, t('heatmap_less')), [1, 2, 3, 4].map(lv => /*#__PURE__*/React.createElement("span", {
+    key: lv,
+    style: { width: 11, height: 11, borderRadius: 3, background: HEAT_LV[lv] }
+  })), /*#__PURE__*/React.createElement("span", null, t('heatmap_more'))));
+  return /*#__PURE__*/React.createElement("div", {
+    style: S.calendarCard
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 10 }
+  }, toggle), calView === 'month' ? monthBlock : yearBlock);
 }
 // Programı (egzersizleri) arkadaşlara gönderme modalı — çoklu seçim
 // Dürtme modalı — 3 hazır profesyonel mesaj seç, gönder
