@@ -1333,7 +1333,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.92'; // Exercise archive: exercises not done in 2 weeks move to a collapsible "Arşiv" section (with last-done date + restore); restore gives 2 more weeks; manual archive button in edit mode. Keeps exercise list clean
+const APP_VERSION = '5.9.95'; // Routine banner 3-state: idle (Başla) → inProgress (green pulse dot + "DEVAM EDİYOR"/In Progress + live WorkoutTimerDisplay + "Devam Et"/Resume button, stronger accent bg/border) → done (green + Tamamlandı + check). inProgress = active (unfinished) session exists for that dayType today. New i18n keys routine_ongoing/routine_resume (tr+en)
 
 // ————— ÇOK DİLLİLİK (i18n) TR/EN —————
 // localStorage: apex-lang = 'tr' | 'en' (yoksa telefon diline göre otomatik)
@@ -1710,7 +1710,7 @@ const I18N = {
     routine_sets: 'Set', routine_reps: 'Tekrar',
     routine_schedule: 'ZAMANLAMA', routine_mode_cycle: 'Sıralı Döngü', routine_mode_weekly: 'Haftalık',
     routine_save: 'Kaydet', routine_confirm_delete: 'Bu rutini silmek istediğinden emin misin?',
-    routine_today: 'Bugünkü Rutin', routine_next: 'Sıradaki', routine_start: 'Başla', routine_done: 'Tamamlandı',
+    routine_today: 'Bugünkü Rutin', routine_next: 'Sıradaki', routine_start: 'Başla', routine_done: 'Tamamlandı', routine_ongoing: 'Devam Ediyor', routine_resume: 'Devam Et',
     routine_day_subtitle_ph: 'örn. Göğüs · Omuz · Triceps',
     routine_pick_ex: 'Hareket Seç', routine_blank_day: 'Boş Gün Ekle',
     mon: 'Pzt', tue: 'Sal', wed: 'Çar', thu: 'Per', fri: 'Cum', sat: 'Cmt', sun: 'Paz',
@@ -1979,7 +1979,7 @@ const I18N = {
     routine_sets: 'Sets', routine_reps: 'Reps',
     routine_schedule: 'SCHEDULE', routine_mode_cycle: 'Sequential Cycle', routine_mode_weekly: 'Weekly',
     routine_save: 'Save', routine_confirm_delete: 'Are you sure you want to delete this routine?',
-    routine_today: "Today's Routine", routine_next: 'Next', routine_start: 'Start', routine_done: 'Completed',
+    routine_today: "Today's Routine", routine_next: 'Next', routine_start: 'Start', routine_done: 'Completed', routine_ongoing: 'In Progress', routine_resume: 'Resume',
     routine_day_subtitle_ph: 'e.g. Chest · Shoulders · Triceps',
     routine_pick_ex: 'Pick Exercise', routine_blank_day: 'Add Blank Day',
     mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun',
@@ -8716,20 +8716,24 @@ function WorkoutTab({
     const isBetter = (a, b) => a.weight > b.weight || a.weight === b.weight && a.reps > b.reps;
     const bestOf = sets => sets.reduce((best, s) => !best || isBetter(s, best) ? s : best, null);
 
-    // Categorize all logs of an exercise into top + backoff (1st set of a day = top, rest = backoff)
+    // Categorize all logs of an exercise into top + backoff.
+    // Seans bazlı grupla (aynı gün iki antrenman karışmasın); top = setType==='top' (yoksa kronolojik ilk set)
     const categorize = logs => {
-      const byDay = {};
+      const groups = {};
       logs.forEach(l => {
-        const k = dateKey(l.timestamp);
-        if (!byDay[k]) byDay[k] = [];
-        byDay[k].push(l);
+        const k = l.sessionId ? 'session:' + l.sessionId : 'day:' + dateKey(l.timestamp);
+        if (!groups[k]) groups[k] = [];
+        groups[k].push(l);
       });
       const tops = [],
         backs = [];
-      Object.values(byDay).forEach(dayLogs => {
-        const sorted = [...dayLogs].sort((a, b) => a.timestamp - b.timestamp);
-        if (sorted[0]) tops.push(sorted[0]);
-        sorted.slice(1).forEach(s => backs.push(s));
+      Object.values(groups).forEach(groupLogs => {
+        const sorted = [...groupLogs].sort((a, b) => a.timestamp - b.timestamp);
+        const hasExplicitTop = sorted.some(s => s.setType === 'top');
+        sorted.forEach((s, i) => {
+          const type = s.setType || (!hasExplicitTop && i === 0 ? 'top' : 'backoff');
+          (type === 'top' ? tops : backs).push(s);
+        });
       });
       return {
         tops,
@@ -8900,15 +8904,16 @@ function WorkoutTab({
     const logs = data.logs.filter(l => l.exerciseName === exerciseName).sort((a, b) => b.timestamp - a.timestamp);
     const grouped = {};
     logs.forEach(log => {
-      const d = new Date(log.timestamp).toDateString();
-      if (!grouped[d]) grouped[d] = [];
-      grouped[d].push(log);
+      // Seans bilgisi varsa seans bazlı grupla — aynı gün iki antrenman karışmasın (getCategorizedSets ile tutarlı)
+      const k = log.sessionId ? 'session:' + log.sessionId : 'day:' + new Date(log.timestamp).toDateString();
+      if (!grouped[k]) grouped[k] = [];
+      grouped[k].push(log);
     });
-    return Object.entries(grouped).map(([date, list]) => ({
-      date,
+    return Object.values(grouped).map(list => ({
+      date: new Date(list[0].timestamp).toDateString(),
       timestamp: list[0].timestamp,
       sets: list.sort((a, b) => a.timestamp - b.timestamp)
-    }));
+    })).sort((a, b) => b.timestamp - a.timestamp);
   };
   const startBackdatedWorkout = (targetDateKey, dayType) => {
     const todayKey = dateKey(Date.now());
@@ -9630,20 +9635,33 @@ function HomeView({
           if (BUILTIN_DAYS[key] && BUILTIN_DAYS[key].name && BUILTIN_DAYS[key].name.toLowerCase() === nameLower) { resolvedDayType = key; break; }
         }
       }
-      // Bugün bu günde antrenman yapıldı mı?
+      // Bugün bu gün "tamamlandı" mı? = bitmiş seans var VE devam eden (aktif) seans YOK.
+      // Eskiden tek bir set logu olunca bile "Tamamlandı" diyordu → seans devam ederken yanlış kapanıyordu.
       const todayKey = dateKey(Date.now());
-      const doneToday = resolvedDayType && (data.logs || []).some(l => l.dayType === resolvedDayType && dateKey(l.timestamp) === todayKey);
+      const todaySessions = (data.sessions || []).filter(s => s.dayType === resolvedDayType && dateKey(s.startTime) === todayKey);
+      const hasActiveSession = todaySessions.some(s => !s.endTime);
+      const hasEndedSession = todaySessions.some(s => s.endTime);
+      // Seans hiç başlatılmadan log girenler için geriye dönük uyum: aktif seans yoksa log varlığı da "tamamlandı" sayılır
+      const hasLogsToday = (data.logs || []).some(l => l.dayType === resolvedDayType && dateKey(l.timestamp) === todayKey);
+      const doneToday = !!resolvedDayType && !hasActiveSession && (hasEndedSession || hasLogsToday);
+      // 3 durum: idle (Başla) → inProgress (Devam Ediyor + canlı sayaç) → done (Tamamlandı)
+      const activeSess = todaySessions.find(s => !s.endTime);
+      const inProgress = !doneToday && !!activeSess;
+      const headerColor = doneToday ? '#4CAF50' : 'var(--accent-light)';
       return /*#__PURE__*/React.createElement("button", {
         onClick: () => { if (resolvedDayType) onSelectDay(resolvedDayType); else onOpenRoutines(); },
         className: 'apex-hero-glow apex-enter apex-enter-1',
-        style: { position: 'relative', width: '100%', marginBottom: 12, background: doneToday ? 'linear-gradient(135deg,rgba(76,175,80,0.16),rgba(0,0,0,0.02))' : 'linear-gradient(135deg,rgba(var(--accent-rgb),0.16),rgba(0,0,0,0.02))', border: '1px solid ' + (doneToday ? 'rgba(76,175,80,0.35)' : 'rgba(var(--accent-rgb),0.3)'), borderRadius: 18, padding: '20px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', overflow: 'hidden' }
+        style: { position: 'relative', width: '100%', marginBottom: 12, background: doneToday ? 'linear-gradient(135deg,rgba(76,175,80,0.16),rgba(0,0,0,0.02))' : inProgress ? 'linear-gradient(135deg,rgba(var(--accent-rgb),0.24),rgba(0,0,0,0.02))' : 'linear-gradient(135deg,rgba(var(--accent-rgb),0.16),rgba(0,0,0,0.02))', border: '1px solid ' + (doneToday ? 'rgba(76,175,80,0.35)' : inProgress ? 'rgba(var(--accent-rgb),0.5)' : 'rgba(var(--accent-rgb),0.3)'), borderRadius: 18, padding: '20px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', overflow: 'hidden' }
       },
-        /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, color: doneToday ? '#4CAF50' : 'var(--accent-light)', letterSpacing: 2, textTransform: 'uppercase', position: 'relative' } }, doneToday ? t('routine_done') : t('routine_today')),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, fontWeight: 800, color: headerColor, letterSpacing: 2, textTransform: 'uppercase', position: 'relative', display: 'flex', alignItems: 'center', gap: 7 } },
+          inProgress && /*#__PURE__*/React.createElement("span", { style: { width: 8, height: 8, borderRadius: '50%', background: '#4CAF50', boxShadow: '0 0 8px 1px rgba(76,175,80,0.8)', animation: 'pulse 1.4s ease-in-out infinite', flexShrink: 0 } }),
+          /*#__PURE__*/React.createElement("span", null, doneToday ? t('routine_done') : inProgress ? t('routine_ongoing') : t('routine_today'))),
         /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontSize: 42, fontWeight: 900, color: '#fff', lineHeight: 0.9, letterSpacing: -1, marginTop: 8, position: 'relative' } }, todayDay.name),
+        inProgress && /*#__PURE__*/React.createElement("div", { style: { marginTop: 8, position: 'relative' } }, /*#__PURE__*/React.createElement(WorkoutTimerDisplay, { startTime: activeSess.startTime })),
         /*#__PURE__*/React.createElement("div", { style: { position: 'absolute', right: 18, bottom: 18, display: 'flex', alignItems: 'center', gap: 6, background: doneToday ? 'linear-gradient(135deg,#4CAF50,#2E7D32)' : 'var(--accent)', padding: '10px 16px', borderRadius: 13, fontSize: 12, fontWeight: 800, color: '#fff', boxShadow: '0 6px 18px rgba(var(--accent-rgb),0.4)' } },
           doneToday ? /*#__PURE__*/React.createElement(ApexIcon, { name: 'check', size: 14, color: '#fff', strokeWidth: 2.6 })
             : /*#__PURE__*/React.createElement(React.Fragment, null,
-                /*#__PURE__*/React.createElement("span", null, t('routine_start')),
+                /*#__PURE__*/React.createElement("span", null, inProgress ? t('routine_resume') : t('routine_start')),
                 /*#__PURE__*/React.createElement("svg", { width: 13, height: 13, viewBox: "0 0 24 24", fill: "#fff" }, /*#__PURE__*/React.createElement("path", { d: "M8 5v14l11-7z" })))));
     })()), (() => {
       const insights = computeInsights(data);
@@ -10708,16 +10726,27 @@ function ExerciseView({
   // Helpers
   const isBetterSet = (a, b) => a.weight > b.weight || a.weight === b.weight && a.reps > b.reps;
   const bestOfSets = sets => sets.reduce((best, s) => !best || isBetterSet(s, best) ? s : best, null);
+  // Bir seansın setlerini top/back-off olarak ayır — setType kayıtlıysa onu, yoksa kronolojik ilk set = top (getCategorizedSets ile tutarlı)
+  const splitTopBackoff = sets => {
+    const sorted = [...sets].sort((a, b) => a.timestamp - b.timestamp);
+    const hasExplicitTop = sorted.some(s => s.setType === 'top');
+    const tops = [], backoffs = [];
+    sorted.forEach((s, i) => {
+      const type = s.setType || (!hasExplicitTop && i === 0 ? 'top' : 'backoff');
+      (type === 'top' ? tops : backoffs).push(s);
+    });
+    return { top: tops.length ? bestOfSets(tops) : null, tops, backoffs };
+  };
 
   // Build categorized data (Top vs Back-off) across all history
-  // history is { date, timestamp, sets: [...] } per day, sorted newest first
-  // Each day's first set (by timestamp) = top, rest = back-off
+  // history is { date, timestamp, sets: [...] } per session (session-grouped), sorted newest first
+  // Top = setType==='top' (yoksa o seansın kronolojik ilk seti), gerisi back-off
   const topAllTime = [],
     backoffAllTime = [];
   history.forEach(h => {
-    const sorted = [...h.sets].sort((a, b) => a.timestamp - b.timestamp);
-    if (sorted[0]) topAllTime.push(sorted[0]);
-    sorted.slice(1).forEach(s => backoffAllTime.push(s));
+    const { tops, backoffs } = splitTopBackoff(h.sets);
+    tops.forEach(s => topAllTime.push(s));
+    backoffs.forEach(s => backoffAllTime.push(s));
   });
   const topPR = topAllTime.length ? bestOfSets(topAllTime) : null;
   const backoffPR = backoffAllTime.length ? bestOfSets(backoffAllTime) : null;
@@ -10732,17 +10761,17 @@ function ExerciseView({
   let targetTop = null,
     targetBackoff = null;
   if (previousEntry) {
-    const sorted = [...previousEntry.sets].sort((a, b) => a.timestamp - b.timestamp);
-    targetTop = sorted[0] || null;
-    const backSets = sorted.slice(1);
-    targetBackoff = backSets.length ? bestOfSets(backSets) : null;
+    const { top, backoffs } = splitTopBackoff(previousEntry.sets);
+    targetTop = top;
+    targetBackoff = backoffs.length ? bestOfSets(backoffs) : null;
   }
 
   // Today's sets (in order)
   const todayEntry = history.find(h => dateKey(h.timestamp) === todayOrLogKey);
   const todaySorted = todayEntry ? [...todayEntry.sets].sort((a, b) => a.timestamp - b.timestamp) : [];
-  const todayTop = todaySorted[0] || null;
-  const todayBackoffs = todaySorted.slice(1);
+  const todaySplit = todayEntry ? splitTopBackoff(todayEntry.sets) : { top: null, tops: [], backoffs: [] };
+  const todayTop = todaySplit.top;
+  const todayBackoffs = todaySplit.backoffs;
   const todayBestBackoff = todayBackoffs.length ? bestOfSets(todayBackoffs) : null;
   const topBeaten = !!(todayTop && targetTop && isBetterSet(todayTop, targetTop));
   const backoffBeaten = !!(todayBestBackoff && targetBackoff && isBetterSet(todayBestBackoff, targetBackoff));
@@ -12189,16 +12218,17 @@ function SessionSummaryModal({
 function getExercisePRHistory(logs, exerciseName) {
   const byDay = {};
   logs.filter(l => l.exerciseName === exerciseName).forEach(l => {
-    const k = dateKey(l.timestamp);
+    // Seans bazlı grupla — aynı gün iki antrenman karışmasın (getCategorizedSets ile tutarlı)
+    const k = l.sessionId ? 'session:' + l.sessionId : 'day:' + dateKey(l.timestamp);
     if (!byDay[k]) byDay[k] = [];
     byDay[k].push(l);
   });
-  // Her gün için top set (ilk set) ve o günkü en iyi
-  const dayEntries = Object.entries(byDay).map(([k, dayLogs]) => {
+  // Her seansın top seti (setType varsa o, yoksa kronolojik ilk set)
+  const dayEntries = Object.values(byDay).map(dayLogs => {
     const sorted = [...dayLogs].sort((a, b) => a.timestamp - b.timestamp);
-    const topSet = sorted[0];
+    const topSet = sorted.find(s => s.setType === 'top') || sorted[0];
     return {
-      dateKey: k,
+      dateKey: dateKey(topSet.timestamp),
       ts: topSet.timestamp,
       weight: topSet.weight,
       reps: topSet.reps
