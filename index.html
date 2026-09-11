@@ -1517,7 +1517,8 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.104'; // Exercise Swap (option A, inline icon). Module: SWAP_SUGGESTIONS (curated per-muscle) + computeSwapAlts(from,data) → {primaryMuscle, history:[same-primary-muscle names you've logged], suggested:[curated not-done]} via existing getExerciseMuscles. SwapModal component: header "X yerine" + muscle tag, sections Geçmişinden/Önerilen (each row shows last perf or "new"), free-text "Elle yaz" input+Aç, "Güne kalıcı ekle" toggle (default off = one-off), note. DayView: swap icon (two-arrows) on each non-editMode/non-completed exercise row (stopPropagation), onSwap prop. WorkoutTab: swapFor/swapFrom state, SwapModal render, onPick(name,addToDay)→ setSwapFrom + optional addExercise(name to current day, keeps Cable Row) + open name's ExerciseView. ExerciseView: swapFrom prop → "X yerine" badge under title. History is by exerciseName so chosen exercise keeps its own PR history. New i18n swap_* keys. Tested computeSwapAlts (history filters by primary muscle, excludes self+done from suggested)
+const APP_VERSION = '5.9.106'; // Plateau engine unified + off-by-one fix (2nd review round). Replaced getStuckWeeksForExercise with getPlateauState(logs, exerciseName, opts) → {isStuck, weeksSinceImprovement, lastImprovementTs, lastWorkoutTs, trainedRecently, curve}, built on getExercisePRHistory (session/setType-aware per-session top curve). Loop scans ALL curve points (fixes feed off-by-one: old day-based helper looped i<days.length-1, skipping the most recent real workout since the feed calls it before today's set is added → could false-fire "plateau broken" when you PR'd last week). BOTH ProgressTab exerciseStats AND the feed plateau card now use this one engine (were separate, drifting) — feed now also gets the trainedRecently gate (no "8 weeks stuck" card when you'd actually abandoned then returned). Trade-off note (accepted): cloud union-merge can resurrect a delete made on an offline-with-unsynced device — future tombstone/deletedAt. Tested unified engine. (Prior v5.9.105 fixes retained: isStuck trainedRecently gate, monthStats rep-PR counting.)
+// Exercise Swap (option A, inline icon). Module: SWAP_SUGGESTIONS (curated per-muscle) + computeSwapAlts(from,data) → {primaryMuscle, history:[same-primary-muscle names you've logged], suggested:[curated not-done]} via existing getExerciseMuscles. SwapModal component: header "X yerine" + muscle tag, sections Geçmişinden/Önerilen (each row shows last perf or "new"), free-text "Elle yaz" input+Aç, "Güne kalıcı ekle" toggle (default off = one-off), note. DayView: swap icon (two-arrows) on each non-editMode/non-completed exercise row (stopPropagation), onSwap prop. WorkoutTab: swapFor/swapFrom state, SwapModal render, onPick(name,addToDay)→ setSwapFrom + optional addExercise(name to current day, keeps Cable Row) + open name's ExerciseView. ExerciseView: swapFrom prop → "X yerine" badge under title. History is by exerciseName so chosen exercise keeps its own PR history. New i18n swap_* keys. Tested computeSwapAlts (history filters by primary muscle, excludes self+done from suggested)
 // P2 cleanups: (#5 SPAM) broadcastGymEntry daily-dedup key now dateKey(Date.now()) local day not toISOString UTC → no duplicate "in workout" notif when UTC day flips at 03:00 TR. (#4) reps validation: handleSubmit requires positive integer 1..1000 (was weight-only >0), addLog defensive guard rejects w<=0/non-integer/r<=0. (#3) rest timer now endsAt-based (Date.now()) — no drift when phone suspends; startRestTimer/adjustRestTimer/tick reworked. (#1) cycle-mode routine cycleIndex now advances in endSession (once/day via lastAdvancedDay guard, only if completed dayType matches routine's current day or unresolvable) — was never incremented. (#7) EN-mode hardcoded TR fixed: "TOP SET/BACK-OFF — YENMEN GEREKEN" + "TOP SET"/"BACK-OFF SET n" → i18n top_to_beat/backoff_to_beat/top_set_cap2/backoff_set_n. DEFERRED: #2 applyProgram sets/reps (needs a prescription storage model → part of APEX Coach), #6 useMemo .length deps (low risk, not clearly broken)
 // Firestore atomicity (data-safety #3): claimUsername now uses db.runTransaction (get usernames/{u} inside tx → throw 'username-taken' if owned by another uid, else set doc + user.username atomically) — closes the check-then-set TOCTOU race; caller shows t('username_taken') on that error. toggleReaction now wraps read-modify-write in db.runTransaction (retries on contention) so two friends reacting at once no longer clobber each other's reaction. No new i18n keys
 // Cloud sync armor (data-safety #2, P0): saveData stamps updatedAt + toasts on localStorage write failure (save_failed). Load effect (WorkoutTab + ProgressTab) no longer blindly overwrites local with cloud — mergeGymData() unions logs & sessions BY ID (added sets never lost), unions exercises per day, picks config fields by newer updatedAt, and RE-READS current localStorage at cloud-arrival (kills the stale-get-after-local-edit race). If local had records cloud lacked (offline adds / 2 devices), merged is pushed back so cloud converges. Trade-off: union favors keeping data, so a delete made on device A while device B is offline-with-unsynced-data can resurrect (visible + re-deletable; better than silently losing an add). Tested 4 merge scenarios. New i18n save_failed
@@ -6685,22 +6686,23 @@ function feedTimeAgo(ts) {
   });
 }
 
-// Bir hareketin kaç haftadır takılı olduğunu hesapla (plato feed kartı için)
-function getStuckWeeksForExercise(logs, exerciseName) {
-  const exLogs = logs.filter(l => l.exerciseName === exerciseName).sort((a, b) => a.timestamp - b.timestamp);
-  if (exLogs.length < 2) return 0;
-  const byDay = {};
-  exLogs.forEach(l => {
-    const k = dateKey(l.timestamp);
-    if (!byDay[k] || l.timestamp < byDay[k].timestamp) byDay[k] = l;
-  });
-  const days = Object.values(byDay).sort((a, b) => a.timestamp - b.timestamp);
-  let best = 0, lastImproveTs = days[0].timestamp;
-  for (let i = 0; i < days.length - 1; i++) {
-    if (days[i].weight > best) { best = days[i].weight; lastImproveTs = days[i].timestamp; }
+// PLATO MOTORU — Progress ve Feed ORTAK kullanır (tek kaynak, ayrışmasınlar).
+// Plato = son ~2 hafta içinde HÂLÂ yapılıyor AMA 4+ haftadır PR yok. Uzun süredir yapılmıyorsa ara verilmiş → plato değil.
+// getExercisePRHistory: her seansın top setini kronolojik verir (setType/sessionId-aware). Loop TÜM noktaları tarar (off-by-one yok).
+function getPlateauState(logs, exerciseName, opts) {
+  const now = Date.now();
+  const plateauMs = ((opts && opts.plateauWeeks) || 4) * 7 * 86400000;
+  const recentMs = (opts && opts.recentMs) || 16 * 86400000;
+  const curve = getExercisePRHistory(logs, exerciseName);
+  if (!curve.length) return { isStuck: false, weeksSinceImprovement: 0, lastImprovementTs: null, lastWorkoutTs: null, trainedRecently: false, curve: [] };
+  let lastImproveTs = curve[0].ts;
+  for (let i = 1; i < curve.length; i++) {
+    if (curve[i].weight > curve[i - 1].weight || (curve[i].weight === curve[i - 1].weight && curve[i].reps > curve[i - 1].reps)) lastImproveTs = curve[i].ts;
   }
-  const weeks = Math.floor((Date.now() - lastImproveTs) / (7 * 86400000));
-  return weeks;
+  const lastWorkoutTs = curve[curve.length - 1].ts;
+  const trainedRecently = now - lastWorkoutTs <= recentMs;
+  const isStuck = trainedRecently && curve.length >= 2 && (now - lastImproveTs >= plateauMs);
+  return { isStuck, weeksSinceImprovement: Math.floor((now - lastImproveTs) / (7 * 86400000)), lastImprovementTs: lastImproveTs, lastWorkoutTs, trainedRecently, curve };
 }
 
 // Feed görünümü (akış) — arkadaşların aktiviteleri
@@ -8833,16 +8835,16 @@ function WorkoutTab({
         // FEED: yeni rekor kartı yaz (salon paylaşımlıysa)
         if (authUser && myUsername && activeGym && activeGym.shared !== false && window.APEX_FIREBASE_OK) {
           const delta = previousPR.weight ? Math.max(0, w - previousPR.weight) : 0;
-          // Plato kırıldı mı kontrolü: bu hareket uzun süredir takılıysa "plateau" kartı
-          const stuckWeeks = getStuckWeeksForExercise(data.logs, exerciseName);
-          if (stuckWeeks >= 4) {
+          // Plato kırıldı mı: ortak motor (data.logs bugünkü set eklenmeden önce → geçmişe göre doğru). isStuck inactivity kapısını da içerir.
+          const plat = getPlateauState(data.logs, exerciseName);
+          if (plat.isStuck) {
             writeFeedItem(authUser.uid, {
               type: 'plateau',
               gymName: activeGym.name,
               exerciseName,
               weight: w,
               reps: r,
-              weeksStuck: stuckWeeks
+              weeksStuck: plat.weeksSinceImprovement
             });
           } else {
             writeFeedItem(authUser.uid, {
@@ -13611,31 +13613,20 @@ function ProgressTab({
 
   // Her egzersiz için PR eğrisi + son PR tarihi + plato durumu
   const exerciseStats = useMemo(() => {
-    const now = Date.now();
-    const PLATEAU_WEEKS = 4;
-    const plateauMs = PLATEAU_WEEKS * 7 * 86400000;
     return allExercises.map(name => {
-      const curve = getExercisePRHistory(data.logs, name);
-      if (curve.length === 0) return null;
-      const currentPR = curve[curve.length - 1];
-      // Son rekor artışının tarihi: eğride weight'in en son arttığı nokta
-      let lastImproveTs = curve[0].ts;
-      for (let i = 1; i < curve.length; i++) {
-        if (curve[i].weight > curve[i - 1].weight || curve[i].weight === curve[i - 1].weight && curve[i].reps > curve[i - 1].reps) {
-          lastImproveTs = curve[i].ts;
-        }
-      }
-      const weeksSince = Math.floor((now - lastImproveTs) / (7 * 86400000));
-      const isStuck = now - lastImproveTs >= plateauMs && curve.length >= 2;
+      // Ortak plato motoru (Feed ile aynı) — Progress ve Feed ayrışmasın
+      const pl = getPlateauState(data.logs, name);
+      if (!pl.curve.length) return null;
+      const currentPR = pl.curve[pl.curve.length - 1];
       return {
         name,
-        curve,
+        curve: pl.curve,
         currentPR,
         weight: currentPR.weight,
         reps: currentPR.reps,
-        lastImproveTs,
-        weeksSince,
-        isStuck,
+        lastImproveTs: pl.lastImprovementTs,
+        weeksSince: pl.weeksSinceImprovement,
+        isStuck: pl.isStuck,
         oneRM: estimate1RM(currentPR.weight, currentPR.reps)
       };
     }).filter(Boolean);
@@ -13651,14 +13642,19 @@ function ProgressTab({
       // Bu ay içindeki rekor artışlarını say
       for (let i = 1; i < es.curve.length; i++) {
         if (es.curve[i].ts >= monthStart) {
-          const improved = es.curve[i].weight > es.curve[i - 1].weight;
-          if (improved) {
+          const cur = es.curve[i], prev = es.curve[i - 1];
+          const weightUp = cur.weight > prev.weight;
+          // Rekor = kilo arttı VEYA aynı kiloda tekrar arttı (80×8 → 80×10 de rekor). Uygulamanın geri kalanıyla tutarlı.
+          const repUp = cur.weight === prev.weight && cur.reps > prev.reps;
+          if (weightUp || repUp) {
             prCount++;
-            const delta = es.curve[i].weight - es.curve[i - 1].weight;
-            if (!biggestJump || delta > biggestJump.delta) biggestJump = {
-              name: es.name,
-              delta
-            };
+            if (weightUp) {
+              const delta = cur.weight - prev.weight;
+              if (!biggestJump || delta > biggestJump.delta) biggestJump = {
+                name: es.name,
+                delta
+              };
+            }
           }
         }
       }
