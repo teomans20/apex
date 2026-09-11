@@ -1134,6 +1134,84 @@ const getExerciseMuscles = (exerciseName, customMap) => {
   }
   return best; // null if nothing matched
 };
+// ————— EXERCISE SWAP: alternatif hareket önerileri —————
+// Kas başına yaygın hareketler (curated fill-in). Kullanıcı geçmişi azsa buradan tamamlanır.
+const SWAP_SUGGESTIONS = {
+  chest: ['Bench Press', 'Incline Dumbbell Press', 'Dumbbell Press', 'Machine Chest Press', 'Chest Fly', 'Dips'],
+  back: ['Barbell Row', 'Dumbbell Row', 'T-Bar Row', 'Seated Cable Row', 'Chest Supported Row', 'Pull-up'],
+  lats: ['Lat Pulldown', 'Pull-up', 'Straight-Arm Pulldown', 'Seated Cable Row'],
+  biceps: ['Barbell Curl', 'Dumbbell Curl', 'Hammer Curl', 'Preacher Curl', 'Cable Curl'],
+  triceps: ['Triceps Pushdown', 'Overhead Triceps Extension', 'Skull Crusher', 'Dips', 'Close-Grip Bench Press'],
+  frontDelts: ['Overhead Press', 'Dumbbell Shoulder Press', 'Arnold Press', 'Machine Shoulder Press'],
+  sideDelts: ['Lateral Raise', 'Cable Lateral Raise', 'Machine Lateral Raise'],
+  rearDelts: ['Reverse Fly', 'Face Pull', 'Rear Delt Row'],
+  quads: ['Squat', 'Leg Press', 'Hack Squat', 'Leg Extension', 'Bulgarian Split Squat'],
+  hams: ['Romanian Deadlift', 'Leg Curl', 'Deadlift', 'Good Morning'],
+  glutes: ['Hip Thrust', 'Romanian Deadlift', 'Glute Bridge', 'Bulgarian Split Squat'],
+  calves: ['Standing Calf Raise', 'Seated Calf Raise', 'Calf Press'],
+  traps: ['Barbell Shrug', 'Dumbbell Shrug', 'Upright Row', 'Face Pull'],
+  abs: ['Cable Crunch', 'Hanging Leg Raise', 'Plank', 'Ab Wheel'],
+  forearms: ['Wrist Curl', 'Reverse Curl', 'Farmer Carry']
+};
+function computeSwapAlts(fromExercise, data) {
+  const cm = (data && data.customMuscleMap) || {};
+  const fm = getExerciseMuscles(fromExercise, cm) || {};
+  const keys = Object.keys(fm);
+  if (!keys.length) return { primaryMuscle: null, history: [], suggested: [] };
+  const maxW = Math.max(...keys.map(k => fm[k]));
+  const primary = keys.filter(k => fm[k] === maxW); // ana kas(lar)
+  const shares = name => { const mm = getExerciseMuscles(name, cm) || {}; return primary.some(p => mm[p]); };
+  const done = [...new Set((data.logs || []).map(l => l.exerciseName))];
+  const fromKey = fromExercise.toLowerCase().trim();
+  const history = done.filter(n => n.toLowerCase().trim() !== fromKey && shares(n));
+  const doneSet = new Set(done.map(n => n.toLowerCase().trim()));
+  const suggested = [];
+  primary.forEach(p => (SWAP_SUGGESTIONS[p] || []).forEach(n => {
+    const key = n.toLowerCase().trim();
+    if (key !== fromKey && !doneSet.has(key) && !suggested.some(x => x.toLowerCase().trim() === key)) suggested.push(n);
+  }));
+  return { primaryMuscle: primary[0], history, suggested: suggested.slice(0, 6) };
+}
+function SwapModal({ fromExercise, data, getLast, onClose, onPick }) {
+  const [addToDay, setAddToDay] = useState(false);
+  const [typed, setTyped] = useState('');
+  const alts = computeSwapAlts(fromExercise, data);
+  const muscleLabel = alts.primaryMuscle ? (alts.primaryMuscle.charAt(0).toUpperCase() + alts.primaryMuscle.slice(1)) : '';
+  const altRow = (name, isNew) => {
+    let sub = isNew ? t('swap_not_done') : null;
+    if (!isNew && getLast) {
+      const lp = getLast(name);
+      if (lp && lp.sets && lp.sets.length) { const s = lp.sets[0]; sub = t('swap_last') + ' · ' + wFmt(s.weight) + wUnit() + ' × ' + s.reps; }
+    }
+    return /*#__PURE__*/React.createElement("button", {
+      key: name,
+      onClick: () => onPick(name, addToDay),
+      style: { display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left', padding: '10px 12px', background: '#0e0e0e', border: '1px solid #1b1b1b', borderRadius: 11, marginBottom: 7, cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
+    }, /*#__PURE__*/React.createElement("div", { style: { flex: 1 } }, /*#__PURE__*/React.createElement("div", { style: { fontWeight: 700, fontSize: 13.5 } }, name), sub && /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#777', marginTop: 2 } }, sub)), isNew ? /*#__PURE__*/React.createElement("span", { style: { fontSize: 8.5, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', padding: '3px 7px', borderRadius: 20, background: '#1a1a1a', color: '#888' } }, t('swap_new')) : /*#__PURE__*/React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "#555", strokeWidth: 2.4 }, /*#__PURE__*/React.createElement("path", { d: "M9 6l6 6-6 6" })));
+  };
+  const secLabel = txt => /*#__PURE__*/React.createElement("div", { style: { fontSize: 9.5, fontWeight: 800, letterSpacing: 1, color: '#888', textTransform: 'uppercase', margin: '13px 2px 8px' } }, txt);
+  return /*#__PURE__*/React.createElement("div", { style: S.modalOverlay, onClick: onClose },
+    /*#__PURE__*/React.createElement("div", { style: { ...S.modalCard, maxWidth: 420, maxHeight: '86vh', overflowY: 'auto' }, onClick: e => e.stopPropagation() },
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' } },
+        /*#__PURE__*/React.createElement("div", null,
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#888', fontWeight: 700, letterSpacing: 0.5 } }, t('swap_title')),
+          /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 22, marginTop: 2 } }, fromExercise, /*#__PURE__*/React.createElement("span", { style: { color: '#555', fontSize: 15, fontWeight: 800 } }, ' ' + t('swap_instead')))),
+        /*#__PURE__*/React.createElement("button", { onClick: onClose, style: { background: 'none', border: 'none', color: '#666', fontSize: 22, cursor: 'pointer', lineHeight: 1, fontFamily: 'inherit' } }, '×')),
+      muscleLabel && /*#__PURE__*/React.createElement("div", { style: { marginTop: 7 } }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 8.5, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', padding: '3px 8px', borderRadius: 20, background: 'rgba(76,175,80,0.15)', color: '#4CAF50' } }, muscleLabel)),
+      alts.history.length > 0 && secLabel(t('swap_from_history')),
+      alts.history.map(n => altRow(n, false)),
+      alts.suggested.length > 0 && secLabel(t('swap_suggested')),
+      alts.suggested.map(n => altRow(n, true)),
+      (alts.history.length === 0 && alts.suggested.length === 0) && /*#__PURE__*/React.createElement("div", { style: { color: '#666', fontSize: 12, textAlign: 'center', padding: '12px 0' } }, t('swap_none')),
+      secLabel(t('swap_type')),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8 } },
+        /*#__PURE__*/React.createElement("input", { value: typed, onChange: e => setTyped(e.target.value), placeholder: t('swap_type_ph'), style: { flex: 1, background: '#0d0d0d', border: '1px solid #242424', borderRadius: 10, padding: '11px 12px', color: '#fff', fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' } }),
+        /*#__PURE__*/React.createElement("button", { onClick: () => { if (typed.trim()) onPick(typed.trim(), addToDay); }, style: { background: 'linear-gradient(135deg,var(--accent),var(--accent-deep))', border: 'none', borderRadius: 10, padding: '11px 18px', color: '#fff', fontWeight: 800, fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer' } }, t('swap_open'))),
+      /*#__PURE__*/React.createElement("button", { onClick: () => setAddToDay(v => !v), style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', textAlign: 'left', marginTop: 14, padding: '12px 13px', background: '#0e0e0e', border: '1px solid ' + (addToDay ? 'rgba(var(--accent-rgb),0.4)' : '#1b1b1b'), borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', color: '#fff' } },
+        /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", { style: { fontWeight: 700, fontSize: 12.5 } }, t('swap_add_to_day')), /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#777', marginTop: 2 } }, t('swap_add_to_day_desc'))),
+        /*#__PURE__*/React.createElement("div", { style: { width: 44, height: 26, borderRadius: 14, background: addToDay ? 'var(--accent)' : '#222', position: 'relative', flexShrink: 0, transition: 'background 0.2s' } }, /*#__PURE__*/React.createElement("div", { style: { width: 20, height: 20, borderRadius: '50%', background: '#fff', position: 'absolute', top: 3, left: addToDay ? 21 : 3, transition: 'left 0.2s' } }))),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: '#666', marginTop: 9, lineHeight: 1.5 } }, t('swap_note'))));
+}
 const STORAGE_KEY = 'heavy-gym-data-v1';
 const GYMS_KEY = 'apex-gyms-v1'; // salon listesi
 const ACTIVE_GYM_KEY = 'apex-active-gym'; // aktif salon id
@@ -1439,7 +1517,10 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.101'; // Cloud sync armor (data-safety #2, P0): saveData stamps updatedAt + toasts on localStorage write failure (save_failed). Load effect (WorkoutTab + ProgressTab) no longer blindly overwrites local with cloud — mergeGymData() unions logs & sessions BY ID (added sets never lost), unions exercises per day, picks config fields by newer updatedAt, and RE-READS current localStorage at cloud-arrival (kills the stale-get-after-local-edit race). If local had records cloud lacked (offline adds / 2 devices), merged is pushed back so cloud converges. Trade-off: union favors keeping data, so a delete made on device A while device B is offline-with-unsynced-data can resurrect (visible + re-deletable; better than silently losing an add). Tested 4 merge scenarios. New i18n save_failed
+const APP_VERSION = '5.9.104'; // Exercise Swap (option A, inline icon). Module: SWAP_SUGGESTIONS (curated per-muscle) + computeSwapAlts(from,data) → {primaryMuscle, history:[same-primary-muscle names you've logged], suggested:[curated not-done]} via existing getExerciseMuscles. SwapModal component: header "X yerine" + muscle tag, sections Geçmişinden/Önerilen (each row shows last perf or "new"), free-text "Elle yaz" input+Aç, "Güne kalıcı ekle" toggle (default off = one-off), note. DayView: swap icon (two-arrows) on each non-editMode/non-completed exercise row (stopPropagation), onSwap prop. WorkoutTab: swapFor/swapFrom state, SwapModal render, onPick(name,addToDay)→ setSwapFrom + optional addExercise(name to current day, keeps Cable Row) + open name's ExerciseView. ExerciseView: swapFrom prop → "X yerine" badge under title. History is by exerciseName so chosen exercise keeps its own PR history. New i18n swap_* keys. Tested computeSwapAlts (history filters by primary muscle, excludes self+done from suggested)
+// P2 cleanups: (#5 SPAM) broadcastGymEntry daily-dedup key now dateKey(Date.now()) local day not toISOString UTC → no duplicate "in workout" notif when UTC day flips at 03:00 TR. (#4) reps validation: handleSubmit requires positive integer 1..1000 (was weight-only >0), addLog defensive guard rejects w<=0/non-integer/r<=0. (#3) rest timer now endsAt-based (Date.now()) — no drift when phone suspends; startRestTimer/adjustRestTimer/tick reworked. (#1) cycle-mode routine cycleIndex now advances in endSession (once/day via lastAdvancedDay guard, only if completed dayType matches routine's current day or unresolvable) — was never incremented. (#7) EN-mode hardcoded TR fixed: "TOP SET/BACK-OFF — YENMEN GEREKEN" + "TOP SET"/"BACK-OFF SET n" → i18n top_to_beat/backoff_to_beat/top_set_cap2/backoff_set_n. DEFERRED: #2 applyProgram sets/reps (needs a prescription storage model → part of APEX Coach), #6 useMemo .length deps (low risk, not clearly broken)
+// Firestore atomicity (data-safety #3): claimUsername now uses db.runTransaction (get usernames/{u} inside tx → throw 'username-taken' if owned by another uid, else set doc + user.username atomically) — closes the check-then-set TOCTOU race; caller shows t('username_taken') on that error. toggleReaction now wraps read-modify-write in db.runTransaction (retries on contention) so two friends reacting at once no longer clobber each other's reaction. No new i18n keys
+// Cloud sync armor (data-safety #2, P0): saveData stamps updatedAt + toasts on localStorage write failure (save_failed). Load effect (WorkoutTab + ProgressTab) no longer blindly overwrites local with cloud — mergeGymData() unions logs & sessions BY ID (added sets never lost), unions exercises per day, picks config fields by newer updatedAt, and RE-READS current localStorage at cloud-arrival (kills the stale-get-after-local-edit race). If local had records cloud lacked (offline adds / 2 devices), merged is pushed back so cloud converges. Trade-off: union favors keeping data, so a delete made on device A while device B is offline-with-unsynced-data can resurrect (visible + re-deletable; better than silently losing an add). Tested 4 merge scenarios. New i18n save_failed
 // Full APEX Backup v2 (data-safety #1 of review): export now captures ALL gyms + measurements/goals/routines/notes/timer/blocked/archive/notifs + lang/unit/theme (was only active gym's data obj). Versioned {apexBackup:2}. Import: type-validated (rejects non-array logs → no crash), restores dayOverrides (was dropped), writes a pre-import recovery snapshot (apex-preimport-backup-*), confirm dialog, pushes imported gyms to cloud then reloads so cloud doesn't overwrite the import. v1 backups still importable. collectFullBackup/restoreFullBackup module-level helpers. New i18n import_confirm/backup_invalid
 // Backdated-add session-join fix: when adding a set to a past day (logDate) that already has exactly ONE session of that dayType, the new log now joins that session (joinSessionId) instead of sessionId=null. Before, the new backdated set couldn't see the existing session's sets (existingSetsInGroup only counted !sessionId logs) → every backdated add became a separate lone "top" in its own group. Now it correctly becomes back-off and joins the same group. Legacy no-session days + live sessions unchanged; 2+ sessions on a day = no auto-join (stays top/null)
 // Hızlı Başlat (Variant A): ExerciseView shows previous session's sets as a ghost card between ProgressChart and input (only when previousEntry exists). Each ghost row tappable → fills weight/reps inputs (editable, overwrites); "Aynısını Getir" button fills the position-appropriate set (idx=min(todaySorted.length, prevLen-1), so first=TOP then next back-off). Per-exercise not whole-session. New i18n keys qf_last_session/qf_fill_same
@@ -1799,12 +1880,13 @@ const I18N = {
     import_confirm: 'Bu yedek yüklenecek ve mevcut verilerin üzerine yazılacak. Güvenlik için içeri aktarmadan önce mevcut halinin bir kopyası otomatik saklanır. Devam edilsin mi?',
     backup_invalid: 'Geçersiz veya bozuk yedek dosyası. Hiçbir şey değiştirilmedi.',
     save_failed: '⚠️ Kayıt cihaza yazılamadı — depolama dolu olabilir',
+    swap_title: 'DEĞİŞTİR', swap_instead: 'yerine', swap_from_history: 'Geçmişinden', swap_suggested: 'Önerilen', swap_type: 'Elle yaz', swap_type_ph: 'Yeni hareket adı...', swap_open: 'Aç', swap_new: 'yeni', swap_not_done: 'henüz yapmadın', swap_last: 'son', swap_none: 'Uygun alternatif bulunamadı — elle yazabilirsin', swap_add_to_day: 'Güne kalıcı ekle', swap_add_to_day_desc: 'Bu hareket de güne eklensin, her seans görünsün', swap_note: 'Seçtiğin hareket kendi geçmişiyle açılır; bu hareket güne dokunulmaz.',
     workout_day_cap: 'ANTRENMAN GÜNÜ',
     total_duration_cap: 'TOPLAM SÜRE',
     send_to_friend: '📤 Bu Programı Arkadaşa Gönder',
     send_cancel: 'İptal',
     top_set_explain: 'İlk setin senin ana setin. Bunu yendiğin anda back-off hedefine geçeriz.',
-    backoff_won: '✓ BACK-OFF YENDİN',
+    backoff_won: '✓ BACK-OFF YENDİN', top_to_beat: 'TOP SET — YENMEN GEREKEN', backoff_to_beat: 'BACK-OFF — YENMEN GEREKEN', top_set_cap2: 'TOP SET', backoff_set_n: 'BACK-OFF SET {n}',
     best_backoff_today: 'Bugün en iyi back-off: ',
     do_backoff_now: 'Şimdi back-off set\'i yap, geçen seferki seviyeyi geç',
     first_backoff: 'İLK BACK-OFF',
@@ -2071,12 +2153,13 @@ const I18N = {
     import_confirm: 'This backup will be loaded and will overwrite your current data. A copy of your current state is saved automatically before importing, just in case. Continue?',
     backup_invalid: 'Invalid or corrupt backup file. Nothing was changed.',
     save_failed: '⚠️ Could not save to device — storage may be full',
+    swap_title: 'SWAP', swap_instead: 'instead', swap_from_history: 'From your history', swap_suggested: 'Suggested', swap_type: 'Type your own', swap_type_ph: 'New exercise name...', swap_open: 'Open', swap_new: 'new', swap_not_done: "haven't done yet", swap_last: 'last', swap_none: 'No alternatives found — type one below', swap_add_to_day: 'Add to day permanently', swap_add_to_day_desc: 'Also add it to the day so it shows every session', swap_note: 'The chosen exercise opens with its own history; this exercise is left as-is.',
     workout_day_cap: 'WORKOUT DAY',
     total_duration_cap: 'TOTAL DURATION',
     send_to_friend: '📤 Send This Program to a Friend',
     send_cancel: 'Cancel',
     top_set_explain: 'Your first set is your main set. Once you beat it, we move to the back-off target.',
-    backoff_won: '✓ BACK-OFF BEATEN',
+    backoff_won: '✓ BACK-OFF BEATEN', top_to_beat: 'TOP SET — TO BEAT', backoff_to_beat: 'BACK-OFF — TO BEAT', top_set_cap2: 'TOP SET', backoff_set_n: 'BACK-OFF SET {n}',
     best_backoff_today: 'Today\'s best back-off: ',
     do_backoff_now: 'Now do a back-off set, beat last time',
     first_backoff: 'FIRST BACK-OFF',
@@ -4886,16 +4969,15 @@ async function isUsernameAvailable(username) {
 async function claimUsername(uid, username) {
   const u = normalizeUsername(username);
   if (!window.APEX_DB) throw new Error('no-db');
-  // usernames koleksiyonuna yaz (benzersizlik için)
-  await window.APEX_DB.collection('usernames').doc(u).set({
-    uid: uid,
-    createdAt: Date.now()
-  });
-  // users dokümanına da ekle
-  await window.APEX_DB.collection('users').doc(uid).set({
-    username: u
-  }, {
-    merge: true
+  const db = window.APEX_DB;
+  const unameRef = db.collection('usernames').doc(u);
+  const userRef = db.collection('users').doc(uid);
+  // Transaction: kontrol + yazma ATOMİK — iki cihaz aynı adı aynı anda alamaz
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(unameRef);
+    if (snap.exists && snap.data().uid !== uid) throw new Error('username-taken');
+    if (!snap.exists) tx.set(unameRef, { uid: uid, createdAt: Date.now() });
+    tx.set(userRef, { username: u }, { merge: true });
   });
   return u;
 }
@@ -4963,7 +5045,7 @@ function UsernameSetup({
       await claimUsername(uid, u);
       onDone(u);
     } catch (e) {
-      setError('Bir hata oldu, tekrar dene');
+      setError((e && e.message === 'username-taken') ? t('username_taken') : t('username_check_fail'));
       setBusy(false);
     }
   };
@@ -5316,8 +5398,9 @@ async function sendClap(fromUid, fromName, toUid, detail) {
 // Salona girdi: tüm arkadaşlara "şu an antrenmanda" bildirimi gönder (günde 1 kez)
 async function broadcastGymEntry(fromUid, fromName) {
   if (!window.APEX_DB) return;
-  // Günde 1 kez: bugün zaten gönderdiysem tekrar gönderme
-  const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  // Günde 1 kez: bugün zaten gönderdiysem tekrar gönderme.
+  // LOKAL gün (UTC değil) — yoksa TR'de 00:00–03:00 arası UTC günü dönünce aynı gün 2. bildirim gidiyordu (spam).
+  const todayKey = dateKey(Date.now()); // YYYY-MM-DD (yerel)
   try {
     if (localStorage.getItem('apex-gym-notified') === todayKey) return;
   } catch (e) {}
@@ -6561,28 +6644,26 @@ async function loadCombinedFeed(myUid, friends, myInfo) {
 // Reaksiyon ekle/kaldır (toggle). reactionType: 'fire'|'muscle'|'clap'
 async function toggleReaction(ownerUid, itemId, reactionType, myUid) {
   if (!window.APEX_DB) return;
-  const ref = window.APEX_DB.collection('users').doc(ownerUid).collection('feed').doc(itemId);
+  const db = window.APEX_DB;
+  const ref = db.collection('users').doc(ownerUid).collection('feed').doc(itemId);
+  // Emoji ↔ legacy anahtar eşlemesi (🔥 ile fire aynı şey sayılır)
+  const emojiToLegacy = { '🔥': 'fire', '💪': 'muscle', '👏': 'clap' };
+  const legacyKey = emojiToLegacy[reactionType];
   try {
-    const snap = await ref.get();
-    if (!snap.exists) return;
-    const data = snap.data();
-    const reactions = data.reactions || {};
-    // Emoji ↔ legacy anahtar eşlemesi (🔥 ile fire aynı şey sayılır)
-    const emojiToLegacy = { '🔥': 'fire', '💪': 'muscle', '👏': 'clap' };
-    const legacyKey = emojiToLegacy[reactionType];
-    // Hem emoji hem legacy anahtarda bu uid var mı kontrol et
-    const inEmoji = (reactions[reactionType] || []).indexOf(myUid) >= 0;
-    const inLegacy = legacyKey ? (reactions[legacyKey] || []).indexOf(myUid) >= 0 : false;
-    const wasReacted = inEmoji || inLegacy;
-    // Bu uid'i HER İKİ anahtardan da temizle (tekrarları da)
-    reactions[reactionType] = (reactions[reactionType] || []).filter(u => u !== myUid);
-    if (legacyKey && reactions[legacyKey]) {
-      reactions[legacyKey] = reactions[legacyKey].filter(u => u !== myUid);
-    }
-    // Tepki yoksa şimdi ekle (emoji anahtarına, tek kez)
-    if (!wasReacted) reactions[reactionType].push(myUid);
-    await ref.update({
-      reactions: reactions
+    // Transaction: oku-değiştir-yaz ATOMİK — iki arkadaş aynı anda tepki verince biri diğerini ezmez (çakışmada yeniden dener)
+    await db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const reactions = snap.data().reactions || {};
+      const inEmoji = (reactions[reactionType] || []).indexOf(myUid) >= 0;
+      const inLegacy = legacyKey ? (reactions[legacyKey] || []).indexOf(myUid) >= 0 : false;
+      const wasReacted = inEmoji || inLegacy;
+      // Bu uid'i HER İKİ anahtardan da temizle (tekrarları da)
+      reactions[reactionType] = (reactions[reactionType] || []).filter(u => u !== myUid);
+      if (legacyKey && reactions[legacyKey]) reactions[legacyKey] = reactions[legacyKey].filter(u => u !== myUid);
+      // Tepki yoksa şimdi ekle (emoji anahtarına, tek kez)
+      if (!wasReacted) reactions[reactionType].push(myUid);
+      tx.update(ref, { reactions: reactions });
     });
   } catch (e) {}
 }
@@ -7554,17 +7635,19 @@ function App() {
     const settings = loadTimerSettings();
     if (!settings.enabled) return;
     const dur = seconds || loadTimerPerExercise()[exerciseName] || settings.defaultSec || 90;
-    setRestTimer({ total: dur, remaining: dur, exerciseName, vibrate: settings.vibrate });
+    // endsAt = gerçek bitiş zamanı; kalan süre her zaman Date.now()'a göre hesaplanır (telefon uyursa sapmaz)
+    setRestTimer({ total: dur, remaining: dur, endsAt: Date.now() + dur * 1000, exerciseName, vibrate: settings.vibrate });
     setTimerFullscreen(false);
   };
   const adjustRestTimer = (delta) => {
     setRestTimer(prev => {
       if (!prev) return prev;
       const nt = Math.max(15, prev.total + delta);
-      const nr = Math.max(1, prev.remaining + delta);
+      const newEndsAt = (prev.endsAt || Date.now()) + delta * 1000;
+      const nr = Math.max(1, Math.round((newEndsAt - Date.now()) / 1000));
       // per-exercise süreyi güncelle
       try { const m = loadTimerPerExercise(); m[prev.exerciseName] = nt; saveTimerPerExercise(m); } catch (e) {}
-      return { ...prev, total: nt, remaining: nr };
+      return { ...prev, total: nt, endsAt: newEndsAt, remaining: nr };
     });
   };
   const stopRestTimer = () => { setRestTimer(null); setTimerFullscreen(false); };
@@ -7574,12 +7657,14 @@ function App() {
     restIntervalRef.current = setInterval(() => {
       setRestTimer(prev => {
         if (!prev) return null;
-        if (prev.remaining <= 1) {
+        // Kalanı gerçek bitiş zamanından hesapla — arka planda geçen süre doğru yansısın
+        const rem = Math.round(((prev.endsAt || Date.now()) - Date.now()) / 1000);
+        if (rem <= 0) {
           if (prev.vibrate && navigator.vibrate) navigator.vibrate([200, 100, 200]);
           if (restIntervalRef.current) { clearInterval(restIntervalRef.current); restIntervalRef.current = null; }
           return null;
         }
-        return { ...prev, remaining: prev.remaining - 1 };
+        return { ...prev, remaining: rem };
       });
     }, 1000);
     return () => { if (restIntervalRef.current) { clearInterval(restIntervalRef.current); restIntervalRef.current = null; } };
@@ -8189,6 +8274,8 @@ function WorkoutTab({
   const [view, setView] = useState('home');
   const [currentDay, setCurrentDay] = useState(null);
   const [currentExercise, setCurrentExercise] = useState(null);
+  const [swapFor, setSwapFor] = useState(null); // Exercise Swap: hangi hareket değiştiriliyor
+  const [swapFrom, setSwapFrom] = useState(null); // ExerciseView'da "X yerine" etiketi için
   const [data, setData] = useState({
     exercises: DEFAULT_EXERCISES,
     logs: [],
@@ -8679,6 +8766,8 @@ function WorkoutTab({
   const addLog = (exerciseName, weight, reps) => {
     const w = parseFloat(weight),
       r = parseInt(reps);
+    // Savunma: geçersiz değerler loga girip stat/PR/hacim hesaplarını kirletmesin
+    if (!(w > 0) || !Number.isInteger(r) || r <= 0) return;
     let timestamp;
     const targetDayKey = logDate || dateKey(Date.now());
     // Geçmiş tarihe kayıt yapılıyorsa bugünkü açık oturuma bağlama
@@ -8913,6 +9002,32 @@ function WorkoutTab({
     };
     saveData(newData);
     haptic([30, 30, 50]);
+    // Cycle-mode rutin: bugünkü rutin günü tamamlandıysa sıradaki güne ilerlet (günde 1 kez)
+    try {
+      const ar = loadActiveRoutine();
+      const routine = ar && ar.routineId ? loadRoutines().find(r => r.id === ar.routineId) : null;
+      const isCycle = routine && (!routine.schedule || routine.schedule.mode !== 'weekly') && routine.days && routine.days.length;
+      if (isCycle) {
+        const todayKey = dateKey(Date.now());
+        if (ar.lastAdvancedDay !== todayKey) {
+          const curDay = getRoutineToday(routine, ar);
+          let resolved = null;
+          if (curDay) {
+            if (curDay.srcKey && dayConfig[curDay.srcKey]) resolved = curDay.srcKey;
+            else {
+              const nameLower = (curDay.name || '').toLowerCase().trim();
+              for (const [key, cfg] of Object.entries(dayConfig || {})) {
+                if ((cfg && cfg.name && cfg.name.toLowerCase().trim() === nameLower) || key.toLowerCase() === nameLower || (BUILTIN_DAYS[key] && BUILTIN_DAYS[key].name && BUILTIN_DAYS[key].name.toLowerCase() === nameLower)) { resolved = key; break; }
+              }
+            }
+          }
+          // Rutinin bugünkü günü çözülemiyorsa yine de ilerlet; çözülüyorsa sadece o gün tamamlanınca
+          if (!resolved || resolved === active.dayType) {
+            saveActiveRoutine({ ...ar, cycleIndex: (ar.cycleIndex || 0) + 1, lastAdvancedDay: todayKey });
+          }
+        }
+      }
+    } catch (e) {}
     // Canlı durum: salondan çıktı + son antrenman zamanı
     if (cloudReady && myUsername) {
       try {
@@ -9228,9 +9343,11 @@ function WorkoutTab({
       setDayEditMode(false);
     },
     onSelectExercise: e => {
+      setSwapFrom(null);
       setCurrentExercise(e);
       setView('exercise');
     },
+    onSwap: name => setSwapFor(name),
     onAddExercise: () => setShowAddExercise(true),
     onRemoveExercise: removeExercise,
     onRenameExercise: renameExercise,
@@ -9242,10 +9359,23 @@ function WorkoutTab({
     exerciseName: currentExercise,
     cfg: dayConfig[currentDay],
     history: getHistoryGrouped(currentExercise),
+    swapFrom: swapFrom,
     onBack: () => setView('day'),
     onAddLog: (w, r) => addLog(currentExercise, w, r),
     onDeleteLog: deleteLog,
     logDate: logDate
+  }), swapFor && /*#__PURE__*/React.createElement(SwapModal, {
+    fromExercise: swapFor,
+    data: data,
+    getLast: getLastPerformance,
+    onClose: () => setSwapFor(null),
+    onPick: (name, addToDay) => {
+      setSwapFrom(swapFor);
+      if (addToDay) { try { addExercise(name); } catch (e) {} }
+      setSwapFor(null);
+      setCurrentExercise(name);
+      setView('exercise');
+    }
   }), showAddExercise && /*#__PURE__*/React.createElement(AddExerciseModal, {
     cfg: dayConfig[currentDay],
     existingExercises: data.exercises,
@@ -10677,6 +10807,7 @@ function DayView({
   onEndSession,
   onBack,
   onSelectExercise,
+  onSwap,
   onAddExercise,
   onRemoveExercise,
   onRenameExercise,
@@ -10862,7 +10993,11 @@ function DayView({
           ...S.chevron,
           color: '#555'
         }
-      }, "→"))), editMode && /*#__PURE__*/React.createElement("button", {
+      }, "→"))), !editMode && !isCompleted && /*#__PURE__*/React.createElement("button", {
+        onClick: e => { e.stopPropagation(); onSwap && onSwap(name); },
+        title: t('swap_title'),
+        style: { flexShrink: 0, marginLeft: 6, width: 34, height: 34, borderRadius: 9, background: 'rgba(var(--accent-rgb),0.09)', border: '1px solid rgba(var(--accent-rgb),0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontFamily: 'inherit' }
+      }, /*#__PURE__*/React.createElement("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "var(--accent-light)", strokeWidth: 2.2 }, /*#__PURE__*/React.createElement("path", { d: "M7 4L3 8l4 4M3 8h13a4 4 0 014 4M17 20l4-4-4-4M21 16H8a4 4 0 01-4-4" }))), editMode && /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           const yeni = prompt(t('edit_ex_name'), name);
           if (yeni && yeni.trim() && yeni.trim() !== name) {
@@ -10939,6 +11074,7 @@ function ExerciseView({
   exerciseName,
   cfg,
   history,
+  swapFrom,
   onBack,
   onAddLog,
   onDeleteLog,
@@ -11019,9 +11155,12 @@ function ExerciseView({
     const normalizedWeight = weight.replace(',', '.');
     const w = parseFloat(normalizedWeight);
     if (!w || w <= 0) return;
+    // Tekrar: pozitif tam sayı olmalı ("0"/negatif/kesir kabul edilmez → stat/PR kirlenmesin)
+    const rInt = parseInt(reps, 10);
+    if (!Number.isInteger(rInt) || rInt <= 0 || rInt > 1000) return;
     // Kullanıcı imperial modundaysa girdiği lb → kg'ye çevir (veri hep kg saklanır)
     const kgWeight = CURRENT_UNIT === 'imperial' ? +(w / KG_TO_LB).toFixed(2) : w;
-    onAddLog(String(kgWeight), reps);
+    onAddLog(String(kgWeight), String(rInt));
     setWeight('');
     setReps('');
     weightRef.current?.focus();
@@ -11051,7 +11190,7 @@ function ExerciseView({
       color: '#fff',
       fontSize: 17
     }
-  }, exerciseName), /*#__PURE__*/React.createElement("div", {
+  }, exerciseName, swapFrom && /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, fontWeight: 800, color: 'var(--accent-light)', letterSpacing: 0.5, marginTop: 2, textTransform: 'none' } }, swapFrom + ' ' + t('swap_instead'))), /*#__PURE__*/React.createElement("div", {
     style: {
       width: 60
     }
@@ -11125,7 +11264,7 @@ function ExerciseView({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: S.targetLabel
-  }, "TOP SET — YENMEN GEREKEN"), /*#__PURE__*/React.createElement("div", {
+  }, t('top_to_beat')), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.targetValue,
       color: topBeaten ? '#4CAF50' : '#FF5252'
@@ -11170,7 +11309,7 @@ function ExerciseView({
       ...S.targetLabel,
       marginTop: 12
     }
-  }, backoffBeaten ? t('backoff_won') : 'BACK-OFF — YENMEN GEREKEN'), /*#__PURE__*/React.createElement("div", {
+  }, backoffBeaten ? t('backoff_won') : t('backoff_to_beat')), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.targetValue,
       color: backoffBeaten ? '#4CAF50' : '#FF5252'
@@ -11256,7 +11395,7 @@ function ExerciseView({
       ...S.inputLabel,
       marginBottom: 0
     }
-  }, showingBackoff ? `BACK-OFF SET ${todaySorted.length}` : 'TOP SET'), isBackdated && /*#__PURE__*/React.createElement("div", {
+  }, showingBackoff ? t('backoff_set_n', { n: todaySorted.length }) : t('top_set_cap2')), isBackdated && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
       color: cfg.accent,
