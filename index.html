@@ -1333,7 +1333,8 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.98'; // Hızlı Başlat (Variant A): ExerciseView shows previous session's sets as a ghost card between ProgressChart and input (only when previousEntry exists). Each ghost row tappable → fills weight/reps inputs (editable, overwrites); "Aynısını Getir" button fills the position-appropriate set (idx=min(todaySorted.length, prevLen-1), so first=TOP then next back-off). Per-exercise not whole-session. New i18n keys qf_last_session/qf_fill_same
+const APP_VERSION = '5.9.99'; // Backdated-add session-join fix: when adding a set to a past day (logDate) that already has exactly ONE session of that dayType, the new log now joins that session (joinSessionId) instead of sessionId=null. Before, the new backdated set couldn't see the existing session's sets (existingSetsInGroup only counted !sessionId logs) → every backdated add became a separate lone "top" in its own group. Now it correctly becomes back-off and joins the same group. Legacy no-session days + live sessions unchanged; 2+ sessions on a day = no auto-join (stays top/null)
+// Hızlı Başlat (Variant A): ExerciseView shows previous session's sets as a ghost card between ProgressChart and input (only when previousEntry exists). Each ghost row tappable → fills weight/reps inputs (editable, overwrites); "Aynısını Getir" button fills the position-appropriate set (idx=min(todaySorted.length, prevLen-1), so first=TOP then next back-off). Per-exercise not whole-session. New i18n keys qf_last_session/qf_fill_same
 // Calendar Ay/Yıl toggle: MonthlyCalendar now has calView state + toggle top-right. 'Yıl' = GitHub-style year heatmap (53 weeks, intensity=daily volume quartiles, --accent tinted) + streak counters (current/longest weekly streak + total active days); tap an active cell → onTapDay (day detail). 'Ay' = existing monthly calendar unchanged. New i18n keys cal_month/cal_year/streak_current/streak_longest/streak_total_days/streak_weeks/heatmap_less/heatmap_more
 // Duplicate-exercise guard in addExercise: normalizes name (trim + collapse spaces + lowercase), compares against ALL days' exercises + all log names. Exact dup in current day → blocked (alert). Same exercise on another day/history with DIFFERENT spelling (case/whitespace) → confirm offering the existing canonical name so PR history stays unified; reusing identical spelling on another day is silent. Catches accidental case/whitespace variants, not synonyms. New i18n key ex_similar_confirm (tr+en)
 
@@ -8558,11 +8559,18 @@ function WorkoutTab({
     const targetDayKey = logDate || dateKey(Date.now());
     // Geçmiş tarihe kayıt yapılıyorsa bugünkü açık oturuma bağlama
     const active = logDate ? null : getActiveSession();
+    // Backdated ekleme: o gün o tipte TEK seans varsa yeni seti ona bağla —
+    // yoksa mevcut seansın setlerini görmez, her set ayrı "top" olur ve ayrı gruba düşer.
+    let joinSessionId = active ? active.id : null;
+    if (logDate && !active) {
+      const daySessions = data.sessions.filter(s => dateKey(s.startTime) === targetDayKey && s.dayType === currentDay);
+      if (daySessions.length === 1) joinSessionId = daySessions[0].id;
+    }
     // Top/back-off ayrımı seans bazlı: aynı gün ikinci bir antrenman açılırsa
     // o antrenmanın ilk seti yine top olur. Seans yoksa eski davranış (gün bazlı).
     const existingSetsInGroup = data.logs.filter(l => {
       if (l.exerciseName !== exerciseName) return false;
-      if (active) return l.sessionId === active.id;
+      if (joinSessionId) return l.sessionId === joinSessionId;
       return !l.sessionId && dateKey(l.timestamp) === targetDayKey;
     }).length;
     const setType = existingSetsInGroup === 0 ? 'top' : 'backoff';
@@ -8582,7 +8590,7 @@ function WorkoutTab({
     }
     const newLog = {
       id: Date.now().toString() + Math.random(),
-      sessionId: active ? active.id : null,
+      sessionId: joinSessionId,
       setType,
       exerciseName,
       dayType: currentDay,
