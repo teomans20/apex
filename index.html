@@ -1233,6 +1233,112 @@ function _clearGuestVault() {
 // Push: mutasyon sonrası (debounced). Restore: login sonrası tek sefer.
 // Restore ASLA dolu kasa slotunu ezmez (copyVault ile aynı felsefe).
 const LOCAL_PROFILE_KEYS = ['apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise', 'apex-routines', 'apex-active-routine', 'apex-blocked', 'apex-ex-archive'];
+// ————— FULL APEX BACKUP v2 —————
+// Aktif kullanıcının (kasanın) TÜM verisini toplar: tüm salonlar + ölçü/hedef/rutin/not/timer + tema/dil/birim.
+const BACKUP_PROFILE_KEYS = ['apex-measurements', 'apex-goals', 'apex-exercise-notes', 'apex-timer-settings', 'apex-timer-per-exercise', 'apex-routines', 'apex-active-routine', 'apex-blocked', 'apex-ex-archive', 'apex-local-notifs'];
+const BACKUP_PREF_KEYS = ['apex-lang', 'apex-unit', 'apex-theme'];
+function _normGymData(d) {
+  d = d || {};
+  return {
+    exercises: (d.exercises && typeof d.exercises === 'object') ? d.exercises : {},
+    logs: Array.isArray(d.logs) ? d.logs : [],
+    sessions: Array.isArray(d.sessions) ? d.sessions : [],
+    customDays: Array.isArray(d.customDays) ? d.customDays : [],
+    customMuscleMap: (d.customMuscleMap && typeof d.customMuscleMap === 'object') ? d.customMuscleMap : {},
+    hiddenDays: Array.isArray(d.hiddenDays) ? d.hiddenDays : [],
+    dayOverrides: (d.dayOverrides && typeof d.dayOverrides === 'object') ? d.dayOverrides : {}
+  };
+}
+function collectFullBackup() {
+  const backup = { apexBackup: 2, exportedAt: Date.now(), appVersion: APP_VERSION };
+  let gyms = [];
+  try { const raw = localStorage.getItem(vk(GYMS_KEY)); if (raw) gyms = JSON.parse(raw) || []; } catch (e) {}
+  if (!Array.isArray(gyms) || !gyms.length) gyms = [{ id: 'default', name: 'Salonum' }];
+  backup.gyms = gyms;
+  try { backup.activeGymId = localStorage.getItem(vk(ACTIVE_GYM_KEY)) || 'default'; } catch (e) { backup.activeGymId = 'default'; }
+  backup.gymData = {};
+  gyms.forEach(g => { try { const raw = localStorage.getItem(gymStorageKey(g.id)); if (raw) backup.gymData[g.id] = JSON.parse(raw); } catch (e) {} });
+  backup.profile = {};
+  BACKUP_PROFILE_KEYS.forEach(k => { try { const v = localStorage.getItem(vk(k)); if (v !== null) backup.profile[k] = v; } catch (e) {} });
+  backup.prefs = {};
+  BACKUP_PREF_KEYS.forEach(k => { try { const v = localStorage.getItem(k); if (v !== null) backup.prefs[k] = v; } catch (e) {} });
+  return backup;
+}
+// Uygular. Dönüş: {ok, error?, gymData?} (gymData = yazılan normalize salon verileri, buluta push için)
+function restoreFullBackup(obj) {
+  if (!obj || typeof obj !== 'object') return { ok: false, error: 'bad' };
+  // Import öncesi kurtarma yedeği (geri almak için)
+  try {
+    const snap = {};
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && (k.indexOf('apex-') === 0 || k.indexOf(STORAGE_KEY) === 0)) snap[k] = localStorage.getItem(k); }
+    localStorage.setItem('apex-preimport-backup-' + Date.now(), JSON.stringify(snap));
+  } catch (e) {}
+  const isV2 = obj.apexBackup === 2 || obj.apexBackup === '2';
+  if (!isV2) {
+    // v1 geriye-uyum: eski export tek salon data objesiydi {exercises, logs, ...}
+    if (!obj.exercises || !Array.isArray(obj.logs)) return { ok: false, error: 'invalid' };
+    const nd = _normGymData(obj);
+    try { localStorage.setItem(gymStorageKey('default'), JSON.stringify(nd)); } catch (e) { return { ok: false, error: 'write' }; }
+    return { ok: true, gymData: { default: nd } };
+  }
+  const gyms = Array.isArray(obj.gyms) && obj.gyms.length ? obj.gyms : [{ id: 'default', name: 'Salonum' }];
+  const gymData = (obj.gymData && typeof obj.gymData === 'object') ? obj.gymData : {};
+  // Tip doğrulama: her salon data'sında logs dizi olmalı
+  for (const gid in gymData) {
+    const d = gymData[gid];
+    if (!d || typeof d !== 'object' || (d.logs !== undefined && !Array.isArray(d.logs))) return { ok: false, error: 'invalid_logs' };
+  }
+  const written = {};
+  try {
+    localStorage.setItem(vk(GYMS_KEY), JSON.stringify(gyms));
+    if (obj.activeGymId) localStorage.setItem(vk(ACTIVE_GYM_KEY), obj.activeGymId);
+    Object.keys(gymData).forEach(gid => { const nd = _normGymData(gymData[gid]); localStorage.setItem(gymStorageKey(gid), JSON.stringify(nd)); written[gid] = nd; });
+    const profile = (obj.profile && typeof obj.profile === 'object') ? obj.profile : {};
+    Object.keys(profile).forEach(k => { if (typeof profile[k] === 'string' && BACKUP_PROFILE_KEYS.indexOf(k) !== -1) localStorage.setItem(vk(k), profile[k]); });
+    const prefs = (obj.prefs && typeof obj.prefs === 'object') ? obj.prefs : {};
+    Object.keys(prefs).forEach(k => { if (typeof prefs[k] === 'string' && BACKUP_PREF_KEYS.indexOf(k) !== -1) localStorage.setItem(k, prefs[k]); });
+  } catch (e) { return { ok: false, error: 'write' }; }
+  return { ok: true, gymData: written };
+}
+// ————— SYNC MERGE (veri kaybı önleme) —————
+// Logs/sessions'ı id'ye göre BİRLEŞTİR (eklenen set asla kaybolmasın); egzersizleri gün-bazında birleştir;
+// config alanlarında updatedAt'i yeni olanı seç. _localHadExtra = yerelde bulutta olmayan kayıt vardı (buluta geri yaz).
+function _mergeExercises(a, b) {
+  const out = { ...(a || {}) };
+  const bb = b || {};
+  Object.keys(bb).forEach(day => {
+    const seen = new Set(out[day] || []);
+    (bb[day] || []).forEach(n => { if (!seen.has(n)) { seen.add(n); } });
+    out[day] = [...new Set([...(out[day] || []), ...(bb[day] || [])])];
+  });
+  return out;
+}
+function mergeGymData(local, cloud) {
+  local = local || {}; cloud = cloud || {};
+  const lUp = local.updatedAt || 0, cUp = cloud.updatedAt || 0;
+  const cloudNewer = cUp >= lUp; // eşitlikte bulut (paylaşılan kaynak)
+  const byId = m => { const o = {}; (Array.isArray(m) ? m : []).forEach(x => { if (x && x.id != null) o[x.id] = x; }); return o; };
+  const lLogs = byId(local.logs), cLogs = byId(cloud.logs);
+  const lSess = byId(local.sessions), cSess = byId(cloud.sessions);
+  const mergedLogs = Object.values({ ...lLogs, ...cLogs }); // id çakışmasında bulut kazanır
+  const mergedSess = Object.values({ ...lSess, ...cSess });
+  let localHadExtra = false;
+  for (const id in lLogs) { if (!(id in cLogs)) { localHadExtra = true; break; } }
+  if (!localHadExtra) { for (const id in lSess) { if (!(id in cSess)) { localHadExtra = true; break; } } }
+  const src = cloudNewer ? cloud : local, other = cloudNewer ? local : cloud;
+  const pick = (k, def) => (src[k] !== undefined ? src[k] : (other[k] !== undefined ? other[k] : def));
+  return {
+    exercises: _mergeExercises(local.exercises, cloud.exercises),
+    logs: mergedLogs,
+    sessions: mergedSess,
+    customDays: pick('customDays', []),
+    customMuscleMap: pick('customMuscleMap', {}),
+    hiddenDays: pick('hiddenDays', []),
+    dayOverrides: pick('dayOverrides', {}),
+    updatedAt: Math.max(lUp, cUp),
+    _localHadExtra: localHadExtra
+  };
+}
 function _readVaultProfile() {
   const out = {};
   LOCAL_PROFILE_KEYS.forEach(base => {
@@ -1333,7 +1439,9 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.99'; // Backdated-add session-join fix: when adding a set to a past day (logDate) that already has exactly ONE session of that dayType, the new log now joins that session (joinSessionId) instead of sessionId=null. Before, the new backdated set couldn't see the existing session's sets (existingSetsInGroup only counted !sessionId logs) → every backdated add became a separate lone "top" in its own group. Now it correctly becomes back-off and joins the same group. Legacy no-session days + live sessions unchanged; 2+ sessions on a day = no auto-join (stays top/null)
+const APP_VERSION = '5.9.101'; // Cloud sync armor (data-safety #2, P0): saveData stamps updatedAt + toasts on localStorage write failure (save_failed). Load effect (WorkoutTab + ProgressTab) no longer blindly overwrites local with cloud — mergeGymData() unions logs & sessions BY ID (added sets never lost), unions exercises per day, picks config fields by newer updatedAt, and RE-READS current localStorage at cloud-arrival (kills the stale-get-after-local-edit race). If local had records cloud lacked (offline adds / 2 devices), merged is pushed back so cloud converges. Trade-off: union favors keeping data, so a delete made on device A while device B is offline-with-unsynced-data can resurrect (visible + re-deletable; better than silently losing an add). Tested 4 merge scenarios. New i18n save_failed
+// Full APEX Backup v2 (data-safety #1 of review): export now captures ALL gyms + measurements/goals/routines/notes/timer/blocked/archive/notifs + lang/unit/theme (was only active gym's data obj). Versioned {apexBackup:2}. Import: type-validated (rejects non-array logs → no crash), restores dayOverrides (was dropped), writes a pre-import recovery snapshot (apex-preimport-backup-*), confirm dialog, pushes imported gyms to cloud then reloads so cloud doesn't overwrite the import. v1 backups still importable. collectFullBackup/restoreFullBackup module-level helpers. New i18n import_confirm/backup_invalid
+// Backdated-add session-join fix: when adding a set to a past day (logDate) that already has exactly ONE session of that dayType, the new log now joins that session (joinSessionId) instead of sessionId=null. Before, the new backdated set couldn't see the existing session's sets (existingSetsInGroup only counted !sessionId logs) → every backdated add became a separate lone "top" in its own group. Now it correctly becomes back-off and joins the same group. Legacy no-session days + live sessions unchanged; 2+ sessions on a day = no auto-join (stays top/null)
 // Hızlı Başlat (Variant A): ExerciseView shows previous session's sets as a ghost card between ProgressChart and input (only when previousEntry exists). Each ghost row tappable → fills weight/reps inputs (editable, overwrites); "Aynısını Getir" button fills the position-appropriate set (idx=min(todaySorted.length, prevLen-1), so first=TOP then next back-off). Per-exercise not whole-session. New i18n keys qf_last_session/qf_fill_same
 // Calendar Ay/Yıl toggle: MonthlyCalendar now has calView state + toggle top-right. 'Yıl' = GitHub-style year heatmap (53 weeks, intensity=daily volume quartiles, --accent tinted) + streak counters (current/longest weekly streak + total active days); tap an active cell → onTapDay (day detail). 'Ay' = existing monthly calendar unchanged. New i18n keys cal_month/cal_year/streak_current/streak_longest/streak_total_days/streak_weeks/heatmap_less/heatmap_more
 // Duplicate-exercise guard in addExercise: normalizes name (trim + collapse spaces + lowercase), compares against ALL days' exercises + all log names. Exact dup in current day → blocked (alert). Same exercise on another day/history with DIFFERENT spelling (case/whitespace) → confirm offering the existing canonical name so PR history stays unified; reusing identical spelling on another day is silent. Catches accidental case/whitespace variants, not synonyms. New i18n key ex_similar_confirm (tr+en)
@@ -1688,6 +1796,9 @@ const I18N = {
     shared_program: 'paylaşılan program',
     backup_loaded: 'Yedek yüklendi!',
     file_read_err: 'Dosya okunamadı.',
+    import_confirm: 'Bu yedek yüklenecek ve mevcut verilerin üzerine yazılacak. Güvenlik için içeri aktarmadan önce mevcut halinin bir kopyası otomatik saklanır. Devam edilsin mi?',
+    backup_invalid: 'Geçersiz veya bozuk yedek dosyası. Hiçbir şey değiştirilmedi.',
+    save_failed: '⚠️ Kayıt cihaza yazılamadı — depolama dolu olabilir',
     workout_day_cap: 'ANTRENMAN GÜNÜ',
     total_duration_cap: 'TOPLAM SÜRE',
     send_to_friend: '📤 Bu Programı Arkadaşa Gönder',
@@ -1957,6 +2068,9 @@ const I18N = {
     shared_program: 'shared program',
     backup_loaded: 'Backup loaded!',
     file_read_err: 'Could not read file.',
+    import_confirm: 'This backup will be loaded and will overwrite your current data. A copy of your current state is saved automatically before importing, just in case. Continue?',
+    backup_invalid: 'Invalid or corrupt backup file. Nothing was changed.',
+    save_failed: '⚠️ Could not save to device — storage may be full',
     workout_day_cap: 'WORKOUT DAY',
     total_duration_cap: 'TOTAL DURATION',
     send_to_friend: '📤 Send This Program to a Friend',
@@ -8239,7 +8353,8 @@ function WorkoutTab({
           customDays: parsed.customDays || [],
           customMuscleMap: parsed.customMuscleMap || {},
           hiddenDays: parsed.hiddenDays || [],
-          dayOverrides: parsed.dayOverrides || {}
+          dayOverrides: parsed.dayOverrides || {},
+          updatedAt: parsed.updatedAt || 0
         };
         setData(localData);
       } else {
@@ -8260,26 +8375,31 @@ function WorkoutTab({
     if (cloudReady) {
       const docRef = window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc(docName);
       docRef.get().then(snap => {
+        // Bulut cevabı gelene kadar yerel değişmiş olabilir → güncel localStorage'ı yeniden oku (yarış koruması)
+        let curLocal = localData;
+        try { const raw = localStorage.getItem(lsKey); if (raw) curLocal = JSON.parse(raw); } catch (e) {}
         if (snap.exists) {
-          const cloud = snap.data();
+          const m = mergeGymData(curLocal, snap.data());
           const merged = {
             exercises: {
               ...DEFAULT_EXERCISES,
-              ...(cloud.exercises || {})
+              ...m.exercises
             },
-            logs: cloud.logs || [],
-            sessions: cloud.sessions || [],
-            customDays: cloud.customDays || [],
-            customMuscleMap: cloud.customMuscleMap || {},
-            hiddenDays: cloud.hiddenDays || [],
-            dayOverrides: cloud.dayOverrides || {}
+            logs: m.logs,
+            sessions: m.sessions,
+            customDays: m.customDays,
+            customMuscleMap: m.customMuscleMap,
+            hiddenDays: m.hiddenDays,
+            dayOverrides: m.dayOverrides
           };
           setData(merged);
           try {
-            localStorage.setItem(lsKey, JSON.stringify(merged));
+            localStorage.setItem(lsKey, JSON.stringify({ ...merged, updatedAt: m.updatedAt }));
           } catch (e) {}
-        } else if (localData) {
-          docRef.set(localData).catch(() => {});
+          // Yerelde bulutta olmayan kayıt varsa (offline ekleme / iki cihaz) birleşmiş hali buluta geri yaz
+          if (m._localHadExtra) { try { docRef.set({ ...merged, updatedAt: Date.now() }).catch(() => {}); } catch (e) {} }
+        } else if (curLocal) {
+          docRef.set({ ...curLocal, updatedAt: Date.now() }).catch(() => {});
         }
         setCloudLoaded(true);
       }).catch(() => {
@@ -8292,14 +8412,18 @@ function WorkoutTab({
   const dayConfig = useMemo(() => buildDayConfigMap(data.customDays, data.hiddenDays, data.dayOverrides), [data.customDays, data.hiddenDays, data.dayOverrides, appLang]);
   const saveData = newData => {
     setData(newData);
-    // Her zaman localStorage'a yaz (offline yedek)
+    // updatedAt damgası: senkron çakışmalarında hangi tarafın yeni olduğunu bilmek için
+    const stamped = { ...newData, updatedAt: Date.now() };
+    // Her zaman localStorage'a yaz (offline yedek). Bu başarısız olursa gerçekten veri kaybı riski var → uyar.
     try {
-      localStorage.setItem(lsKey, JSON.stringify(newData));
-    } catch (e) {}
-    // Giriş varsa buluta da yaz
+      localStorage.setItem(lsKey, JSON.stringify(stamped));
+    } catch (e) {
+      try { setToast(t('save_failed')); } catch (e2) {}
+    }
+    // Giriş varsa buluta da yaz (offline başarısızlık normal, sessiz)
     if (cloudReady) {
       try {
-        window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc(docName).set(newData).catch(() => {});
+        window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc(docName).set(stamped).catch(() => {});
       } catch (e) {}
     }
   };
@@ -8962,7 +9086,9 @@ function WorkoutTab({
     };
   };
   const exportData = () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
+    // Full APEX Backup v2: tüm salonlar + ölçü/hedef/rutin/not/timer + prefs
+    const backup = collectFullBackup();
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {
       type: 'application/json'
     });
     const url = URL.createObjectURL(blob);
@@ -8982,25 +9108,19 @@ function WorkoutTab({
       if (!file) return;
       const reader = new FileReader();
       reader.onload = ev => {
-        try {
-          const imp = JSON.parse(ev.target.result);
-          if (imp.exercises && imp.logs) {
-            saveData({
-              exercises: {
-                ...DEFAULT_EXERCISES,
-                ...imp.exercises
-              },
-              logs: imp.logs,
-              sessions: imp.sessions || [],
-              customDays: imp.customDays || [],
-              customMuscleMap: imp.customMuscleMap || {},
-              hiddenDays: imp.hiddenDays || []
-            });
-            alert(t('backup_loaded'));
-          }
-        } catch {
-          alert(t('file_read_err'));
+        let imp;
+        try { imp = JSON.parse(ev.target.result); } catch { alert(t('file_read_err')); return; }
+        if (!confirm(t('import_confirm'))) return;
+        const res = restoreFullBackup(imp);
+        if (!res.ok) { alert(t('backup_invalid')); return; }
+        // Buluta da yaz: aksi halde reload'da eski bulut verisi importu ezer
+        if (cloudReady && res.gymData) {
+          Object.keys(res.gymData).forEach(gid => {
+            try { window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc(gymDocName(gid)).set(res.gymData[gid]).catch(() => {}); } catch (e) {}
+          });
         }
+        alert(t('backup_loaded'));
+        setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 600);
       };
       reader.readAsText(file);
     };
@@ -13300,7 +13420,8 @@ function ProgressTab({
           customDays: parsed.customDays || [],
           customMuscleMap: parsed.customMuscleMap || {},
           hiddenDays: parsed.hiddenDays || [],
-          dayOverrides: parsed.dayOverrides || {}
+          dayOverrides: parsed.dayOverrides || {},
+          updatedAt: parsed.updatedAt || 0
         };
         setData(localData);
       } else {
@@ -13318,19 +13439,24 @@ function ProgressTab({
     if (cloudReady) {
       window.APEX_DB.collection('users').doc(authUser.uid).collection('data').doc(docName).get().then(snap => {
         if (snap.exists) {
-          const cloud = snap.data();
-          setData({
+          // Güncel yereli yeniden oku + birleştir (WorkoutTab yeni set eklemiş olabilir → bayat gösterme)
+          let curLocal = null;
+          try { const raw = localStorage.getItem(lsKey); if (raw) curLocal = JSON.parse(raw); } catch (e) {}
+          const m = mergeGymData(curLocal, snap.data());
+          const merged = {
             exercises: {
               ...DEFAULT_EXERCISES,
-              ...(cloud.exercises || {})
+              ...m.exercises
             },
-            logs: cloud.logs || [],
-            sessions: cloud.sessions || [],
-            customDays: cloud.customDays || [],
-            customMuscleMap: cloud.customMuscleMap || {},
-            hiddenDays: cloud.hiddenDays || [],
-            dayOverrides: cloud.dayOverrides || {}
-          });
+            logs: m.logs,
+            sessions: m.sessions,
+            customDays: m.customDays,
+            customMuscleMap: m.customMuscleMap,
+            hiddenDays: m.hiddenDays,
+            dayOverrides: m.dayOverrides
+          };
+          setData(merged);
+          try { localStorage.setItem(lsKey, JSON.stringify({ ...merged, updatedAt: m.updatedAt })); } catch (e) {}
         }
       }).catch(() => {});
     }
