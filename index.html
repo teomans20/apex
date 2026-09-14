@@ -1417,6 +1417,16 @@ function mergeGymData(local, cloud) {
     _localHadExtra: localHadExtra
   };
 }
+// Bozuk kayıtları at (id yok / NaN ağırlık-tekrar-zaman) — beyaz ekran / render çökmesini önler.
+function sanitizeGymData(d) {
+  if (!d || typeof d !== 'object') return d;
+  const okNum = v => typeof v === 'number' && isFinite(v);
+  if (Array.isArray(d.logs)) d.logs = d.logs.filter(l => l && l.id != null && l.exerciseName && okNum(l.weight) && okNum(l.reps) && okNum(l.timestamp));
+  else d.logs = [];
+  if (Array.isArray(d.sessions)) d.sessions = d.sessions.filter(s => s && s.id != null && okNum(s.startTime));
+  else d.sessions = [];
+  return d;
+}
 function _readVaultProfile() {
   const out = {};
   LOCAL_PROFILE_KEYS.forEach(base => {
@@ -1517,7 +1527,8 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.106'; // Plateau engine unified + off-by-one fix (2nd review round). Replaced getStuckWeeksForExercise with getPlateauState(logs, exerciseName, opts) → {isStuck, weeksSinceImprovement, lastImprovementTs, lastWorkoutTs, trainedRecently, curve}, built on getExercisePRHistory (session/setType-aware per-session top curve). Loop scans ALL curve points (fixes feed off-by-one: old day-based helper looped i<days.length-1, skipping the most recent real workout since the feed calls it before today's set is added → could false-fire "plateau broken" when you PR'd last week). BOTH ProgressTab exerciseStats AND the feed plateau card now use this one engine (were separate, drifting) — feed now also gets the trainedRecently gate (no "8 weeks stuck" card when you'd actually abandoned then returned). Trade-off note (accepted): cloud union-merge can resurrect a delete made on an offline-with-unsynced device — future tombstone/deletedAt. Tested unified engine. (Prior v5.9.105 fixes retained: isStuck trainedRecently gate, monthStats rep-PR counting.)
+const APP_VERSION = '5.9.107'; // URGENT crash-recovery (Dostum's dad's Android: deleting a set → black screen that never came back = persisted data state crashing render on every load). TWO safety layers: (1) AppErrorBoundary class wraps <App> at root — any render exception now shows a dark recovery screen (⚠️ + "Yeniden Dene"/reload + "Yedeği İndir"/export-from-localStorage, bilingual via CURRENT_LANG) instead of a black screen. (2) sanitizeGymData(d) drops malformed logs (missing id/exerciseName, non-finite weight/reps/timestamp) and sessions (missing id / non-finite startTime); applied to localData on load (both tabs) AND to the cloud-merged result (mutates in place so localStorage + cloud push-back also get cleaned) → corrupt data can no longer crash render and is auto-cleaned on next load across devices. Tested sanitize + full-file syntax incl boundary.
+// Plateau engine unified + off-by-one fix (2nd review round). Replaced getStuckWeeksForExercise with getPlateauState(logs, exerciseName, opts) → {isStuck, weeksSinceImprovement, lastImprovementTs, lastWorkoutTs, trainedRecently, curve}, built on getExercisePRHistory (session/setType-aware per-session top curve). Loop scans ALL curve points (fixes feed off-by-one: old day-based helper looped i<days.length-1, skipping the most recent real workout since the feed calls it before today's set is added → could false-fire "plateau broken" when you PR'd last week). BOTH ProgressTab exerciseStats AND the feed plateau card now use this one engine (were separate, drifting) — feed now also gets the trainedRecently gate (no "8 weeks stuck" card when you'd actually abandoned then returned). Trade-off note (accepted): cloud union-merge can resurrect a delete made on an offline-with-unsynced device — future tombstone/deletedAt. Tested unified engine. (Prior v5.9.105 fixes retained: isStuck trainedRecently gate, monthStats rep-PR counting.)
 // Exercise Swap (option A, inline icon). Module: SWAP_SUGGESTIONS (curated per-muscle) + computeSwapAlts(from,data) → {primaryMuscle, history:[same-primary-muscle names you've logged], suggested:[curated not-done]} via existing getExerciseMuscles. SwapModal component: header "X yerine" + muscle tag, sections Geçmişinden/Önerilen (each row shows last perf or "new"), free-text "Elle yaz" input+Aç, "Güne kalıcı ekle" toggle (default off = one-off), note. DayView: swap icon (two-arrows) on each non-editMode/non-completed exercise row (stopPropagation), onSwap prop. WorkoutTab: swapFor/swapFrom state, SwapModal render, onPick(name,addToDay)→ setSwapFrom + optional addExercise(name to current day, keeps Cable Row) + open name's ExerciseView. ExerciseView: swapFrom prop → "X yerine" badge under title. History is by exerciseName so chosen exercise keeps its own PR history. New i18n swap_* keys. Tested computeSwapAlts (history filters by primary muscle, excludes self+done from suggested)
 // P2 cleanups: (#5 SPAM) broadcastGymEntry daily-dedup key now dateKey(Date.now()) local day not toISOString UTC → no duplicate "in workout" notif when UTC day flips at 03:00 TR. (#4) reps validation: handleSubmit requires positive integer 1..1000 (was weight-only >0), addLog defensive guard rejects w<=0/non-integer/r<=0. (#3) rest timer now endsAt-based (Date.now()) — no drift when phone suspends; startRestTimer/adjustRestTimer/tick reworked. (#1) cycle-mode routine cycleIndex now advances in endSession (once/day via lastAdvancedDay guard, only if completed dayType matches routine's current day or unresolvable) — was never incremented. (#7) EN-mode hardcoded TR fixed: "TOP SET/BACK-OFF — YENMEN GEREKEN" + "TOP SET"/"BACK-OFF SET n" → i18n top_to_beat/backoff_to_beat/top_set_cap2/backoff_set_n. DEFERRED: #2 applyProgram sets/reps (needs a prescription storage model → part of APEX Coach), #6 useMemo .length deps (low risk, not clearly broken)
 // Firestore atomicity (data-safety #3): claimUsername now uses db.runTransaction (get usernames/{u} inside tx → throw 'username-taken' if owned by another uid, else set doc + user.username atomically) — closes the check-then-set TOCTOU race; caller shows t('username_taken') on that error. toggleReaction now wraps read-modify-write in db.runTransaction (retries on contention) so two friends reacting at once no longer clobber each other's reaction. No new i18n keys
@@ -8445,6 +8456,7 @@ function WorkoutTab({
           dayOverrides: parsed.dayOverrides || {},
           updatedAt: parsed.updatedAt || 0
         };
+        localData = sanitizeGymData(localData);
         setData(localData);
       } else {
         // Bu salonda hiç veri yok → temiz başla (varsayılan günler, boş loglar)
@@ -8481,6 +8493,7 @@ function WorkoutTab({
             hiddenDays: m.hiddenDays,
             dayOverrides: m.dayOverrides
           };
+          sanitizeGymData(merged);
           setData(merged);
           try {
             localStorage.setItem(lsKey, JSON.stringify({ ...merged, updatedAt: m.updatedAt }));
@@ -13564,6 +13577,7 @@ function ProgressTab({
           dayOverrides: parsed.dayOverrides || {},
           updatedAt: parsed.updatedAt || 0
         };
+        localData = sanitizeGymData(localData);
         setData(localData);
       } else {
         setData({
@@ -13596,6 +13610,7 @@ function ProgressTab({
             hiddenDays: m.hiddenDays,
             dayOverrides: m.dayOverrides
           };
+          sanitizeGymData(merged);
           setData(merged);
           try { localStorage.setItem(lsKey, JSON.stringify({ ...merged, updatedAt: m.updatedAt })); } catch (e) {}
         }
@@ -17061,7 +17076,40 @@ const S = {
     transition: 'opacity 0.15s'
   }
 };
-ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));
+// Global hata sınırı — herhangi bir render hatası SİYAH/BEYAŞ ekran yerine kurtarma ekranı göstersin.
+// Veriyi silmez; Yeniden Dene (reload) + Yedeği İndir (localStorage'dan çalışır, UI çökse bile) sunar.
+class AppErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { err: null }; }
+  static getDerivedStateFromError(err) { return { err: err }; }
+  componentDidCatch(err, info) { try { console.error('APEX crash:', err, info); } catch (e) {} }
+  render() {
+    if (!this.state.err) return this.props.children;
+    var tr = (typeof CURRENT_LANG === 'undefined') || CURRENT_LANG !== 'en';
+    var doReload = function () { try { window.location.reload(); } catch (e) {} };
+    var doExport = function () {
+      try {
+        var backup = (typeof collectFullBackup === 'function') ? collectFullBackup() : null;
+        if (!backup) return;
+        var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'apex-backup-' + new Date().toISOString().split('T')[0] + '.json';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e) {}
+    };
+    var btn = function (label, onClick, primary) {
+      return React.createElement('button', { onClick: onClick, style: { width: '100%', maxWidth: 320, padding: '15px', borderRadius: 14, border: primary ? 'none' : '1px solid #333', background: primary ? '#4A90E2' : '#161616', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', marginTop: 10 } }, label);
+    };
+    return React.createElement('div', { style: { minHeight: '100vh', background: '#0a0a0a', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', fontFamily: '-apple-system,system-ui,sans-serif', boxSizing: 'border-box' } },
+      React.createElement('div', { style: { fontSize: 44, marginBottom: 14 } }, '⚠️'),
+      React.createElement('div', { style: { fontSize: 20, fontWeight: 900, marginBottom: 10 } }, tr ? 'Bir sorun oluştu' : 'Something went wrong'),
+      React.createElement('div', { style: { fontSize: 13.5, color: '#aaa', lineHeight: 1.6, maxWidth: 320, marginBottom: 20 } }, tr ? 'Verilerin cihazında güvende. Yeniden deneyebilir ya da her ihtimale karşı yedeğini indirebilirsin.' : 'Your data is safe on your device. You can try again, or download a backup just in case.'),
+      btn(tr ? '↻ Yeniden Dene' : '↻ Try Again', doReload, true),
+      btn(tr ? '⤓ Yedeği İndir' : '⤓ Download Backup', doExport, false));
+  }
+}
+ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(AppErrorBoundary, null, /*#__PURE__*/React.createElement(App, null)));
 </script>
 
 </body>
