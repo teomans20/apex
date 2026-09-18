@@ -1527,7 +1527,8 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.107'; // URGENT crash-recovery (Dostum's dad's Android: deleting a set → black screen that never came back = persisted data state crashing render on every load). TWO safety layers: (1) AppErrorBoundary class wraps <App> at root — any render exception now shows a dark recovery screen (⚠️ + "Yeniden Dene"/reload + "Yedeği İndir"/export-from-localStorage, bilingual via CURRENT_LANG) instead of a black screen. (2) sanitizeGymData(d) drops malformed logs (missing id/exerciseName, non-finite weight/reps/timestamp) and sessions (missing id / non-finite startTime); applied to localData on load (both tabs) AND to the cloud-merged result (mutates in place so localStorage + cloud push-back also get cleaned) → corrupt data can no longer crash render and is auto-cleaned on next load across devices. Tested sanitize + full-file syntax incl boundary.
+const APP_VERSION = '5.9.108'; // Crash boundary made DIAGNOSTIC (brother hit a crash on v5.9.107 we could not reproduce across 6 paths: zero-log exercise open, end-session, calendar day-detail Düzenle, journal, progress, friends). Recovery screen now shows the error message + first stack lines + REACT COMPONENT STACK (names the exact crashing component) + APP_VERSION in a scrollable mono box, adds a "Hatayı Kopyala"/Copy Error button (clipboard + textarea fallback), and componentDidCatch persists the full record to localStorage 'apex-last-error' {at, version, message, stack, componentStack, ua}. Verified end-to-end in headless Chromium with an injected throw: boundary renders, names HomeView/WorkoutTab, and stores the record.
+// URGENT crash-recovery (Dostum's dad's Android: deleting a set → black screen that never came back = persisted data state crashing render on every load). TWO safety layers: (1) AppErrorBoundary class wraps <App> at root — any render exception now shows a dark recovery screen (⚠️ + "Yeniden Dene"/reload + "Yedeği İndir"/export-from-localStorage, bilingual via CURRENT_LANG) instead of a black screen. (2) sanitizeGymData(d) drops malformed logs (missing id/exerciseName, non-finite weight/reps/timestamp) and sessions (missing id / non-finite startTime); applied to localData on load (both tabs) AND to the cloud-merged result (mutates in place so localStorage + cloud push-back also get cleaned) → corrupt data can no longer crash render and is auto-cleaned on next load across devices. Tested sanitize + full-file syntax incl boundary.
 // Plateau engine unified + off-by-one fix (2nd review round). Replaced getStuckWeeksForExercise with getPlateauState(logs, exerciseName, opts) → {isStuck, weeksSinceImprovement, lastImprovementTs, lastWorkoutTs, trainedRecently, curve}, built on getExercisePRHistory (session/setType-aware per-session top curve). Loop scans ALL curve points (fixes feed off-by-one: old day-based helper looped i<days.length-1, skipping the most recent real workout since the feed calls it before today's set is added → could false-fire "plateau broken" when you PR'd last week). BOTH ProgressTab exerciseStats AND the feed plateau card now use this one engine (were separate, drifting) — feed now also gets the trainedRecently gate (no "8 weeks stuck" card when you'd actually abandoned then returned). Trade-off note (accepted): cloud union-merge can resurrect a delete made on an offline-with-unsynced device — future tombstone/deletedAt. Tested unified engine. (Prior v5.9.105 fixes retained: isStuck trainedRecently gate, monthStats rep-PR counting.)
 // Exercise Swap (option A, inline icon). Module: SWAP_SUGGESTIONS (curated per-muscle) + computeSwapAlts(from,data) → {primaryMuscle, history:[same-primary-muscle names you've logged], suggested:[curated not-done]} via existing getExerciseMuscles. SwapModal component: header "X yerine" + muscle tag, sections Geçmişinden/Önerilen (each row shows last perf or "new"), free-text "Elle yaz" input+Aç, "Güne kalıcı ekle" toggle (default off = one-off), note. DayView: swap icon (two-arrows) on each non-editMode/non-completed exercise row (stopPropagation), onSwap prop. WorkoutTab: swapFor/swapFrom state, SwapModal render, onPick(name,addToDay)→ setSwapFrom + optional addExercise(name to current day, keeps Cable Row) + open name's ExerciseView. ExerciseView: swapFrom prop → "X yerine" badge under title. History is by exerciseName so chosen exercise keeps its own PR history. New i18n swap_* keys. Tested computeSwapAlts (history filters by primary muscle, excludes self+done from suggested)
 // P2 cleanups: (#5 SPAM) broadcastGymEntry daily-dedup key now dateKey(Date.now()) local day not toISOString UTC → no duplicate "in workout" notif when UTC day flips at 03:00 TR. (#4) reps validation: handleSubmit requires positive integer 1..1000 (was weight-only >0), addLog defensive guard rejects w<=0/non-integer/r<=0. (#3) rest timer now endsAt-based (Date.now()) — no drift when phone suspends; startRestTimer/adjustRestTimer/tick reworked. (#1) cycle-mode routine cycleIndex now advances in endSession (once/day via lastAdvancedDay guard, only if completed dayType matches routine's current day or unresolvable) — was never incremented. (#7) EN-mode hardcoded TR fixed: "TOP SET/BACK-OFF — YENMEN GEREKEN" + "TOP SET"/"BACK-OFF SET n" → i18n top_to_beat/backoff_to_beat/top_set_cap2/backoff_set_n. DEFERRED: #2 applyProgram sets/reps (needs a prescription storage model → part of APEX Coach), #6 useMemo .length deps (low risk, not clearly broken)
@@ -17079,9 +17080,23 @@ const S = {
 // Global hata sınırı — herhangi bir render hatası SİYAH/BEYAŞ ekran yerine kurtarma ekranı göstersin.
 // Veriyi silmez; Yeniden Dene (reload) + Yedeği İndir (localStorage'dan çalışır, UI çökse bile) sunar.
 class AppErrorBoundary extends React.Component {
-  constructor(props) { super(props); this.state = { err: null }; }
+  constructor(props) { super(props); this.state = { err: null, info: null, copied: false }; }
   static getDerivedStateFromError(err) { return { err: err }; }
-  componentDidCatch(err, info) { try { console.error('APEX crash:', err, info); } catch (e) {} }
+  componentDidCatch(err, info) {
+    try { console.error('APEX crash:', err, info); } catch (e) {}
+    try { this.setState({ info: info }); } catch (e) {}
+    // Hatayı kalıcı sakla — kullanıcı sonra gösterebilsin / destek için
+    try {
+      localStorage.setItem('apex-last-error', JSON.stringify({
+        at: new Date().toISOString(),
+        version: (typeof APP_VERSION !== 'undefined' ? APP_VERSION : '?'),
+        message: (err && err.message) || String(err),
+        stack: ((err && err.stack) || '').split('\n').slice(0, 12).join('\n'),
+        componentStack: ((info && info.componentStack) || '').split('\n').slice(0, 12).join('\n'),
+        ua: (navigator && navigator.userAgent) || ''
+      }));
+    } catch (e) {}
+  }
   render() {
     if (!this.state.err) return this.props.children;
     var tr = (typeof CURRENT_LANG === 'undefined') || CURRENT_LANG !== 'en';
@@ -17098,13 +17113,25 @@ class AppErrorBoundary extends React.Component {
         URL.revokeObjectURL(url);
       } catch (e) {}
     };
+    var self = this;
+    var err = this.state.err;
+    var detail = ((err && err.message) || String(err)) + '\n' + ((err && err.stack) || '').split('\n').slice(1, 5).join('\n') + '\n--\n' + (((this.state.info && this.state.info.componentStack) || '').split('\n').slice(1, 5).join('\n')) + '\nv' + (typeof APP_VERSION !== 'undefined' ? APP_VERSION : '?');
+    var doCopy = function () {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(detail);
+        else { var ta = document.createElement('textarea'); ta.value = detail; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
+        self.setState({ copied: true });
+      } catch (e) {}
+    };
     var btn = function (label, onClick, primary) {
       return React.createElement('button', { onClick: onClick, style: { width: '100%', maxWidth: 320, padding: '15px', borderRadius: 14, border: primary ? 'none' : '1px solid #333', background: primary ? '#4A90E2' : '#161616', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', marginTop: 10 } }, label);
     };
     return React.createElement('div', { style: { minHeight: '100vh', background: '#0a0a0a', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', fontFamily: '-apple-system,system-ui,sans-serif', boxSizing: 'border-box' } },
       React.createElement('div', { style: { fontSize: 44, marginBottom: 14 } }, '⚠️'),
       React.createElement('div', { style: { fontSize: 20, fontWeight: 900, marginBottom: 10 } }, tr ? 'Bir sorun oluştu' : 'Something went wrong'),
-      React.createElement('div', { style: { fontSize: 13.5, color: '#aaa', lineHeight: 1.6, maxWidth: 320, marginBottom: 20 } }, tr ? 'Verilerin cihazında güvende. Yeniden deneyebilir ya da her ihtimale karşı yedeğini indirebilirsin.' : 'Your data is safe on your device. You can try again, or download a backup just in case.'),
+      React.createElement('div', { style: { fontSize: 13.5, color: '#aaa', lineHeight: 1.6, maxWidth: 320, marginBottom: 16 } }, tr ? 'Verilerin cihazında güvende. Yeniden deneyebilir ya da her ihtimale karşı yedeğini indirebilirsin.' : 'Your data is safe on your device. You can try again, or download a backup just in case.'),
+      React.createElement('div', { style: { width: '100%', maxWidth: 320, background: '#111', border: '1px solid #262626', borderRadius: 10, padding: '10px 12px', textAlign: 'left', fontSize: 10.5, lineHeight: 1.45, color: '#c98b8b', fontFamily: 'ui-monospace,Menlo,monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 150, overflowY: 'auto' } }, detail),
+      btn(tr ? (this.state.copied ? '✓ Kopyalandı' : '⧉ Hatayı Kopyala') : (this.state.copied ? '✓ Copied' : '⧉ Copy Error'), doCopy, false),
       btn(tr ? '↻ Yeniden Dene' : '↻ Try Again', doReload, true),
       btn(tr ? '⤓ Yedeği İndir' : '⤓ Download Backup', doExport, false));
   }
