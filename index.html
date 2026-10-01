@@ -207,6 +207,27 @@
   @keyframes sfConf { 0%{opacity:1;transform:translateY(-30px) rotate(0)} 100%{opacity:0;transform:translateY(460px) rotate(540deg)} }
   .sf-scene.on .sf-conf { animation: sfConf 1.9s ease-in both; }
 
+  /* ===== APEX WRAPPED (v5.9.111) ===== */
+  .wr-card { transition: opacity .35s ease; position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 40px 28px; opacity: 0; pointer-events: none; text-align: center; }
+  .wr-card.on { opacity: 1; pointer-events: auto; }
+  @keyframes wrPop { from { opacity:0; transform:scale(.6); filter:blur(9px); } to { opacity:1; transform:none; filter:blur(0); } }
+  .wr-card.on .wr-pop { animation: wrPop .72s cubic-bezier(.16,1.4,.3,1) both; }
+  @keyframes wrUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
+  .wr-card.on .wr-up { animation: wrUp .55s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes wrGlow { 0%{opacity:0;transform:scale(.5)} 45%{opacity:.9} 100%{opacity:.3;transform:scale(1.35)} }
+  .wr-card.on .wr-glow { animation: wrGlow 1.6s ease-out both; }
+  @keyframes wrGrow { to { height: var(--h); } }
+  .wr-card.on .wr-bar { animation: wrGrow .7s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes wrDraw { to { stroke-dashoffset: 0; } }
+  .wr-line { vector-effect: non-scaling-stroke; }
+  .wr-card.on .wr-line { animation: wrDraw 1.2s .25s cubic-bezier(.4,0,.2,1) both; }
+  @keyframes wrHolo { from { transform: translateX(-120%); } to { transform: translateX(120%); } }
+  .wr-card.on .wr-holo { animation: wrHolo 1.4s .5s cubic-bezier(.4,0,.2,1) both; }
+  @keyframes wrShine { 0%,100%{ background-position: 200% 0; } 50%{ background-position: -40% 0; } }
+  .wr-shine { background: linear-gradient(100deg, rgba(255,183,77,.1) 30%, rgba(255,214,150,.45) 48%, rgba(255,183,77,.1) 66%);
+    background-size: 220% 100%; animation: wrShine 3.4s ease-in-out infinite; }
+
   #root { min-height: 100vh; }
   /* Telefon yatay tutulduğunda içeriği zorla dik göster (iOS PWA orientation lock desteklemediği için) */
   @media screen and (orientation: landscape) and (max-width: 950px) {
@@ -1565,7 +1586,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.110'; // SEANS FİLMİ: antrenman bitince kendiliğinden oynayan ~11 sn'lik sinematik özet. 5 sahne: (1) gün adı — ışık süzülmesi + accent hale, (2) hareket montajı — seansın TÜM hareketleri sırayla düşer (isim, set sayısı, top set, hacim; rekorlular altın + kupa SVG), altta hacim barı dolar, (3) doruk nokta — rekor varsa madalya+ışınlar+"önceki X · +Ykg", rekor yoksa sahne atlanmaz ama "GÜNÜN EN AĞIR SETİ"ne döner (halter SVG, gün accent'i), (4) sayaçlar (hacim/set/süre, geçen seansa göre % çipi) + mevcut BodyFront/BodyBack silüetinde kas haritası (seans hacmi kaslara dağıtılıp 0..1 yoğunlukla accent'e boyanır; baskın taraf ön/arka otomatik), (5) kapanış kartı — holografik parlama + konfeti + ↻/Detaylar/Kapat. Sahne geçişleri dissolve, üstte story barları, sağ üstte Atla/Kapat. Tüm sahneler animasyon bittikten sonra ~1 sn bekler (ritim). computeSessionSummary'ye exerciseRows/heaviestSet/muscleScores/muscleSide/topMuscleNames/endedAt eklendi ve prs artık prev taşıyor; aynı harekette top+backoff rekoru tek rekor sayılır. Renkler gün tipinin accent'inden gelir, emoji yok (SVG). Detaylar mevcut SessionSummaryModal'ı açar — eski özet kaldırılmadı. // ROOT CAUSE FIXED (the black-screen crash). Error text from the wild: "null is not an object (evaluating 'todayTop.weight')" at ExerciseView. This was a regression Claude introduced in v5.9.93: todayTop changed from todaySorted[0] (never null when sets exist) to todaySplit.top, and splitTopBackoff returns top:null when EVERY set of the group is explicitly setType:'backoff' with no 'top' — which is exactly what happens after the TOP set is DELETED (dad's "deleting a set -> black screen") . showingBackoff (sets exist) still rendered the TOP strip -> todayTop.weight on null -> throw on every render of that exercise. FIX: splitTopBackoff now falls back to the earliest set as top when no explicit top remains (if (!tops.length && backoffs.length) tops.push(backoffs.shift())), restoring pre-5.9.93 behaviour; plus defence-in-depth guard `!todayTop ? null :` on the targetTopStrip branch. Reproduced in headless Chromium (all-backoff seed -> boundary + exact error), verified fixed (renders "ILK TOP"), and re-ran the other scenario repros for regressions.
+const APP_VERSION = '5.9.111'; // APEX WRAPPED: yıl sonu hikaye özeti, TÜM SALONLARIN verisi birleştirilerek (collectAllGymsData: GYMS_KEY'deki her salonun data'sı okunur, logs/sessions id'ye göre tekilleştirilir, customMuscleMap birleşir). buildWrapped(range) bir dönemin istatistiklerini üretir: set/tekrar/hacim/gün/dakika, haftanın günü dağılımı + en sadık gün, rekor sayısı ve en çok gelişen hareket (getExercisePRHistory top-set eğrisi, 14 noktaya seyreltilir), en çok çalışılan kas, en uzun haftalık seri, en çok yapılan hareket. WrappedStory: 7 kart (açılış / set / hacim+somut karşılaştırma / en çok gelişen + kendini çizen grafik / haftanın günleri çubukları / rekorlar / holografik kapanış kartı), dissolve geçişli, story barlı, Atla'lı. volumeComparison() hacmi uçak-balina-otobüs-otomobil-buzdolabı ölçeğine çevirir. GİRİŞ: (1) Defter'de hafta özetlerinin üstünde parıltılı kart — her zaman erişilebilir, (2) 25 Aralık–7 Ocak arası ana ekranda afiş. 1–7 Ocak arası hâlâ geçen yılı gösterir. En az 5 antrenman günü şartı. Seans Filmi'nin CSS grain'i paylaşılır; yeni wr-* animasyonları eklendi. Emoji yok, i18n tr+en tam. // SEANS FİLMİ: antrenman bitince kendiliğinden oynayan ~11 sn'lik sinematik özet. 5 sahne: (1) gün adı — ışık süzülmesi + accent hale, (2) hareket montajı — seansın TÜM hareketleri sırayla düşer (isim, set sayısı, top set, hacim; rekorlular altın + kupa SVG), altta hacim barı dolar, (3) doruk nokta — rekor varsa madalya+ışınlar+"önceki X · +Ykg", rekor yoksa sahne atlanmaz ama "GÜNÜN EN AĞIR SETİ"ne döner (halter SVG, gün accent'i), (4) sayaçlar (hacim/set/süre, geçen seansa göre % çipi) + mevcut BodyFront/BodyBack silüetinde kas haritası (seans hacmi kaslara dağıtılıp 0..1 yoğunlukla accent'e boyanır; baskın taraf ön/arka otomatik), (5) kapanış kartı — holografik parlama + konfeti + ↻/Detaylar/Kapat. Sahne geçişleri dissolve, üstte story barları, sağ üstte Atla/Kapat. Tüm sahneler animasyon bittikten sonra ~1 sn bekler (ritim). computeSessionSummary'ye exerciseRows/heaviestSet/muscleScores/muscleSide/topMuscleNames/endedAt eklendi ve prs artık prev taşıyor; aynı harekette top+backoff rekoru tek rekor sayılır. Renkler gün tipinin accent'inden gelir, emoji yok (SVG). Detaylar mevcut SessionSummaryModal'ı açar — eski özet kaldırılmadı. // ROOT CAUSE FIXED (the black-screen crash). Error text from the wild: "null is not an object (evaluating 'todayTop.weight')" at ExerciseView. This was a regression Claude introduced in v5.9.93: todayTop changed from todaySorted[0] (never null when sets exist) to todaySplit.top, and splitTopBackoff returns top:null when EVERY set of the group is explicitly setType:'backoff' with no 'top' — which is exactly what happens after the TOP set is DELETED (dad's "deleting a set -> black screen") . showingBackoff (sets exist) still rendered the TOP strip -> todayTop.weight on null -> throw on every render of that exercise. FIX: splitTopBackoff now falls back to the earliest set as top when no explicit top remains (if (!tops.length && backoffs.length) tops.push(backoffs.shift())), restoring pre-5.9.93 behaviour; plus defence-in-depth guard `!todayTop ? null :` on the targetTopStrip branch. Reproduced in headless Chromium (all-backoff seed -> boundary + exact error), verified fixed (renders "ILK TOP"), and re-ran the other scenario repros for regressions.
 // Crash boundary made DIAGNOSTIC (brother hit a crash on v5.9.107 we could not reproduce across 6 paths: zero-log exercise open, end-session, calendar day-detail Düzenle, journal, progress, friends). Recovery screen now shows the error message + first stack lines + REACT COMPONENT STACK (names the exact crashing component) + APP_VERSION in a scrollable mono box, adds a "Hatayı Kopyala"/Copy Error button (clipboard + textarea fallback), and componentDidCatch persists the full record to localStorage 'apex-last-error' {at, version, message, stack, componentStack, ua}. Verified end-to-end in headless Chromium with an injected throw: boundary renders, names HomeView/WorkoutTab, and stores the record.
 // URGENT crash-recovery (Dostum's dad's Android: deleting a set → black screen that never came back = persisted data state crashing render on every load). TWO safety layers: (1) AppErrorBoundary class wraps <App> at root — any render exception now shows a dark recovery screen (⚠️ + "Yeniden Dene"/reload + "Yedeği İndir"/export-from-localStorage, bilingual via CURRENT_LANG) instead of a black screen. (2) sanitizeGymData(d) drops malformed logs (missing id/exerciseName, non-finite weight/reps/timestamp) and sessions (missing id / non-finite startTime); applied to localData on load (both tabs) AND to the cloud-merged result (mutates in place so localStorage + cloud push-back also get cleaned) → corrupt data can no longer crash render and is auto-cleaned on next load across devices. Tested sanitize + full-file syntax incl boundary.
 // Plateau engine unified + off-by-one fix (2nd review round). Replaced getStuckWeeksForExercise with getPlateauState(logs, exerciseName, opts) → {isStuck, weeksSinceImprovement, lastImprovementTs, lastWorkoutTs, trainedRecently, curve}, built on getExercisePRHistory (session/setType-aware per-session top curve). Loop scans ALL curve points (fixes feed off-by-one: old day-based helper looped i<days.length-1, skipping the most recent real workout since the feed calls it before today's set is added → could false-fire "plateau broken" when you PR'd last week). BOTH ProgressTab exerciseStats AND the feed plateau card now use this one engine (were separate, drifting) — feed now also gets the trainedRecently gate (no "8 weeks stuck" card when you'd actually abandoned then returned). Trade-off note (accepted): cloud union-merge can resurrect a delete made on an offline-with-unsynced device — future tombstone/deletedAt. Tested unified engine. (Prior v5.9.105 fixes retained: isStuck trainedRecently gate, monthStats rep-PR counting.)
@@ -1690,6 +1711,24 @@ function t(key, vars) {
 }
 const I18N = {
   tr: {
+    // APEX Wrapped (v5.9.111)
+    wrap_title: 'APEX WRAPPED', wrap_total: 'TOPLAM', wrap_sets: 'SET', wrap_lifted: 'KALDIRDIĞIN TOPLAM AĞIRLIK',
+    wrap_most_improved: 'EN ÇOK GELİŞEN HAREKETİN', wrap_loyal_day: 'EN SADIK GÜNÜN', wrap_pr_broken: 'KEZ REKOR KIRDIN',
+    wrap_intro: 'Bu dönem neler oldu, bakalım.',
+    wrap_intro_gyms: '{n} salondaki her şey burada.',
+    wrap_sets_cap: '{d} gün salondaydın, {r} tekrar yaptın.',
+    wrap_growth_cap: '{a} ile başladın, {b} ile bitirdin.',
+    wrap_days_cap: '{n} kez {d} günü antrenman yaptın.',
+    wrap_pr_cap: 'En uzun serin {w} hafta üst üste.\nEn çok çalıştırdığın kas: {m}.',
+    wrap_cmp_plane: 'Bu, {n} Boeing 737 eder.\nÜstelik tek tek kaldırdın.',
+    wrap_cmp_whale: 'Bu, {n} mavi balina eder.',
+    wrap_cmp_bus: 'Bu, {n} belediye otobüsü eder.',
+    wrap_cmp_car: 'Bu, {n} otomobil eder.',
+    wrap_cmp_fridge: 'Bu, {n} buzdolabı eder.',
+    wrap_open: 'Wrapped\'ini izle', wrap_card_sub: 'Yılın özeti · tüm salonlar',
+    wrap_not_ready: 'Wrapped için yeterli veri yok',
+    wd_mon: 'Pazartesi', wd_tue: 'Salı', wd_wed: 'Çarşamba', wd_thu: 'Perşembe', wd_fri: 'Cuma', wd_sat: 'Cumartesi', wd_sun: 'Pazar',
+    wd_mon_s: 'PZT', wd_tue_s: 'SAL', wd_wed_s: 'ÇAR', wd_thu_s: 'PER', wd_fri_s: 'CUM', wd_sat_s: 'CMT', wd_sun_s: 'PAZ',
     // Seans Filmi (v5.9.110)
     sf_skip: 'Atla', sf_details: 'Detaylar', sf_set: 'set', sf_ton: 't', sf_min: 'dk',
     sf_hour: 's', sf_volume: 'Hacim', sf_duration: 'Süre', sf_records: 'Rekor', sf_completed: 'SEANS TAMAMLANDI',
@@ -1987,6 +2026,23 @@ const I18N = {
     report_failed: 'Şikâyet gönderilemedi, tekrar dene.'
   },
   en: {
+    wrap_title: 'APEX WRAPPED', wrap_total: 'TOTAL', wrap_sets: 'SETS', wrap_lifted: 'TOTAL WEIGHT LIFTED',
+    wrap_most_improved: 'YOUR MOST IMPROVED LIFT', wrap_loyal_day: 'YOUR MOST LOYAL DAY', wrap_pr_broken: 'RECORDS BROKEN',
+    wrap_intro: 'Let\'s see how it went.',
+    wrap_intro_gyms: 'Everything from {n} gyms, together.',
+    wrap_sets_cap: '{d} days in the gym, {r} reps total.',
+    wrap_growth_cap: 'Started at {a}, finished at {b}.',
+    wrap_days_cap: 'You trained {n} times on {d}.',
+    wrap_pr_cap: 'Longest streak: {w} weeks straight.\nMost trained muscle: {m}.',
+    wrap_cmp_plane: 'That is {n} Boeing 737s.\nOne rep at a time.',
+    wrap_cmp_whale: 'That is {n} blue whales.',
+    wrap_cmp_bus: 'That is {n} city buses.',
+    wrap_cmp_car: 'That is {n} cars.',
+    wrap_cmp_fridge: 'That is {n} refrigerators.',
+    wrap_open: 'Watch your Wrapped', wrap_card_sub: 'Year in review · all gyms',
+    wrap_not_ready: 'Not enough data for Wrapped yet',
+    wd_mon: 'Monday', wd_tue: 'Tuesday', wd_wed: 'Wednesday', wd_thu: 'Thursday', wd_fri: 'Friday', wd_sat: 'Saturday', wd_sun: 'Sunday',
+    wd_mon_s: 'MON', wd_tue_s: 'TUE', wd_wed_s: 'WED', wd_thu_s: 'THU', wd_fri_s: 'FRI', wd_sat_s: 'SAT', wd_sun_s: 'SUN',
     sf_skip: 'Skip', sf_details: 'Details', sf_set: 'sets', sf_ton: 't', sf_min: 'min',
     sf_hour: 'h', sf_volume: 'Volume', sf_duration: 'Duration', sf_records: 'Records', sf_completed: 'SESSION COMPLETE',
     sf_new_record: 'NEW RECORD', sf_heaviest_set: 'HEAVIEST SET OF THE DAY', sf_previous: 'previous',
@@ -4183,6 +4239,20 @@ function JournalDetailView({ entry, onBack }) {
 
 // ————— GÜNLÜK: ANA LİSTE —————
 function JournalModal({ data, myUsername, onClose }) {
+  // APEX WRAPPED (v5.9.111) — yıl özeti; 1–7 Ocak arası hâlâ geçen yılı gösterir
+  const [showWrapped, setShowWrapped] = useState(false);
+  const wrapped = React.useMemo(() => {
+    const now = new Date();
+    const y = (now.getMonth() === 0 && now.getDate() <= 7) ? now.getFullYear() - 1 : now.getFullYear();
+    try {
+      return buildWrapped({
+        from: new Date(y, 0, 1).getTime(),
+        to: new Date(y + 1, 0, 1).getTime(),
+        label: String(y), kind: 'year'
+      });
+    } catch (e) { return null; }
+  }, []);
+  const wrappedReady = !!(wrapped && wrapped.workoutDays >= 5);
   const [detailEntry, setDetailEntry] = useState(null);
   const [weekDetail, setWeekDetail] = useState(null); // açık hafta özeti
   const entries = React.useMemo(() => buildJournalEntries(data), [data]);
@@ -4261,6 +4331,23 @@ function JournalModal({ data, myUsername, onClose }) {
     /*#__PURE__*/React.createElement("div", { style: { flex: 1, background: 'linear-gradient(180deg,#0f0f0f,#0a0a0a)', border: '1px solid #1c1c1c', borderRadius: 14, padding: '13px 10px', textAlign: 'center' } },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 24, fontWeight: 800, lineHeight: 1, fontFamily: "'Big Shoulders Display',sans-serif" } }, weekStreak),
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: '#777', letterSpacing: 0.6, marginTop: 5 } }, t('week_streak_short')))),
+  // APEX WRAPPED kartı
+  wrappedReady && /*#__PURE__*/React.createElement("button", {
+    onClick: () => { haptic(18); setShowWrapped(true); },
+    className: 'wr-shine',
+    style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 13,
+      border: '1px solid rgba(255,183,77,0.38)', borderRadius: 16, padding: '15px 16px', marginBottom: 20,
+      cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
+  },
+    /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9.5, letterSpacing: 2.6, fontWeight: 800, color: '#FFB74D' } }, t('wrap_title')),
+      /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 30, lineHeight: 1, marginTop: 4 } }, wrapped.label),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#bba', marginTop: 4 } }, t('wrap_card_sub'))),
+    /*#__PURE__*/React.createElement("div", { style: { flex: 'none', display: 'flex', alignItems: 'center', gap: 7,
+      background: 'rgba(0,0,0,0.42)', borderRadius: 20, padding: '9px 14px', fontSize: 11.5, fontWeight: 800, color: '#FFD9A0' } },
+      /*#__PURE__*/React.createElement("svg", { width: 12, height: 12, viewBox: '0 0 24 24', fill: '#FFD9A0' },
+        /*#__PURE__*/React.createElement("path", { d: 'M8 5v14l11-7z' })), t('wrap_open'))),
+  showWrapped && /*#__PURE__*/React.createElement(WrappedStory, { wrapped: wrapped, onClose: () => setShowWrapped(false) }),
   // HAFTA ÖZETLERİ (yatay kaydırmalı kartlar)
   weekSummaries.length > 0 && /*#__PURE__*/React.createElement("div", { style: { marginBottom: 22 } },
     /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 11 } },
@@ -9949,6 +10036,7 @@ function HomeView({
   weeklySummaryRange,
   onOpenGymPicker
 }) {
+  const [homeWrapped, setHomeWrapped] = useState(null); // APEX Wrapped afişi (v5.9.111)
   const todayLogs = data.logs.filter(l => dateKey(l.timestamp) === dateKey(Date.now()));
   const totalSessions = new Set(data.logs.map(l => dateKey(l.timestamp))).size;
   const totalVolume = data.logs.reduce((s, l) => s + l.weight * l.reps, 0);
@@ -10161,6 +10249,28 @@ function HomeView({
                 /*#__PURE__*/React.createElement("span", null, inProgress ? t('routine_resume') : t('routine_start')),
                 /*#__PURE__*/React.createElement("svg", { width: 13, height: 13, viewBox: "0 0 24 24", fill: "#fff" }, /*#__PURE__*/React.createElement("path", { d: "M8 5v14l11-7z" })))));
     })()), (() => {
+      // APEX WRAPPED afişi — 25 Aralık – 7 Ocak arası ana ekranda belirir (v5.9.111)
+      const now = new Date(), mo = now.getMonth(), dy = now.getDate();
+      const inSeason = (mo === 11 && dy >= 25) || (mo === 0 && dy <= 7);
+      if (!inSeason) return null;
+      const yr = mo === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      let wr = null;
+      try { wr = buildWrapped({ from: new Date(yr, 0, 1).getTime(), to: new Date(yr + 1, 0, 1).getTime(), label: String(yr), kind: 'year' }); } catch (e) {}
+      if (!wr || wr.workoutDays < 5) return null;
+      return /*#__PURE__*/React.createElement(React.Fragment, null,
+        homeWrapped && /*#__PURE__*/React.createElement(WrappedStory, { wrapped: homeWrapped, onClose: () => setHomeWrapped(null) }),
+        /*#__PURE__*/React.createElement("button", {
+        onClick: () => { haptic(18); setHomeWrapped(wr); },
+        className: 'wr-shine',
+        style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 13, border: '1px solid rgba(255,183,77,0.4)', borderRadius: 16, padding: '15px 16px', marginBottom: 14, cursor: 'pointer', fontFamily: 'inherit', color: '#fff' }
+      },
+        /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 9.5, letterSpacing: 2.6, fontWeight: 800, color: '#FFB74D' } }, t('wrap_title')),
+          /*#__PURE__*/React.createElement("div", { style: { fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 30, lineHeight: 1, marginTop: 4 } }, wr.label),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#bba', marginTop: 4 } }, t('wrap_card_sub'))),
+        /*#__PURE__*/React.createElement("div", { style: { flex: 'none', display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(0,0,0,0.42)', borderRadius: 20, padding: '9px 14px', fontSize: 11.5, fontWeight: 800, color: '#FFD9A0' } },
+          /*#__PURE__*/React.createElement("svg", { width: 12, height: 12, viewBox: '0 0 24 24', fill: '#FFD9A0' }, /*#__PURE__*/React.createElement("path", { d: 'M8 5v14l11-7z' })), t('wrap_open'))));
+    })(), (() => {
       const insights = computeInsights(data);
       if (!insights.length) return null;
       const colors = { warn: { c: '#FFA726', bg: 'rgba(255,167,38,0.07)', bd: 'rgba(255,167,38,0.22)' }, good: { c: '#4CAF50', bg: 'rgba(76,175,80,0.07)', bd: 'rgba(76,175,80,0.22)' }, info: { c: 'var(--accent-light)', bg: 'rgba(var(--accent-rgb),0.07)', bd: 'rgba(var(--accent-rgb),0.22)' } };
@@ -12609,6 +12719,183 @@ function DayEditorModal({
     style: S.deleteDayBtn
   }, t('delete_this_day'))));
 }
+// ============ APEX WRAPPED — hikaye ekranı (v5.9.111) ============
+function WrappedStory({ wrapped, onClose }) {
+  const W = wrapped;
+  const A = '#4A90E2', GOLD = '#FFB74D', GREEN = '#4CAF50', PURPLE = '#A78BFA';
+  const tons = W.totalVolume / 1000;
+
+  const cards = React.useMemo(() => {
+    const list = [{ k: 'intro', dur: 2100 }, { k: 'sets', dur: 2700 }, { k: 'tons', dur: 2900 }];
+    if (W.bestGrowth) list.push({ k: 'growth', dur: 3400 });
+    list.push({ k: 'days', dur: 3000 });
+    if (W.prCount > 0) list.push({ k: 'prs', dur: 2800 });
+    list.push({ k: 'final', dur: 4000 });
+    return list;
+  }, [W]);
+
+  const [idx, setIdx] = useState(0);
+  const [run, setRun] = useState(0);
+  useEffect(() => {
+    if (idx >= cards.length - 1) return;
+    const id = setTimeout(() => setIdx(i => i + 1), cards[idx].dur);
+    return () => clearTimeout(id);
+  }, [idx, run, cards]);
+  const cur = cards[idx] ? cards[idx].k : 'final';
+  const onLast = idx >= cards.length - 1;
+  const replay = () => { setIdx(0); setRun(r => r + 1); };
+
+  const cuSets = useCountUp(W.totalSets, { duration: 1400, enabled: cur === 'sets' });
+  const cuTons = useCountUp(tons, { duration: 1500, decimals: tons < 20 ? 1 : 0, enabled: cur === 'tons' });
+  const cuPr = useCountUp(W.prCount, { duration: 1300, enabled: cur === 'prs' });
+
+  const hero = (size, color, extra) => ({ fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900,
+    lineHeight: .85, letterSpacing: -1, fontSize: size, color: color || '#fff', ...(extra || {}) });
+  const kick = { fontSize: 10, letterSpacing: 3.4, fontWeight: 800, color: '#6e6e6e', textTransform: 'uppercase' };
+  const cap = { fontSize: 12, color: '#8a8a8a', lineHeight: 1.6, marginTop: 14, maxWidth: 280 };
+  const glow = col => React.createElement('div', { className: 'wr-glow', style: { position: 'absolute',
+    width: 300, height: 300, borderRadius: '50%', background: `radial-gradient(circle,${col},transparent 66%)` } });
+  const card = (k, children) => React.createElement('div', { className: 'wr-card' + (cur === k ? ' on' : '') }, children);
+
+  const DAY_KEYS = ['wd_mon', 'wd_tue', 'wd_wed', 'wd_thu', 'wd_fri', 'wd_sat', 'wd_sun'];
+  const maxDay = Math.max(1, ...W.weekdayCounts);
+
+  // gelişim grafiği yolu
+  const growthPath = (() => {
+    if (!W.bestGrowth) return '';
+    const pts = W.bestGrowth.points;
+    const lo = Math.min(...pts), hi = Math.max(...pts), span = hi - lo || 1;
+    return pts.map((v, i) => {
+      const x = 8 + (i / Math.max(1, pts.length - 1)) * 244;
+      const y = 80 - ((v - lo) / span) * 68;
+      return (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }).join(' ');
+  })();
+
+  return React.createElement('div', { style: { position: 'fixed', inset: 0, zIndex: 9100, background: '#050505', overflow: 'hidden' } },
+    React.createElement('div', { className: 'sf-grain', style: { zIndex: 3 } }),
+    React.createElement('div', { style: { position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
+      background: 'radial-gradient(ellipse at center,transparent 44%,rgba(0,0,0,.5) 100%)' } }),
+
+    React.createElement('div', { style: { position: 'absolute', top: 'calc(env(safe-area-inset-top,0px) + 14px)',
+      left: 16, right: 16, display: 'flex', gap: 4, zIndex: 9 } },
+      cards.map((c, i) => React.createElement('div', { key: i, style: { flex: 1, height: 2, borderRadius: 2,
+        background: 'rgba(255,255,255,.14)', overflow: 'hidden' } },
+        React.createElement('div', { key: run + '-' + i, style: { height: '100%', borderRadius: 2, background: 'rgba(255,255,255,.9)',
+          width: i <= idx ? '100%' : '0%', transition: i === idx ? `width ${c.dur}ms linear` : 'none' } })))),
+
+    React.createElement('button', { onClick: onLast ? onClose : () => setIdx(cards.length - 1),
+      style: { position: 'absolute', top: 'calc(env(safe-area-inset-top,0px) + 26px)', right: 14, zIndex: 10,
+        background: 'rgba(255,255,255,.07)', border: 'none', color: '#aaa', borderRadius: 20, padding: '7px 13px',
+        fontSize: 11, fontWeight: 800, letterSpacing: .6, cursor: 'pointer' } }, onLast ? t('close') : t('sf_skip')),
+
+    // 1 — açılış
+    card('intro', [
+      glow('rgba(74,144,226,.45)'),
+      React.createElement('div', { key: 'k', className: 'wr-up', style: { ...kick, animationDelay: '.5s' } }, t('wrap_title')),
+      React.createElement('div', { key: 'y', className: 'wr-pop', style: hero('clamp(64px,24vw,98px)', '#fff', { marginTop: 6 }) }, W.label),
+      React.createElement('div', { key: 'c', className: 'wr-up', style: { ...cap, animationDelay: '.78s' } },
+        W.gymCount > 1 ? t('wrap_intro_gyms', { n: W.gymCount }) : t('wrap_intro'))
+    ]),
+
+    // 2 — set
+    card('sets', [
+      glow('rgba(74,144,226,.3)'),
+      React.createElement('div', { key: 'k', className: 'wr-up', style: kick }, t('wrap_total')),
+      React.createElement('div', { key: 'n', className: 'wr-pop', style: hero('clamp(68px,26vw,104px)', '#7FB3F0', { marginTop: 8 }) }, cuSets),
+      React.createElement('div', { key: 's', className: 'wr-up', style: { ...hero('clamp(22px,8vw,30px)'), animationDelay: '.35s' } }, t('wrap_sets')),
+      React.createElement('div', { key: 'c', className: 'wr-up', style: { ...cap, animationDelay: '.62s' } },
+        t('wrap_sets_cap', { d: W.workoutDays, r: W.totalReps.toLocaleString('tr-TR') }))
+    ]),
+
+    // 3 — hacim
+    card('tons', [
+      glow('rgba(255,183,77,.3)'),
+      React.createElement('div', { key: 'k', className: 'wr-up', style: kick }, t('wrap_lifted')),
+      React.createElement('div', { key: 'n', className: 'wr-pop', style: hero('clamp(60px,23vw,94px)', GOLD, { marginTop: 8 }) },
+        cuTons, React.createElement('span', { style: { fontSize: 32, color: '#8a8a8a' } }, t('sf_ton'))),
+      React.createElement('div', { key: 'c', className: 'wr-up', style: { ...cap, animationDelay: '.62s' } }, volumeComparison(tons))
+    ]),
+
+    // 4 — en çok gelişen
+    W.bestGrowth ? card('growth', [
+      React.createElement('div', { key: 'k', className: 'wr-up', style: kick }, t('wrap_most_improved')),
+      React.createElement('div', { key: 'n', className: 'wr-pop', style: hero('clamp(24px,8vw,34px)', '#fff', { marginTop: 10 }) },
+        W.bestGrowth.name.toUpperCase()),
+      React.createElement('svg', { key: 'g', viewBox: '0 0 260 92', preserveAspectRatio: 'none',
+        style: { width: '100%', maxWidth: 260, height: 92, marginTop: 8 } },
+        React.createElement('path', { className: 'wr-line', d: growthPath, fill: 'none', stroke: GREEN,
+          strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round', pathLength: 1, strokeDasharray: 1, strokeDashoffset: 1 })),
+      React.createElement('div', { key: 'v', className: 'wr-up', style: { ...hero('clamp(32px,12vw,44px)', GREEN), animationDelay: '1.35s' } },
+        '+' + wFmt(W.bestGrowth.gain), React.createElement('span', { style: { fontSize: 18, color: '#8a8a8a' } }, wUnit())),
+      React.createElement('div', { key: 'c', className: 'wr-up', style: { ...cap, animationDelay: '1.52s' } },
+        t('wrap_growth_cap', { a: wFmt(W.bestGrowth.from) + wUnit(), b: wFmt(W.bestGrowth.to) + wUnit() }))
+    ]) : null,
+
+    // 5 — haftanın günleri
+    card('days', [
+      React.createElement('div', { key: 'k', className: 'wr-up', style: kick }, t('wrap_loyal_day')),
+      React.createElement('div', { key: 'n', className: 'wr-pop', style: hero('clamp(28px,10vw,40px)', '#fff', { margin: '8px 0 16px' }) },
+        t(DAY_KEYS[W.topWeekdayIdx]).toUpperCase()),
+      React.createElement('div', { key: 'b', style: { display: 'flex', alignItems: 'flex-end', gap: 7, height: 132 } },
+        W.weekdayCounts.map((v, i) => React.createElement('div', { key: i,
+          style: { width: 26, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 } },
+          React.createElement('div', { className: 'wr-bar', style: { width: '100%', height: 0,
+            '--h': Math.max(3, Math.round(v / maxDay * 112)) + 'px', borderRadius: '5px 5px 2px 2px',
+            animationDelay: (0.15 + i * 0.09) + 's',
+            background: i === W.topWeekdayIdx ? 'linear-gradient(180deg,#7FB3F0,#2E6BB8)' : '#1c1c1c' } }),
+          React.createElement('div', { style: { fontSize: 9, fontWeight: 800,
+            color: i === W.topWeekdayIdx ? '#7FB3F0' : '#6e6e6e' } }, t(DAY_KEYS[i] + '_s'))))),
+      React.createElement('div', { key: 'c', className: 'wr-up', style: { ...cap, animationDelay: '.95s' } },
+        t('wrap_days_cap', { n: W.weekdayCounts[W.topWeekdayIdx], d: t(DAY_KEYS[W.topWeekdayIdx]) }))
+    ]),
+
+    // 6 — rekorlar
+    W.prCount > 0 ? card('prs', [
+      glow('rgba(167,139,250,.32)'),
+      React.createElement('div', { key: 'k', className: 'wr-up', style: kick }, t('sf_records')),
+      React.createElement('div', { key: 'n', className: 'wr-pop', style: hero('clamp(68px,26vw,104px)', PURPLE, { marginTop: 8 }) }, cuPr),
+      React.createElement('div', { key: 's', className: 'wr-up', style: { ...hero('clamp(18px,6.5vw,26px)'), animationDelay: '.35s' } }, t('wrap_pr_broken')),
+      React.createElement('div', { key: 'c', className: 'wr-up', style: { ...cap, animationDelay: '.62s' } },
+        t('wrap_pr_cap', { w: W.longestWeeks, m: W.topMuscle || '-' }))
+    ]) : null,
+
+    // 7 — kapanış kartı
+    card('final', [
+      React.createElement('div', { key: 'c', className: 'wr-up', style: { position: 'relative', overflow: 'hidden',
+        width: '100%', maxWidth: 320, borderRadius: 22, padding: '26px 22px', textAlign: 'left',
+        background: `linear-gradient(150deg,${hexToRgba(A, .3)},rgba(10,10,10,.5))`,
+        border: `1px solid ${hexToRgba(A, .45)}`,
+        boxShadow: '0 24px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12)' } },
+        React.createElement('div', { className: 'wr-holo', style: { position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'linear-gradient(115deg,transparent 30%,rgba(255,255,255,.3) 46%,rgba(200,225,255,.35) 52%,transparent 68%)' } }),
+        React.createElement('div', { style: { fontSize: 9.5, letterSpacing: 3, color: '#7FB3F0', fontWeight: 800 } }, t('wrap_title')),
+        React.createElement('div', { style: hero('clamp(34px,13vw,46px)', '#fff', { margin: '9px 0 15px' }) }, W.label),
+        React.createElement('div', { style: { display: 'flex', gap: 9 } },
+          [[String(W.totalSets), t('sf_set'), '#fff'],
+           [(tons < 20 ? tons.toFixed(1) : Math.round(tons)) + t('sf_ton'), t('sf_volume'), GOLD],
+           [String(W.prCount), t('sf_records'), PURPLE]].map((c, i) =>
+            React.createElement('div', { key: i, style: { flex: 1 } },
+              React.createElement('div', { style: hero(27, c[2]) }, c[0]),
+              React.createElement('div', { style: { fontSize: 8.5, color: '#9a9a9a', letterSpacing: 1.2, fontWeight: 700, marginTop: 2 } },
+                c[1].toUpperCase())))),
+        React.createElement('div', { style: { marginTop: 15, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.13)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+          React.createElement('span', { style: hero(17, '#fff', { letterSpacing: 1 }) }, 'APEX'),
+          React.createElement('span', { style: { fontSize: 10, color: '#9a9a9a' } },
+            W.workoutDays + ' ' + t('workouts_label')))),
+      React.createElement('div', { key: 'b', className: 'wr-up', style: { animationDelay: '.7s', display: 'flex',
+        gap: 9, marginTop: 16, width: '100%', maxWidth: 320 } },
+        React.createElement('button', { onClick: replay, style: { flex: 'none', padding: '14px 16px', borderRadius: 14,
+          border: '1px solid #272727', background: '#121212', color: '#bbb', fontWeight: 800, fontSize: 13,
+          fontFamily: 'inherit', cursor: 'pointer' } }, '↻'),
+        React.createElement('button', { onClick: onClose, style: { flex: 1, padding: 14, borderRadius: 14, border: 'none',
+          background: '#fff', color: '#000', fontWeight: 900, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' } },
+          t('close')))
+    ])
+  );
+}
+
 // ============ SEANS FİLMİ (v5.9.110) ============
 // Antrenman bitince kendiliğinden oynayan ~11 sn'lik sinematik özet.
 // 5 sahne: gün adı -> hareket montajı -> doruk nokta (rekor veya en ağır set) -> sayaçlar+kas haritası -> kapanış kartı.
@@ -13037,6 +13324,145 @@ function getExercisePRHistory(logs, exerciseName) {
     };
   });
   return prCurve;
+}
+
+// ============ APEX WRAPPED (v5.9.111) ============
+// TÜM SALONLARIN verisini birleştirir (logs/sessions id'ye göre tekilleştirilir).
+function collectAllGymsData() {
+  let gyms = [];
+  try { const raw = localStorage.getItem(vk(GYMS_KEY)); if (raw) gyms = JSON.parse(raw) || []; } catch (e) {}
+  if (!Array.isArray(gyms) || !gyms.length) gyms = [{ id: 'default', name: 'Salonum' }];
+  const logs = [], sessions = [], seenL = new Set(), seenS = new Set();
+  const customMuscleMap = {};
+  const gymNames = [];
+  gyms.forEach(g => {
+    let d = null;
+    try { const raw = localStorage.getItem(gymStorageKey(g.id)); if (raw) d = JSON.parse(raw); } catch (e) {}
+    if (!d || typeof d !== 'object') return;
+    let used = false;
+    (Array.isArray(d.logs) ? d.logs : []).forEach(l => {
+      if (!l || l.id == null || seenL.has(l.id)) return;
+      seenL.add(l.id); logs.push(l); used = true;
+    });
+    (Array.isArray(d.sessions) ? d.sessions : []).forEach(x => {
+      if (!x || x.id == null || seenS.has(x.id)) return;
+      seenS.add(x.id); sessions.push(x);
+    });
+    if (d.customMuscleMap && typeof d.customMuscleMap === 'object') Object.assign(customMuscleMap, d.customMuscleMap);
+    if (used) gymNames.push(g.name || g.id);
+  });
+  return { logs, sessions, customMuscleMap, gymNames, gymCount: gymNames.length };
+}
+
+// Bir dönemin (yıl ya da ay) Wrapped istatistiklerini üretir.
+// range: {from, to, label, kind:'year'|'month'}
+function buildWrapped(range) {
+  const all = collectAllGymsData();
+  const okNum = v => typeof v === 'number' && isFinite(v);
+  const logs = all.logs.filter(l => l && okNum(l.timestamp) && l.timestamp >= range.from && l.timestamp < range.to
+    && l.exerciseName && okNum(l.weight) && okNum(l.reps));
+  if (!logs.length) return null;
+
+  const totalSets = logs.length;
+  const totalReps = logs.reduce((s, l) => s + l.reps, 0);
+  const totalVolume = logs.reduce((s, l) => s + l.weight * l.reps, 0);
+  const dayKeys = new Set(logs.map(l => dateKey(l.timestamp)));
+  const workoutDays = dayKeys.size;
+
+  // Süre: dönem içindeki bitmiş seanslar
+  const sess = all.sessions.filter(x => x && okNum(x.startTime) && okNum(x.endTime)
+    && x.startTime >= range.from && x.startTime < range.to && x.endTime > x.startTime);
+  const totalMinutes = sess.reduce((s, x) => s + Math.round((x.endTime - x.startTime) / 60000), 0);
+
+  // Haftanın günleri
+  const weekdayCounts = [0, 0, 0, 0, 0, 0, 0]; // 0=Pazartesi
+  const countedDays = new Set();
+  logs.forEach(l => {
+    const k = dateKey(l.timestamp);
+    if (countedDays.has(k)) return;
+    countedDays.add(k);
+    weekdayCounts[(new Date(l.timestamp).getDay() + 6) % 7]++;
+  });
+  const topWeekdayIdx = weekdayCounts.indexOf(Math.max(...weekdayCounts));
+
+  // Rekorlar + en çok gelişen hareket (dönem içindeki top-set eğrisinden)
+  const exNames = [...new Set(logs.map(l => l.exerciseName))];
+  let prCount = 0, bestGrowth = null;
+  exNames.forEach(name => {
+    const curve = getExercisePRHistory(logs, name);
+    if (!curve.length) return;
+    for (let i = 1; i < curve.length; i++) {
+      if (curve[i].weight > curve[i - 1].weight ||
+         (curve[i].weight === curve[i - 1].weight && curve[i].reps > curve[i - 1].reps)) prCount++;
+    }
+    if (curve.length < 3) return;
+    const gain = curve[curve.length - 1].weight - curve[0].weight;
+    if (gain > 0 && (!bestGrowth || gain > bestGrowth.gain)) {
+      bestGrowth = {
+        name, gain,
+        from: curve[0].weight, to: curve[curve.length - 1].weight,
+        reps: curve[curve.length - 1].reps,
+        points: (() => {
+          const ws = curve.map(c => c.weight);
+          if (ws.length <= 14) return ws;
+          const out = [];
+          for (let i = 0; i < 14; i++) out.push(ws[Math.round(i * (ws.length - 1) / 13)]);
+          return out;
+        })()
+      };
+    }
+  });
+
+  // En çok çalışılan kas
+  const muscleVol = {};
+  logs.forEach(l => {
+    const ms = getExerciseMuscles(l.exerciseName, all.customMuscleMap);
+    if (!ms || typeof ms !== 'object') return;
+    const en = Object.entries(ms);
+    const totW = en.reduce((s, [, w]) => s + w, 0);
+    if (totW <= 0) return;
+    const vol = l.weight * l.reps;
+    en.forEach(([m, w]) => { muscleVol[m] = (muscleVol[m] || 0) + vol * (w / totW); });
+  });
+  const mSorted = Object.entries(muscleVol).sort((a, b) => b[1] - a[1]);
+  const topMuscle = mSorted.length ? (MUSCLES[mSorted[0][0]] ? t('muscle_' + mSorted[0][0]) : mSorted[0][0]) : null;
+
+  // En uzun haftalık seri (dönem içinde)
+  const weekOf = ts => { const d = new Date(ts); const off = (d.getDay() + 6) % 7;
+    const m = new Date(d); m.setDate(d.getDate() - off); m.setHours(0, 0, 0, 0); return m.getTime(); };
+  const weeks = [...new Set(logs.map(l => weekOf(l.timestamp)))].sort((a, b) => a - b);
+  let longestWeeks = weeks.length ? 1 : 0, runW = 1;
+  for (let i = 1; i < weeks.length; i++) {
+    if (weeks[i] - weeks[i - 1] === 604800000) { runW++; if (runW > longestWeeks) longestWeeks = runW; }
+    else runW = 1;
+  }
+
+  // En çok yapılan hareket
+  const exCounts = {};
+  logs.forEach(l => { exCounts[l.exerciseName] = (exCounts[l.exerciseName] || 0) + 1; });
+  const topEx = Object.entries(exCounts).sort((a, b) => b[1] - a[1])[0];
+
+  return {
+    label: range.label, kind: range.kind,
+    totalSets, totalReps, totalVolume, workoutDays, totalMinutes,
+    weekdayCounts, topWeekdayIdx, prCount, bestGrowth, topMuscle, longestWeeks,
+    topExercise: topEx ? { name: topEx[0], sets: topEx[1] } : null,
+    gymCount: all.gymCount, gymNames: all.gymNames
+  };
+}
+
+// Hacmi somut bir şeye çevir (ton cinsinden) — kart metni için
+function volumeComparison(tons) {
+  const REFS = [
+    { min: 400, key: 'wrap_cmp_plane',  div: 41  },   // Boeing 737 ≈ 41 t
+    { min: 120, key: 'wrap_cmp_whale',  div: 30  },   // mavi balina ≈ 30 t
+    { min: 40,  key: 'wrap_cmp_bus',    div: 12  },   // otobüs ≈ 12 t
+    { min: 8,   key: 'wrap_cmp_car',    div: 1.4 },   // otomobil ≈ 1.4 t
+    { min: 0,   key: 'wrap_cmp_fridge', div: 0.08 }   // buzdolabı ≈ 80 kg
+  ];
+  const r = REFS.find(x => tons >= x.min) || REFS[REFS.length - 1];
+  const n = Math.max(1, Math.round(tons / r.div));
+  return t(r.key, { n });
 }
 
 // Tahmini 1RM (Epley formülü)
