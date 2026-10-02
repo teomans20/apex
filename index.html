@@ -170,6 +170,23 @@
   @keyframes apexShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   @keyframes apexSlide { 0% { transform: translateX(-130%); } 100% { transform: translateX(330%); } }
 
+  /* ===== CANLI SALON (v5.9.117) ===== */
+  @keyframes lgFly { 0% { opacity: 1; transform: translate(0,0) scale(.6); } 100% { opacity: 0; transform: translate(var(--dx), -110px) scale(1.3); } }
+
+  /* ===== GÜN RENGİ (v5.9.116) ===== */
+  @property --accent { syntax: '<color>'; inherits: true; initial-value: #FF3D3D; }
+  @property --accent-light { syntax: '<color>'; inherits: true; initial-value: #FF6B6B; }
+  @property --accent-dark { syntax: '<color>'; inherits: true; initial-value: #c62828; }
+  @property --accent-deep { syntax: '<color>'; inherits: true; initial-value: #8b1a1a; }
+  :root { transition: --accent .8s ease, --accent-light .8s ease, --accent-dark .8s ease, --accent-deep .8s ease; }
+  body::before { content: ''; position: fixed; left: 0; right: 0; top: 0; height: 240px; pointer-events: none; z-index: 8998;
+    mix-blend-mode: screen; background: radial-gradient(ellipse at 50% -38%, rgba(var(--accent-rgb), .26), transparent 70%);
+    opacity: 0; transition: opacity .9s ease; }
+  html.apex-day-tint body::before { opacity: 1; }
+  body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 8999;
+    box-shadow: inset 0 0 0 0 transparent; transition: box-shadow .9s ease; }
+  html.apex-day-tint body::after { box-shadow: inset 0 0 0 1.5px rgba(var(--accent-rgb), .42), inset 0 0 38px rgba(var(--accent-rgb), .1); }
+
   /* ===== SEANS FİLMİ (v5.9.110) ===== */
   .sf-scene { transition: opacity .34s ease; position: absolute; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; opacity: 0; pointer-events: none; padding: 30px 26px; }
@@ -1586,7 +1603,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.115'; // ÇARK SESİ: titreşim tamamen kaldırıldı (kullanıcı: sadece ses). Tık sesi kısıldı (gain .09→.035, 18→14 ms, 3200→2600 Hz daha yumuşak). iOS'ta navigator.audioSession.type='ambient' → kulaklıkta çalan müziği durdurmaz/kısmaz, üstüne karışır, sessiz modda susar. Adım etiketinin solunda hoparlör düğmesi: sesi aç/kapa, cihaz genelinde 'apex-wheel-sound' ile hatırlanır. ÖNCEKİ (5.9.114): ÇARK TIKI: çevirirken hissedilen/duyulan tık. haptic(4) çoğu Android'de hissedilmiyordu → vibrate(10); iPhone'da navigator.vibrate yok → iOS 18+ gizli <input switch> label.click() sistem haptiği; ayrıca 18 ms'lik bandpass gürültü tıkı (Web Audio, dosya yok, vol .09). En fazla ~30 tık/sn. Tekrar ± butonları da aynı tığı verir. ÖNCEKİ (5.9.113): ÇARK ADIM TAHMİNİ: adım artık hareket başına geçmiş loglardan tahmin ediliyor (ağırlıkların %90'ının katı olan en büyük adım: 5 / 2,5 / 2 / 1,25 / 1; 2,5'ten büyük adım için ≥4 farklı ağırlık; az veri → 2,5). Cetvelin altında 'ADIM 2 kg · OTO' — dokununca elle değiştirilir (OTO→1→1,25→2→2,5→5), hareket başına vk('apex-wheel-step')'te hatırlanır. ÖNCEKİ (5.9.112): AĞIRLIK ÇARKI: set girme kutusundaki ağırlık input'u yerine büyük sayı + sürüklenebilir cetvel (WeightWheel). Fırlatınca süzülür (sürtünme 0.93), en yakın adıma oturur, her adımda haptic(4) (28 ms throttle). Adım her yerde sabit 2,5 (kullanıcı kararı). Cetvelde mavi GEÇEN (önceki seansın top/back-off'u) ve altın REKOR (top/back-off PR) işaretleri — çizgiler hep ayrı, etiketler yakınsa sola/sağa yaslanır, aynı değerse birleşir. Sayının altında not: REKORUN ÜSTÜ +X / REKOR AĞIRLIĞI / GEÇEN SEFERDEN +X / GEÇEN SEFERKİ. Varsayılan: açılışta ve her kayıttan sonra (prefillPending ref) geçen seferki ağırlık+tekrar dolar; top'tan sonra otomatik back-off hedefine geçer; hedef yoksa son set / PR / 20. Kullanıcı silip yazarken yeniden doldurma YOK. Büyük sayıya dokununca klavye açılır (tümünü seçer). Tekrar: − / ＋ ve yazılabilir alan. Kayıt sonrası klavye artık otomatik açılmıyor (focus kaldırıldı). Imperial'da max 900 lb. 
+const APP_VERSION = '5.9.117'; // CANLI SALON: arkadaş durumları artık onSnapshot ile CANLI (useLiveFriends; sadece WorkoutTab/FriendsTab mount iken dinler). Durum belgesine seans içinde exercise/exIndex (yalnız hareket değişince, _liveLastEx ile) ve pr {ex,w,r,pw,pr,at} (yalnız rekor anında) yazılır; seans başında sıfırlanır; paylaşımlı salon kuralı aynı (activeGym.shared!==false). LiveGymStrip: dönen yeşil halkalı avatarlar (rekor kıranın halkası 25 dk altın), hareket · n. hareket · dk; altta canlı rekor kartı + ateş butonu (notifications'a type:'fire', id fire_{from}_{prAt} → rekor başına tek; apex-fired ile yerelde de kilit; uçan alev animasyonu). Yerleşim: Arkadaşlar sekmesi başlığın altı (segmentin üstü) + ana ekranda SANA ÖZEL'in üstü (compact, dokununca Arkadaşlar'a gider) — ikisi de SADECE biri salondaysa görünür. 6 saatten eski 'salonda' durumu bayat sayılır. Bildirimlerde 'fire' metni. ÖNCEKİ (5.9.116): GÜN RENGİ: seans aktifken (herhangi gün, bitmemiş, son 6 saatte başlamış) tüm uygulamanın --accent/-light/-dark/-deep/-rgb değişkenleri o günün rengine döner (setDayTint, WorkoutTab useEffect[tintAccent]); seans bitince seçili temaya geri döner. WorkoutTab sekme değişince unmount olsa da tint kalır (cleanup yok, sadece seans durumuyla değişir). Seans sırasında tema değiştirilirse gün rengi önde kalır (applyTheme sonunda yeniden uygular). html.apex-day-tint → body::before üstte gün renginde ışık (içeriğin üstünde, mix-blend screen — yazıyı örtmez, ışık ekler), body::after ince kenar çerçevesi + iç parıltı. @property ile --accent* renk geçişleri .8s akıcı (--accent-rgb liste olduğu için anında). ÖNCEKİ (5.9.115): ÇARK SESİ: titreşim tamamen kaldırıldı (kullanıcı: sadece ses). Tık sesi kısıldı (gain .09→.035, 18→14 ms, 3200→2600 Hz daha yumuşak). iOS'ta navigator.audioSession.type='ambient' → kulaklıkta çalan müziği durdurmaz/kısmaz, üstüne karışır, sessiz modda susar. Adım etiketinin solunda hoparlör düğmesi: sesi aç/kapa, cihaz genelinde 'apex-wheel-sound' ile hatırlanır. ÖNCEKİ (5.9.114): ÇARK TIKI: çevirirken hissedilen/duyulan tık. haptic(4) çoğu Android'de hissedilmiyordu → vibrate(10); iPhone'da navigator.vibrate yok → iOS 18+ gizli <input switch> label.click() sistem haptiği; ayrıca 18 ms'lik bandpass gürültü tıkı (Web Audio, dosya yok, vol .09). En fazla ~30 tık/sn. Tekrar ± butonları da aynı tığı verir. ÖNCEKİ (5.9.113): ÇARK ADIM TAHMİNİ: adım artık hareket başına geçmiş loglardan tahmin ediliyor (ağırlıkların %90'ının katı olan en büyük adım: 5 / 2,5 / 2 / 1,25 / 1; 2,5'ten büyük adım için ≥4 farklı ağırlık; az veri → 2,5). Cetvelin altında 'ADIM 2 kg · OTO' — dokununca elle değiştirilir (OTO→1→1,25→2→2,5→5), hareket başına vk('apex-wheel-step')'te hatırlanır. ÖNCEKİ (5.9.112): AĞIRLIK ÇARKI: set girme kutusundaki ağırlık input'u yerine büyük sayı + sürüklenebilir cetvel (WeightWheel). Fırlatınca süzülür (sürtünme 0.93), en yakın adıma oturur, her adımda haptic(4) (28 ms throttle). Adım her yerde sabit 2,5 (kullanıcı kararı). Cetvelde mavi GEÇEN (önceki seansın top/back-off'u) ve altın REKOR (top/back-off PR) işaretleri — çizgiler hep ayrı, etiketler yakınsa sola/sağa yaslanır, aynı değerse birleşir. Sayının altında not: REKORUN ÜSTÜ +X / REKOR AĞIRLIĞI / GEÇEN SEFERDEN +X / GEÇEN SEFERKİ. Varsayılan: açılışta ve her kayıttan sonra (prefillPending ref) geçen seferki ağırlık+tekrar dolar; top'tan sonra otomatik back-off hedefine geçer; hedef yoksa son set / PR / 20. Kullanıcı silip yazarken yeniden doldurma YOK. Büyük sayıya dokununca klavye açılır (tümünü seçer). Tekrar: − / ＋ ve yazılabilir alan. Kayıt sonrası klavye artık otomatik açılmıyor (focus kaldırıldı). Imperial'da max 900 lb. 
 // prev:  // APEX WRAPPED: yıl sonu hikaye özeti, TÜM SALONLARIN verisi birleştirilerek (collectAllGymsData: GYMS_KEY'deki her salonun data'sı okunur, logs/sessions id'ye göre tekilleştirilir, customMuscleMap birleşir). buildWrapped(range) bir dönemin istatistiklerini üretir: set/tekrar/hacim/gün/dakika, haftanın günü dağılımı + en sadık gün, rekor sayısı ve en çok gelişen hareket (getExercisePRHistory top-set eğrisi, 14 noktaya seyreltilir), en çok çalışılan kas, en uzun haftalık seri, en çok yapılan hareket. WrappedStory: 7 kart (açılış / set / hacim+somut karşılaştırma / en çok gelişen + kendini çizen grafik / haftanın günleri çubukları / rekorlar / holografik kapanış kartı), dissolve geçişli, story barlı, Atla'lı. volumeComparison() hacmi uçak-balina-otobüs-otomobil-buzdolabı ölçeğine çevirir. GİRİŞ: (1) Defter'de hafta özetlerinin üstünde parıltılı kart — her zaman erişilebilir, (2) 25 Aralık–7 Ocak arası ana ekranda afiş. 1–7 Ocak arası hâlâ geçen yılı gösterir. En az 5 antrenman günü şartı. Seans Filmi'nin CSS grain'i paylaşılır; yeni wr-* animasyonları eklendi. Emoji yok, i18n tr+en tam. // SEANS FİLMİ: antrenman bitince kendiliğinden oynayan ~11 sn'lik sinematik özet. 5 sahne: (1) gün adı — ışık süzülmesi + accent hale, (2) hareket montajı — seansın TÜM hareketleri sırayla düşer (isim, set sayısı, top set, hacim; rekorlular altın + kupa SVG), altta hacim barı dolar, (3) doruk nokta — rekor varsa madalya+ışınlar+"önceki X · +Ykg", rekor yoksa sahne atlanmaz ama "GÜNÜN EN AĞIR SETİ"ne döner (halter SVG, gün accent'i), (4) sayaçlar (hacim/set/süre, geçen seansa göre % çipi) + mevcut BodyFront/BodyBack silüetinde kas haritası (seans hacmi kaslara dağıtılıp 0..1 yoğunlukla accent'e boyanır; baskın taraf ön/arka otomatik), (5) kapanış kartı — holografik parlama + konfeti + ↻/Detaylar/Kapat. Sahne geçişleri dissolve, üstte story barları, sağ üstte Atla/Kapat. Tüm sahneler animasyon bittikten sonra ~1 sn bekler (ritim). computeSessionSummary'ye exerciseRows/heaviestSet/muscleScores/muscleSide/topMuscleNames/endedAt eklendi ve prs artık prev taşıyor; aynı harekette top+backoff rekoru tek rekor sayılır. Renkler gün tipinin accent'inden gelir, emoji yok (SVG). Detaylar mevcut SessionSummaryModal'ı açar — eski özet kaldırılmadı. // ROOT CAUSE FIXED (the black-screen crash). Error text from the wild: "null is not an object (evaluating 'todayTop.weight')" at ExerciseView. This was a regression Claude introduced in v5.9.93: todayTop changed from todaySorted[0] (never null when sets exist) to todaySplit.top, and splitTopBackoff returns top:null when EVERY set of the group is explicitly setType:'backoff' with no 'top' — which is exactly what happens after the TOP set is DELETED (dad's "deleting a set -> black screen") . showingBackoff (sets exist) still rendered the TOP strip -> todayTop.weight on null -> throw on every render of that exercise. FIX: splitTopBackoff now falls back to the earliest set as top when no explicit top remains (if (!tops.length && backoffs.length) tops.push(backoffs.shift())), restoring pre-5.9.93 behaviour; plus defence-in-depth guard `!todayTop ? null :` on the targetTopStrip branch. Reproduced in headless Chromium (all-backoff seed -> boundary + exact error), verified fixed (renders "ILK TOP"), and re-ran the other scenario repros for regressions.
 // Crash boundary made DIAGNOSTIC (brother hit a crash on v5.9.107 we could not reproduce across 6 paths: zero-log exercise open, end-session, calendar day-detail Düzenle, journal, progress, friends). Recovery screen now shows the error message + first stack lines + REACT COMPONENT STACK (names the exact crashing component) + APP_VERSION in a scrollable mono box, adds a "Hatayı Kopyala"/Copy Error button (clipboard + textarea fallback), and componentDidCatch persists the full record to localStorage 'apex-last-error' {at, version, message, stack, componentStack, ua}. Verified end-to-end in headless Chromium with an injected throw: boundary renders, names HomeView/WorkoutTab, and stores the record.
 // URGENT crash-recovery (Dostum's dad's Android: deleting a set → black screen that never came back = persisted data state crashing render on every load). TWO safety layers: (1) AppErrorBoundary class wraps <App> at root — any render exception now shows a dark recovery screen (⚠️ + "Yeniden Dene"/reload + "Yedeği İndir"/export-from-localStorage, bilingual via CURRENT_LANG) instead of a black screen. (2) sanitizeGymData(d) drops malformed logs (missing id/exerciseName, non-finite weight/reps/timestamp) and sessions (missing id / non-finite startTime); applied to localData on load (both tabs) AND to the cloud-merged result (mutates in place so localStorage + cloud push-back also get cleaned) → corrupt data can no longer crash render and is auto-cleaned on next load across devices. Tested sanitize + full-file syntax incl boundary.
@@ -1712,6 +1729,9 @@ function t(key, vars) {
 }
 const I18N = {
   tr: {
+    // Canlı salon (v5.9.117)
+    live_in_gym: 'ŞU AN SALONDA · {n}', live_now: 'CANLI · ŞİMDİ', live_broke_pr: '{name} rekor kırdı',
+    live_pr_short: 'REKOR!', live_ex_n: '{n}. hareket', fire_sent_you: 'rekoruna ateş yolladı',
     // Ağırlık çarkı (v5.9.112)
     wheel_last: 'GEÇEN', wheel_pr: 'REKOR', wheel_above_pr: 'REKORUN ÜSTÜ · +{d}', wheel_at_pr: 'REKOR AĞIRLIĞI',
     wheel_above_last: 'GEÇEN SEFERDEN +{d}', wheel_same_last: 'GEÇEN SEFERKİ',
@@ -2031,6 +2051,8 @@ const I18N = {
     report_failed: 'Şikâyet gönderilemedi, tekrar dene.'
   },
   en: {
+    live_in_gym: 'IN THE GYM NOW · {n}', live_now: 'LIVE · NOW', live_broke_pr: '{name} hit a PR',
+    live_pr_short: 'PR!', live_ex_n: 'exercise {n}', fire_sent_you: 'sent fire for your record',
     wheel_last: 'LAST', wheel_pr: 'RECORD', wheel_above_pr: 'ABOVE RECORD · +{d}', wheel_at_pr: 'RECORD WEIGHT',
     wheel_above_last: '+{d} VS LAST TIME', wheel_same_last: 'SAME AS LAST TIME',
     wheel_step: 'STEP {s}', wheel_step_auto: 'AUTO', wheel_step_manual: 'MANUAL',
@@ -2533,6 +2555,31 @@ const APEX_THEMES = {
   sampiyon: { name: 'Şampiyon', emoji: '👑', accent: '#FFB74D', dark: '#F57C00', deep: '#8a4b00', light: '#FFCC80', rgb: '255,183,77' },
   orman:    { name: 'Orman',    emoji: '🌲', accent: '#4CAF50', dark: '#2e7d32', deep: '#1b4d1e', light: '#81C784', rgb: '76,175,80' }
 };
+// ————— GÜN RENGİ (v5.9.116) —————
+// Seans aktifken tüm uygulamanın ana rengi o günün rengine döner; seans bitince seçili temaya geri döner.
+let _dayTint = null;
+function _mixHex(hex, to, k) {
+  const h = String(hex).replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => Math.round(v + (to - v) * k));
+  return '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+}
+function _applyTintVars(hex) {
+  const r = document.documentElement.style;
+  r.setProperty('--accent', hex);
+  r.setProperty('--accent-light', _mixHex(hex, 255, 0.32));
+  r.setProperty('--accent-dark', _mixHex(hex, 0, 0.22));
+  r.setProperty('--accent-deep', _mixHex(hex, 0, 0.45));
+  r.setProperty('--accent-rgb', hexToRgbStr(hex));
+}
+function setDayTint(hex) {
+  const next = hex || null;
+  if (next === _dayTint) return;
+  _dayTint = next;
+  const html = document.documentElement;
+  if (_dayTint) { _applyTintVars(_dayTint); html.classList.add('apex-day-tint'); }
+  else { html.classList.remove('apex-day-tint'); applyTheme(loadTheme()); }
+}
 const THEME_KEY = 'apex-theme';
 function applyTheme(id) {
   const t = APEX_THEMES[id] || APEX_THEMES.apex;
@@ -2542,6 +2589,7 @@ function applyTheme(id) {
   r.setProperty('--accent-deep', t.deep);
   r.setProperty('--accent-light', t.light);
   r.setProperty('--accent-rgb', t.rgb);
+  if (_dayTint) _applyTintVars(_dayTint); // seans sürerken gün rengi önde
 }
 function loadTheme() {
   try { return localStorage.getItem(THEME_KEY) || 'apex'; } catch (e) { return 'apex'; }
@@ -4666,7 +4714,7 @@ function NotificationPanel({
     style: { flex: 1, minWidth: 0 }
   }, /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 13.5, lineHeight: 1.4 }
-  }, /*#__PURE__*/React.createElement("b", null, n.fromName), " ", n.type === 'clap' ? t('reacted_to_record') : n.type === 'gym' ? t('in_workout_status') : t('poked_you_msg'), n.message && n.type === 'poke' ? ': "' + n.message + '"' : n.message && n.type === 'clap' ? ' · ' + n.message : ''), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", null, n.fromName), " ", n.type === 'clap' ? t('reacted_to_record') : n.type === 'gym' ? t('in_workout_status') : n.type === 'fire' ? t('fire_sent_you') : t('poked_you_msg'), n.message && n.type === 'poke' ? ': "' + n.message + '"' : n.message && (n.type === 'clap' || n.type === 'fire') ? ' · ' + n.message : ''), /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 11, color: '#666', marginTop: 3 }
   }, feedTimeAgo(n.createdAt))), /*#__PURE__*/React.createElement("button", {
     onClick: () => onDismissOne(n.id),
@@ -5641,6 +5689,141 @@ async function loadLiveStatus(uid) {
   }
 }
 
+// ————— CANLI SALON (v5.9.117) —————
+// Durum belgesine (users/{uid}/public/status) seans içinde iki ek alan yazılır:
+//   exercise/exIndex → yalnız hareket DEĞİŞİNCE (her sette değil), pr → yalnız rekor kırılınca.
+// Arkadaşlar bu belgeyi onSnapshot ile canlı dinler. "Ateş" = arkadaşın notifications'ına 'fire' kaydı (rekor başına tek).
+const LIVE_WINDOW_MS = 6 * 3600000;   // 6 saatten eski "salonda" durumu bayat sayılır
+const LIVE_PR_WINDOW_MS = 25 * 60000; // rekor kartı 25 dk görünür
+const _liveLastEx = {};               // sessionId → son yayınlanan hareket (gereksiz yazmayı önler)
+async function updateLiveStatus(uid, patch) {
+  if (!window.APEX_DB || !uid) return;
+  try {
+    await window.APEX_DB.collection('users').doc(uid).collection('public').doc('status').set({ ...patch, updatedAt: Date.now() }, { merge: true });
+  } catch (e) {}
+}
+async function sendFire(fromUid, fromName, toUid, prAt, detail) {
+  if (!window.APEX_DB) return;
+  const id = 'fire_' + fromUid + '_' + prAt; // aynı rekora ikinci ateş üzerine yazar, çoğalmaz
+  try {
+    await window.APEX_DB.collection('users').doc(toUid).collection('notifications').doc(id).set({
+      type: 'fire', fromUid, fromName: fromName || t('friend_word'), message: detail || '', createdAt: Date.now(), read: false
+    });
+  } catch (e) {}
+}
+function isLiveStatus(st) { return !!(st && st.training && st.since && Date.now() - st.since < LIVE_WINDOW_MS); }
+function freshPR(st) { return st && st.pr && st.pr.at && st.pr.at >= (st.since || 0) && Date.now() - st.pr.at < LIVE_PR_WINDOW_MS ? st.pr : null; }
+
+// Arkadaşların durumunu CANLI dinler. enabled=false iken hiçbir dinleyici açmaz.
+function useLiveFriends(uid, enabled) {
+  const [friends, setFriends] = useState([]);
+  const [statuses, setStatuses] = useState({});
+  const [photos, setPhotos] = useState({});
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!enabled || !uid || !window.APEX_DB) return;
+    let alive = true;
+    const unsubs = [];
+    loadFriends(uid).then(f => {
+      if (!alive) return;
+      setFriends(f || []);
+      (f || []).forEach(fr => {
+        try {
+          const u = window.APEX_DB.collection('users').doc(fr.uid).collection('public').doc('status')
+            .onSnapshot(snap => { if (alive) setStatuses(prev => ({ ...prev, [fr.uid]: snap.exists ? snap.data() : null })); }, () => {});
+          unsubs.push(u);
+        } catch (e) {}
+      });
+    });
+    return () => { alive = false; unsubs.forEach(u => { try { u(); } catch (e) {} }); };
+  }, [uid, enabled]);
+  // dakikada bir yeniden çiz → "24 dk" güncel kalsın, bayat durumlar düşsün
+  useEffect(() => { if (!enabled) return; const id = setInterval(() => setTick(x => x + 1), 60000); return () => clearInterval(id); }, [enabled]);
+  const live = friends.filter(f => isLiveStatus(statuses[f.uid]))
+    .map(f => ({ ...f, st: statuses[f.uid] }))
+    .sort((a, b) => (b.st.since || 0) - (a.st.since || 0));
+  const liveKey = live.map(f => f.uid).join(',');
+  useEffect(() => {
+    live.forEach(f => {
+      if (photos[f.uid] !== undefined) return;
+      setPhotos(p => ({ ...p, [f.uid]: null }));
+      loadProfilePhoto(f.uid).then(ph => setPhotos(p => ({ ...p, [f.uid]: ph || null }))).catch(() => {});
+    });
+  }, [liveKey]);
+  return { live, photos };
+}
+
+function LiveGymStrip({ live, photos, me, compact, onOpen, style }) {
+  const [fired, setFired] = useState(() => { try { return JSON.parse(localStorage.getItem('apex-fired') || '{}'); } catch (e) { return {}; } });
+  const [burst, setBurst] = useState(0);
+  if (!live || !live.length) return null;
+  const prF = live.filter(f => freshPR(f.st)).sort((a, b) => b.st.pr.at - a.st.pr.at)[0];
+  const pr = prF ? prF.st.pr : null;
+  const fireKey = prF ? prF.uid + '_' + pr.at : null;
+  const didFire = !!(fireKey && fired[fireKey]);
+  const nm = f => f.name || f.username || t('friend_word');
+  const mins = f => Math.max(1, Math.round((Date.now() - f.st.since) / 60000));
+  const fmtSet = (w, r) => `${wFmt(w)}${wUnit()} × ${r}`;
+  const doFire = e => {
+    e.stopPropagation();
+    if (!prF || didFire || !me || !me.uid) return;
+    haptic(15);
+    sendFire(me.uid, me.name || me.username, prF.uid, pr.at, `${pr.ex} ${fmtSet(pr.w, pr.r)}`);
+    const nf = { ...fired, [fireKey]: Date.now() };
+    // eski kayıtları temizle (2 gün)
+    Object.keys(nf).forEach(k => { if (Date.now() - nf[k] > 172800000) delete nf[k]; });
+    setFired(nf); setBurst(b => b + 1);
+    try { localStorage.setItem('apex-fired', JSON.stringify(nf)); } catch (er) {}
+  };
+  const flame = (size, fill) => React.createElement('svg', { width: size, height: size, viewBox: '0 0 24 24', fill },
+    React.createElement('path', { d: 'M12 2c1 4 5 5.5 5 10.5A5 5 0 0 1 7 12.5c0-2.2 1.2-3.6 2.5-4.6.2 1.6 1 2.6 2 3C11 8 10.5 5 12 2z' }));
+  const AV = compact ? 46 : 54;
+
+  return React.createElement('div', {
+    onClick: compact && onOpen ? onOpen : undefined,
+    style: { background: 'linear-gradient(180deg,#0f120f,#0a0a0a)', border: '1px solid rgba(76,175,80,0.22)', borderRadius: 18,
+      padding: compact ? '12px 12px 12px' : '14px 14px 14px', cursor: compact && onOpen ? 'pointer' : 'default', ...(style || {}) }
+  },
+    React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 } },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 7, fontSize: 9.5, letterSpacing: 2, fontWeight: 800, color: '#4CAF50' } },
+        React.createElement('span', { style: { width: 7, height: 7, borderRadius: '50%', background: '#4CAF50', boxShadow: '0 0 6px #4CAF50', animation: 'pulse 1.4s infinite' } }),
+        t('live_in_gym', { n: live.length })),
+      compact && onOpen ? React.createElement('span', { style: { color: '#4CAF50', fontSize: 16, fontWeight: 800 } }, '›') : null),
+    React.createElement('div', { style: { display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch' } },
+      live.map(f => {
+        const gold = freshPR(f.st);
+        return React.createElement('div', { key: f.uid, style: { flex: 'none', width: AV + 22, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 } },
+          React.createElement('div', { style: { position: 'relative', width: AV + 6, height: AV + 6 } },
+            React.createElement('div', { style: { position: 'absolute', inset: 0, borderRadius: '50%', animation: 'spin 3s linear infinite',
+              background: gold ? 'conic-gradient(from 0deg,#FFD88A,#B8761F,#FFE7B0,#8A560F,#FFD88A)' : 'conic-gradient(from 0deg,#4CAF50,#2BB3A3,#4CAF50)',
+              boxShadow: gold ? '0 0 18px rgba(255,183,77,.5)' : 'none' } }),
+            React.createElement('div', { style: { position: 'absolute', inset: 3, borderRadius: '50%', background: '#070707', padding: 2 } },
+              React.createElement(Avatar, { name: nm(f), photo: photos && photos[f.uid], size: AV - 4 }))),
+          React.createElement('div', { style: { fontSize: 11, fontWeight: 800, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, nm(f)),
+          React.createElement('div', { style: { fontSize: 9, color: gold ? '#FFB74D' : '#777', textAlign: 'center', lineHeight: 1.3, maxWidth: '100%',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: gold ? 800 : 400 } },
+            gold ? t('live_pr_short') : (f.st.exercise || f.st.dayName || '')),
+          React.createElement('div', { style: { fontSize: 8.5, color: '#555', fontWeight: 700, whiteSpace: 'nowrap' } },
+            (!compact && f.st.exIndex ? t('live_ex_n', { n: f.st.exIndex }) + ' · ' : '') + mins(f) + ' ' + t('sf_min')));
+      })),
+    prF ? React.createElement('div', { onClick: e => e.stopPropagation(), style: { marginTop: 12, borderRadius: 14, padding: '11px 12px',
+      background: 'linear-gradient(135deg,rgba(255,183,77,.16),rgba(10,10,10,.5))', border: '1px solid rgba(255,183,77,.4)',
+      display: 'flex', gap: 12, alignItems: 'center', animation: 'apexCardIn .4s cubic-bezier(.16,1.3,.3,1) both' } },
+      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+        React.createElement('div', { style: { fontSize: 9, letterSpacing: 1.8, color: '#FFB74D', fontWeight: 800 } }, t('live_now')),
+        React.createElement('div', { style: { fontSize: 13.5, fontWeight: 800, marginTop: 3 } }, t('live_broke_pr', { name: nm(prF) })),
+        React.createElement('div', { style: { fontSize: 11, color: '#aaa', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+          `${pr.ex} ${fmtSet(pr.w, pr.r)}` + (pr.pw ? ` · ${t('sf_previous')} ${fmtSet(pr.pw, pr.pr)}` : ''))),
+      React.createElement('button', { onClick: doFire, disabled: didFire, style: { position: 'relative', flex: 'none', width: 46, height: 46, borderRadius: 13,
+        border: 'none', background: didFire ? '#2a1a10' : '#FF7A3D', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: didFire ? 'default' : 'pointer', overflow: 'visible' } },
+        didFire ? React.createElement('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: '#FF7A3D', strokeWidth: 3 },
+          React.createElement('path', { d: 'M20 6L9 17l-5-5' })) : flame(22, '#fff'),
+        burst ? Array.from({ length: 6 }).map((_, i) => React.createElement('span', { key: burst + '-' + i, style: { position: 'absolute', left: 13, top: 10,
+          pointerEvents: 'none', animation: 'lgFly 1.1s cubic-bezier(.2,.6,.3,1) forwards', animationDelay: (i * 0.06) + 's',
+          '--dx': ((i % 2 ? 1 : -1) * (8 + i * 6)) + 'px' } }, flame(18, '#FF7A3D'))) : null)) : null);
+}
+
 // ————— ANTRENMAN GÜNLÜĞÜ (JOURNAL) —————
 // Kas dağılımı bar renkleri (sırayla)
 // ————— HAFTA ÖZETİ —————
@@ -6250,6 +6433,7 @@ function FriendsTab({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [resetSignal]);
   const cloudReady = !!(authUser && window.APEX_FIREBASE_OK && window.APEX_DB);
+  const liveFrT = useLiveFriends(authUser && authUser.uid, cloudReady); // CANLI SALON (sekme üstü)
   const me = {
     uid: authUser && authUser.uid,
     username: myUsername,
@@ -6345,6 +6529,9 @@ function FriendsTab({
     onClick: () => setSub(sub === 'add' ? 'friends' : 'add'),
     style: S.friendAddBtn
   }, sub === 'add' ? '✕' : t('add_btn'))),
+  sub !== 'add' && liveFrT.live.length > 0 && /*#__PURE__*/React.createElement(LiveGymStrip, {
+    live: liveFrT.live, photos: { ...photoMap, ...liveFrT.photos }, me: me, compact: false, style: { margin: '0 16px 14px' }
+  }),
   sub !== 'add' && /*#__PURE__*/React.createElement("div", {
     style: S.feedSeg
   }, /*#__PURE__*/React.createElement("button", {
@@ -8029,7 +8216,8 @@ function App() {
     onChangeLang: changeLang,
     appUnit: unit,
     onChangeUnit: changeUnit,
-    onThemeChange: bumpTheme
+    onThemeChange: bumpTheme,
+    onOpenFriends: () => setTab('friends')
   }), tab === 'progress' && /*#__PURE__*/React.createElement(ProgressTab, {
     key: activeGymId + '::' + vaultVersion,
     authUser: authUser,
@@ -8437,7 +8625,8 @@ function WorkoutTab({
   onChangeLang,
   appUnit,
   onChangeUnit,
-  onThemeChange
+  onThemeChange,
+  onOpenFriends
 }) {
   const [view, setView] = useState('home');
   const [currentDay, setCurrentDay] = useState(null);
@@ -8572,6 +8761,7 @@ function WorkoutTab({
   const [editDayId, setEditDayId] = useState(null); // custom day being edited
   const [cloudLoaded, setCloudLoaded] = useState(false); // bulut verisi yüklendi mi
   const cloudReady = !!(authUser && window.APEX_FIREBASE_OK && window.APEX_DB);
+  const liveFr = useLiveFriends(authUser && authUser.uid, cloudReady); // CANLI SALON (ana ekran şeridi)
   const gymId = activeGym && activeGym.id || 'default';
   const lsKey = gymStorageKey(gymId);
   const docName = gymDocName(gymId);
@@ -8987,6 +9177,16 @@ function WorkoutTab({
       logs: [...data.logs, newLog]
     });
 
+    // CANLI SALON (v5.9.117): hareket değiştiyse yayınla (her sette değil — Firebase'e yük binmesin)
+    const liveShare = !logDate && joinSessionId && cloudReady && myUsername && activeGym && activeGym.shared !== false;
+    if (liveShare && _liveLastEx[joinSessionId] !== exerciseName) {
+      _liveLastEx[joinSessionId] = exerciseName;
+      const order = [];
+      [...data.logs, newLog].filter(l => l.sessionId === joinSessionId).sort((a, b) => a.timestamp - b.timestamp)
+        .forEach(l => { if (order.indexOf(l.exerciseName) === -1) order.push(l.exerciseName); });
+      updateLiveStatus(authUser.uid, { exercise: exerciseName, exIndex: order.indexOf(exerciseName) + 1 });
+    }
+
     // Only celebrate PR for today's entries; need at least one prior PR in the same category
     if (!logDate && previousPR) {
       const newSet = {
@@ -9001,6 +9201,8 @@ function WorkoutTab({
           exerciseName,
           type: setType
         });
+        // CANLI SALON: rekor anı arkadaşlara canlı düşer
+        if (liveShare) updateLiveStatus(authUser.uid, { pr: { ex: exerciseName, w, r, pw: previousPR.weight || 0, pr: previousPR.reps || 0, at: Date.now() } });
         // FEED: yeni rekor kartı yaz (salon paylaşımlıysa)
         if (authUser && myUsername && activeGym && activeGym.shared !== false && window.APEX_FIREBASE_OK) {
           const delta = previousPR.weight ? Math.max(0, w - previousPR.weight) : 0;
@@ -9139,6 +9341,12 @@ function WorkoutTab({
     });
   };
   const getActiveSession = () => data.sessions.find(s => s.dayType === currentDay && !s.endTime);
+  // GÜN RENGİ (v5.9.116): herhangi bir günde son 6 saatte başlamış, bitmemiş seans varsa o günün rengine bürün.
+  // 6 saat sınırı: unutulup kapatılmamış eski seans uygulamayı sonsuza dek boyamasın.
+  const tintSession = (data.sessions || []).filter(x => x && !x.endTime && x.startTime && Date.now() - x.startTime < 6 * 3600000)
+    .sort((a, b) => b.startTime - a.startTime)[0];
+  const tintAccent = tintSession ? ((dayConfig[tintSession.dayType] || {}).accent || null) : null;
+  useEffect(() => { setDayTint(tintAccent); }, [tintAccent]);
   const startSession = () => {
     const newSession = {
       id: Date.now().toString(),
@@ -9155,6 +9363,7 @@ function WorkoutTab({
     if (cloudReady && myUsername && activeGym && activeGym.shared !== false) {
       const dayCfg = dayConfig[currentDay];
       setLiveStatus(authUser.uid, true, (dayCfg && dayCfg.name) || currentDay);
+      updateLiveStatus(authUser.uid, { exercise: '', exIndex: 0, pr: null });
       // Tüm arkadaşlara "antrenmanda" bildirimi (günde 1 kez)
       broadcastGymEntry(authUser.uid, authUser.displayName || myUsername);
     }
@@ -9495,6 +9704,10 @@ function WorkoutTab({
     setView('day');
   };
   return /*#__PURE__*/React.createElement(React.Fragment, null, view === 'home' && /*#__PURE__*/React.createElement(HomeView, {
+    liveFriends: liveFr.live,
+    livePhotos: liveFr.photos,
+    liveMe: authUser ? { uid: authUser.uid, name: authUser.displayName || '', username: myUsername } : null,
+    onOpenFriends: onOpenFriends,
     onSelectDay: d => {
       setCurrentDay(d);
       setLogDate(null);
@@ -10042,7 +10255,11 @@ function HomeView({
   weeklyUnseen,
   onOpenWeekly,
   weeklySummaryRange,
-  onOpenGymPicker
+  onOpenGymPicker,
+  liveFriends,
+  livePhotos,
+  liveMe,
+  onOpenFriends
 }) {
   const [homeWrapped, setHomeWrapped] = useState(null); // APEX Wrapped afişi (v5.9.111)
   const todayLogs = data.logs.filter(l => dateKey(l.timestamp) === dateKey(Date.now()));
@@ -10278,7 +10495,9 @@ function HomeView({
           /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: '#bba', marginTop: 4 } }, t('wrap_card_sub'))),
         /*#__PURE__*/React.createElement("div", { style: { flex: 'none', display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(0,0,0,0.42)', borderRadius: 20, padding: '9px 14px', fontSize: 11.5, fontWeight: 800, color: '#FFD9A0' } },
           /*#__PURE__*/React.createElement("svg", { width: 12, height: 12, viewBox: '0 0 24 24', fill: '#FFD9A0' }, /*#__PURE__*/React.createElement("path", { d: 'M8 5v14l11-7z' })), t('wrap_open'))));
-    })(), (() => {
+    })(), liveFriends && liveFriends.length > 0 && /*#__PURE__*/React.createElement(LiveGymStrip, {
+      live: liveFriends, photos: livePhotos, me: liveMe, compact: true, onOpen: onOpenFriends, style: { marginBottom: 14 }
+    }), (() => {
       const insights = computeInsights(data);
       if (!insights.length) return null;
       const colors = { warn: { c: '#FFA726', bg: 'rgba(255,167,38,0.07)', bd: 'rgba(255,167,38,0.22)' }, good: { c: '#4CAF50', bg: 'rgba(76,175,80,0.07)', bd: 'rgba(76,175,80,0.22)' }, info: { c: 'var(--accent-light)', bg: 'rgba(var(--accent-rgb),0.07)', bd: 'rgba(var(--accent-rgb),0.22)' } };
