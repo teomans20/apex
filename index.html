@@ -1586,7 +1586,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.114'; // ÇARK TIKI: çevirirken hissedilen/duyulan tık. haptic(4) çoğu Android'de hissedilmiyordu → vibrate(10); iPhone'da navigator.vibrate yok → iOS 18+ gizli <input switch> label.click() sistem haptiği; ayrıca 18 ms'lik bandpass gürültü tıkı (Web Audio, dosya yok, vol .09). En fazla ~30 tık/sn. Tekrar ± butonları da aynı tığı verir. ÖNCEKİ (5.9.113): ÇARK ADIM TAHMİNİ: adım artık hareket başına geçmiş loglardan tahmin ediliyor (ağırlıkların %90'ının katı olan en büyük adım: 5 / 2,5 / 2 / 1,25 / 1; 2,5'ten büyük adım için ≥4 farklı ağırlık; az veri → 2,5). Cetvelin altında 'ADIM 2 kg · OTO' — dokununca elle değiştirilir (OTO→1→1,25→2→2,5→5), hareket başına vk('apex-wheel-step')'te hatırlanır. ÖNCEKİ (5.9.112): AĞIRLIK ÇARKI: set girme kutusundaki ağırlık input'u yerine büyük sayı + sürüklenebilir cetvel (WeightWheel). Fırlatınca süzülür (sürtünme 0.93), en yakın adıma oturur, her adımda haptic(4) (28 ms throttle). Adım her yerde sabit 2,5 (kullanıcı kararı). Cetvelde mavi GEÇEN (önceki seansın top/back-off'u) ve altın REKOR (top/back-off PR) işaretleri — çizgiler hep ayrı, etiketler yakınsa sola/sağa yaslanır, aynı değerse birleşir. Sayının altında not: REKORUN ÜSTÜ +X / REKOR AĞIRLIĞI / GEÇEN SEFERDEN +X / GEÇEN SEFERKİ. Varsayılan: açılışta ve her kayıttan sonra (prefillPending ref) geçen seferki ağırlık+tekrar dolar; top'tan sonra otomatik back-off hedefine geçer; hedef yoksa son set / PR / 20. Kullanıcı silip yazarken yeniden doldurma YOK. Büyük sayıya dokununca klavye açılır (tümünü seçer). Tekrar: − / ＋ ve yazılabilir alan. Kayıt sonrası klavye artık otomatik açılmıyor (focus kaldırıldı). Imperial'da max 900 lb. 
+const APP_VERSION = '5.9.115'; // ÇARK SESİ: titreşim tamamen kaldırıldı (kullanıcı: sadece ses). Tık sesi kısıldı (gain .09→.035, 18→14 ms, 3200→2600 Hz daha yumuşak). iOS'ta navigator.audioSession.type='ambient' → kulaklıkta çalan müziği durdurmaz/kısmaz, üstüne karışır, sessiz modda susar. Adım etiketinin solunda hoparlör düğmesi: sesi aç/kapa, cihaz genelinde 'apex-wheel-sound' ile hatırlanır. ÖNCEKİ (5.9.114): ÇARK TIKI: çevirirken hissedilen/duyulan tık. haptic(4) çoğu Android'de hissedilmiyordu → vibrate(10); iPhone'da navigator.vibrate yok → iOS 18+ gizli <input switch> label.click() sistem haptiği; ayrıca 18 ms'lik bandpass gürültü tıkı (Web Audio, dosya yok, vol .09). En fazla ~30 tık/sn. Tekrar ± butonları da aynı tığı verir. ÖNCEKİ (5.9.113): ÇARK ADIM TAHMİNİ: adım artık hareket başına geçmiş loglardan tahmin ediliyor (ağırlıkların %90'ının katı olan en büyük adım: 5 / 2,5 / 2 / 1,25 / 1; 2,5'ten büyük adım için ≥4 farklı ağırlık; az veri → 2,5). Cetvelin altında 'ADIM 2 kg · OTO' — dokununca elle değiştirilir (OTO→1→1,25→2→2,5→5), hareket başına vk('apex-wheel-step')'te hatırlanır. ÖNCEKİ (5.9.112): AĞIRLIK ÇARKI: set girme kutusundaki ağırlık input'u yerine büyük sayı + sürüklenebilir cetvel (WeightWheel). Fırlatınca süzülür (sürtünme 0.93), en yakın adıma oturur, her adımda haptic(4) (28 ms throttle). Adım her yerde sabit 2,5 (kullanıcı kararı). Cetvelde mavi GEÇEN (önceki seansın top/back-off'u) ve altın REKOR (top/back-off PR) işaretleri — çizgiler hep ayrı, etiketler yakınsa sola/sağa yaslanır, aynı değerse birleşir. Sayının altında not: REKORUN ÜSTÜ +X / REKOR AĞIRLIĞI / GEÇEN SEFERDEN +X / GEÇEN SEFERKİ. Varsayılan: açılışta ve her kayıttan sonra (prefillPending ref) geçen seferki ağırlık+tekrar dolar; top'tan sonra otomatik back-off hedefine geçer; hedef yoksa son set / PR / 20. Kullanıcı silip yazarken yeniden doldurma YOK. Büyük sayıya dokununca klavye açılır (tümünü seçer). Tekrar: − / ＋ ve yazılabilir alan. Kayıt sonrası klavye artık otomatik açılmıyor (focus kaldırıldı). Imperial'da max 900 lb. 
 // prev:  // APEX WRAPPED: yıl sonu hikaye özeti, TÜM SALONLARIN verisi birleştirilerek (collectAllGymsData: GYMS_KEY'deki her salonun data'sı okunur, logs/sessions id'ye göre tekilleştirilir, customMuscleMap birleşir). buildWrapped(range) bir dönemin istatistiklerini üretir: set/tekrar/hacim/gün/dakika, haftanın günü dağılımı + en sadık gün, rekor sayısı ve en çok gelişen hareket (getExercisePRHistory top-set eğrisi, 14 noktaya seyreltilir), en çok çalışılan kas, en uzun haftalık seri, en çok yapılan hareket. WrappedStory: 7 kart (açılış / set / hacim+somut karşılaştırma / en çok gelişen + kendini çizen grafik / haftanın günleri çubukları / rekorlar / holografik kapanış kartı), dissolve geçişli, story barlı, Atla'lı. volumeComparison() hacmi uçak-balina-otobüs-otomobil-buzdolabı ölçeğine çevirir. GİRİŞ: (1) Defter'de hafta özetlerinin üstünde parıltılı kart — her zaman erişilebilir, (2) 25 Aralık–7 Ocak arası ana ekranda afiş. 1–7 Ocak arası hâlâ geçen yılı gösterir. En az 5 antrenman günü şartı. Seans Filmi'nin CSS grain'i paylaşılır; yeni wr-* animasyonları eklendi. Emoji yok, i18n tr+en tam. // SEANS FİLMİ: antrenman bitince kendiliğinden oynayan ~11 sn'lik sinematik özet. 5 sahne: (1) gün adı — ışık süzülmesi + accent hale, (2) hareket montajı — seansın TÜM hareketleri sırayla düşer (isim, set sayısı, top set, hacim; rekorlular altın + kupa SVG), altta hacim barı dolar, (3) doruk nokta — rekor varsa madalya+ışınlar+"önceki X · +Ykg", rekor yoksa sahne atlanmaz ama "GÜNÜN EN AĞIR SETİ"ne döner (halter SVG, gün accent'i), (4) sayaçlar (hacim/set/süre, geçen seansa göre % çipi) + mevcut BodyFront/BodyBack silüetinde kas haritası (seans hacmi kaslara dağıtılıp 0..1 yoğunlukla accent'e boyanır; baskın taraf ön/arka otomatik), (5) kapanış kartı — holografik parlama + konfeti + ↻/Detaylar/Kapat. Sahne geçişleri dissolve, üstte story barları, sağ üstte Atla/Kapat. Tüm sahneler animasyon bittikten sonra ~1 sn bekler (ritim). computeSessionSummary'ye exerciseRows/heaviestSet/muscleScores/muscleSide/topMuscleNames/endedAt eklendi ve prs artık prev taşıyor; aynı harekette top+backoff rekoru tek rekor sayılır. Renkler gün tipinin accent'inden gelir, emoji yok (SVG). Detaylar mevcut SessionSummaryModal'ı açar — eski özet kaldırılmadı. // ROOT CAUSE FIXED (the black-screen crash). Error text from the wild: "null is not an object (evaluating 'todayTop.weight')" at ExerciseView. This was a regression Claude introduced in v5.9.93: todayTop changed from todaySorted[0] (never null when sets exist) to todaySplit.top, and splitTopBackoff returns top:null when EVERY set of the group is explicitly setType:'backoff' with no 'top' — which is exactly what happens after the TOP set is DELETED (dad's "deleting a set -> black screen") . showingBackoff (sets exist) still rendered the TOP strip -> todayTop.weight on null -> throw on every render of that exercise. FIX: splitTopBackoff now falls back to the earliest set as top when no explicit top remains (if (!tops.length && backoffs.length) tops.push(backoffs.shift())), restoring pre-5.9.93 behaviour; plus defence-in-depth guard `!todayTop ? null :` on the targetTopStrip branch. Reproduced in headless Chromium (all-backoff seed -> boundary + exact error), verified fixed (renders "ILK TOP"), and re-ran the other scenario repros for regressions.
 // Crash boundary made DIAGNOSTIC (brother hit a crash on v5.9.107 we could not reproduce across 6 paths: zero-log exercise open, end-session, calendar day-detail Düzenle, journal, progress, friends). Recovery screen now shows the error message + first stack lines + REACT COMPONENT STACK (names the exact crashing component) + APP_VERSION in a scrollable mono box, adds a "Hatayı Kopyala"/Copy Error button (clipboard + textarea fallback), and componentDidCatch persists the full record to localStorage 'apex-last-error' {at, version, message, stack, componentStack, ua}. Verified end-to-end in headless Chromium with an injected throw: boundary renders, names HomeView/WorkoutTab, and stores the record.
 // URGENT crash-recovery (Dostum's dad's Android: deleting a set → black screen that never came back = persisted data state crashing render on every load). TWO safety layers: (1) AppErrorBoundary class wraps <App> at root — any render exception now shows a dark recovery screen (⚠️ + "Yeniden Dene"/reload + "Yedeği İndir"/export-from-localStorage, bilingual via CURRENT_LANG) instead of a black screen. (2) sanitizeGymData(d) drops malformed logs (missing id/exerciseName, non-finite weight/reps/timestamp) and sessions (missing id / non-finite startTime); applied to localData on load (both tabs) AND to the cloud-merged result (mutates in place so localStorage + cloud push-back also get cleaned) → corrupt data can no longer crash render and is auto-cleaned on next load across devices. Tested sanitize + full-file syntax incl boundary.
@@ -11319,44 +11319,39 @@ function DayView({
     }
   }, t('send_to_friend')));
 }
-// ============ ÇARK "TIK"I (v5.9.114) ============
-// Android: navigator.vibrate(10) (4 ms çoğu cihazda hissedilmiyordu).
-// iPhone: Safari'de vibrate yok → iOS 18+ gizli <input switch> tıklaması sistem titreşimini tetikler.
-// Ses: kodla üretilen çok kısa, kuru bir tık (dosya yok). AudioContext ilk dokunuşta açılır.
-let _wtAC = null, _wtSwitch = null, _wtBuf = null, _wtLast = 0;
+// ============ ÇARK "TIK"I (v5.9.115) ============
+// Sadece ses (titreşim kaldırıldı — kullanıcı kararı). Kodla üretilen çok kısa, yumuşak bir tık.
+// iOS: navigator.audioSession.type='ambient' → müziği DURDURMAZ/KISMAZ, üstüne karışır, sessiz modda çalmaz.
+// Kapatılabilir: 'apex-wheel-sound' (cihaz geneli) = '0' ise sessiz.
+let _wtAC = null, _wtBuf = null, _wtLast = 0;
+let _wtOn = (() => { try { return localStorage.getItem('apex-wheel-sound') !== '0'; } catch (e) { return true; } })();
+function setWheelSound(on) { _wtOn = !!on; try { localStorage.setItem('apex-wheel-sound', on ? '1' : '0'); } catch (e) {} }
 function wheelTickPrime() {
+  if (!_wtOn) return;
+  try {
+    if (navigator.audioSession && navigator.audioSession.type !== 'ambient') navigator.audioSession.type = 'ambient';
+  } catch (e) {}
   try {
     if (!_wtAC) _wtAC = new (window.AudioContext || window.webkitAudioContext)();
     if (_wtAC.state === 'suspended') _wtAC.resume();
     if (!_wtBuf) {
-      const len = Math.floor(_wtAC.sampleRate * 0.018);
+      const len = Math.floor(_wtAC.sampleRate * 0.014);
       _wtBuf = _wtAC.createBuffer(1, len, _wtAC.sampleRate);
       const d = _wtBuf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+      for (let k = 0; k < len; k++) d[k] = (Math.random() * 2 - 1) * Math.pow(1 - k / len, 3);
     }
   } catch (e) {}
-  if (!_wtSwitch && !navigator.vibrate) {
-    try {
-      const lbl = document.createElement('label');
-      lbl.setAttribute('aria-hidden', 'true');
-      lbl.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
-      const inp = document.createElement('input');
-      inp.type = 'checkbox'; inp.setAttribute('switch', ''); inp.tabIndex = -1;
-      lbl.appendChild(inp); document.body.appendChild(lbl); _wtSwitch = lbl;
-    } catch (e) {}
-  }
 }
 function wheelTick(force) {
+  if (!_wtOn) return;
   const now = performance.now();
   if (!force && now - _wtLast < 34) return; // hızlı fırlatmada saniyede ~30 tık üst sınır
   _wtLast = now;
-  if (navigator.vibrate) { try { navigator.vibrate(10); } catch (e) {} }
-  else if (_wtSwitch) { try { _wtSwitch.click(); } catch (e) {} }
   try {
     const c = _wtAC;
     if (!c || c.state !== 'running' || !_wtBuf) return;
     const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
-    src.buffer = _wtBuf; f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 1.3; g.gain.value = 0.09;
+    src.buffer = _wtBuf; f.type = 'bandpass'; f.frequency.value = 2600; f.Q.value = 1.1; g.gain.value = 0.035;
     src.connect(f).connect(g).connect(c.destination); src.start();
   } catch (e) {}
 }
@@ -11591,10 +11586,11 @@ function ExerciseView({
     try { const m = JSON.parse(localStorage.getItem(vk(STEP_KEY)) || '{}'); return m[exerciseName] || null; } catch (e) { return null; }
   });
   const wheelStep = wheelStepOverride || wheelStepAuto;
+  const [wheelSoundOn, setWheelSoundOn] = useState(() => _wtOn);
   const cycleWheelStep = () => {
     const opts = CURRENT_UNIT === 'imperial' ? [null, 1, 2.5, 5, 10] : [null, 1, 1.25, 2, 2.5, 5];
     const next = opts[(opts.indexOf(wheelStepOverride) + 1) % opts.length];
-    setWheelStepOverride(next); haptic(8);
+    setWheelStepOverride(next); wheelTickPrime(); wheelTick(true);
     try { const m = JSON.parse(localStorage.getItem(vk(STEP_KEY)) || '{}'); if (next) m[exerciseName] = next; else delete m[exerciseName];
       localStorage.setItem(vk(STEP_KEY), JSON.stringify(m)); } catch (e) {}
   };
@@ -11885,7 +11881,12 @@ function ExerciseView({
   /*#__PURE__*/React.createElement(WeightWheel, {
     value: weight, onChange: v => setWeight(v), step: wheelStep, min: 0, max: wheelMax, marks: wheelMarks
   }),
-  /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', marginTop: 2 } },
+  /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, marginTop: 2 } },
+    /*#__PURE__*/React.createElement("button", { onClick: () => { const on = !wheelSoundOn; setWheelSound(on); setWheelSoundOn(on); if (on) { wheelTickPrime(); wheelTick(true); } },
+      'aria-label': 'sound', style: { border: 'none', background: 'none', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center' } },
+      /*#__PURE__*/React.createElement("svg", { width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none', stroke: wheelSoundOn ? '#7d7d7d' : '#444', strokeWidth: 2.2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+        /*#__PURE__*/React.createElement("path", { d: 'M11 5L6 9H3v6h3l5 4V5z' }),
+        wheelSoundOn ? /*#__PURE__*/React.createElement("path", { d: 'M15.5 8.5a5 5 0 0 1 0 7' }) : /*#__PURE__*/React.createElement("path", { d: 'M16 9l5 6M21 9l-5 6' }))),
     /*#__PURE__*/React.createElement("button", { onClick: cycleWheelStep, style: { border: 'none', background: 'none', cursor: 'pointer',
       fontFamily: 'inherit', fontSize: 9.5, fontWeight: 800, letterSpacing: 1.2, color: '#5e5e5e', padding: '4px 8px' } },
       t('wheel_step', { s: String(wheelStep).replace('.', ',') + ' ' + wUnit() }) + ' · ' + (wheelStepOverride ? t('wheel_step_manual') : t('wheel_step_auto')))),
