@@ -1586,7 +1586,8 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.111'; // APEX WRAPPED: yıl sonu hikaye özeti, TÜM SALONLARIN verisi birleştirilerek (collectAllGymsData: GYMS_KEY'deki her salonun data'sı okunur, logs/sessions id'ye göre tekilleştirilir, customMuscleMap birleşir). buildWrapped(range) bir dönemin istatistiklerini üretir: set/tekrar/hacim/gün/dakika, haftanın günü dağılımı + en sadık gün, rekor sayısı ve en çok gelişen hareket (getExercisePRHistory top-set eğrisi, 14 noktaya seyreltilir), en çok çalışılan kas, en uzun haftalık seri, en çok yapılan hareket. WrappedStory: 7 kart (açılış / set / hacim+somut karşılaştırma / en çok gelişen + kendini çizen grafik / haftanın günleri çubukları / rekorlar / holografik kapanış kartı), dissolve geçişli, story barlı, Atla'lı. volumeComparison() hacmi uçak-balina-otobüs-otomobil-buzdolabı ölçeğine çevirir. GİRİŞ: (1) Defter'de hafta özetlerinin üstünde parıltılı kart — her zaman erişilebilir, (2) 25 Aralık–7 Ocak arası ana ekranda afiş. 1–7 Ocak arası hâlâ geçen yılı gösterir. En az 5 antrenman günü şartı. Seans Filmi'nin CSS grain'i paylaşılır; yeni wr-* animasyonları eklendi. Emoji yok, i18n tr+en tam. // SEANS FİLMİ: antrenman bitince kendiliğinden oynayan ~11 sn'lik sinematik özet. 5 sahne: (1) gün adı — ışık süzülmesi + accent hale, (2) hareket montajı — seansın TÜM hareketleri sırayla düşer (isim, set sayısı, top set, hacim; rekorlular altın + kupa SVG), altta hacim barı dolar, (3) doruk nokta — rekor varsa madalya+ışınlar+"önceki X · +Ykg", rekor yoksa sahne atlanmaz ama "GÜNÜN EN AĞIR SETİ"ne döner (halter SVG, gün accent'i), (4) sayaçlar (hacim/set/süre, geçen seansa göre % çipi) + mevcut BodyFront/BodyBack silüetinde kas haritası (seans hacmi kaslara dağıtılıp 0..1 yoğunlukla accent'e boyanır; baskın taraf ön/arka otomatik), (5) kapanış kartı — holografik parlama + konfeti + ↻/Detaylar/Kapat. Sahne geçişleri dissolve, üstte story barları, sağ üstte Atla/Kapat. Tüm sahneler animasyon bittikten sonra ~1 sn bekler (ritim). computeSessionSummary'ye exerciseRows/heaviestSet/muscleScores/muscleSide/topMuscleNames/endedAt eklendi ve prs artık prev taşıyor; aynı harekette top+backoff rekoru tek rekor sayılır. Renkler gün tipinin accent'inden gelir, emoji yok (SVG). Detaylar mevcut SessionSummaryModal'ı açar — eski özet kaldırılmadı. // ROOT CAUSE FIXED (the black-screen crash). Error text from the wild: "null is not an object (evaluating 'todayTop.weight')" at ExerciseView. This was a regression Claude introduced in v5.9.93: todayTop changed from todaySorted[0] (never null when sets exist) to todaySplit.top, and splitTopBackoff returns top:null when EVERY set of the group is explicitly setType:'backoff' with no 'top' — which is exactly what happens after the TOP set is DELETED (dad's "deleting a set -> black screen") . showingBackoff (sets exist) still rendered the TOP strip -> todayTop.weight on null -> throw on every render of that exercise. FIX: splitTopBackoff now falls back to the earliest set as top when no explicit top remains (if (!tops.length && backoffs.length) tops.push(backoffs.shift())), restoring pre-5.9.93 behaviour; plus defence-in-depth guard `!todayTop ? null :` on the targetTopStrip branch. Reproduced in headless Chromium (all-backoff seed -> boundary + exact error), verified fixed (renders "ILK TOP"), and re-ran the other scenario repros for regressions.
+const APP_VERSION = '5.9.113'; // ÇARK ADIM TAHMİNİ: adım artık hareket başına geçmiş loglardan tahmin ediliyor (ağırlıkların %90'ının katı olan en büyük adım: 5 / 2,5 / 2 / 1,25 / 1; 2,5'ten büyük adım için ≥4 farklı ağırlık; az veri → 2,5). Cetvelin altında 'ADIM 2 kg · OTO' — dokununca elle değiştirilir (OTO→1→1,25→2→2,5→5), hareket başına vk('apex-wheel-step')'te hatırlanır. ÖNCEKİ (5.9.112): AĞIRLIK ÇARKI: set girme kutusundaki ağırlık input'u yerine büyük sayı + sürüklenebilir cetvel (WeightWheel). Fırlatınca süzülür (sürtünme 0.93), en yakın adıma oturur, her adımda haptic(4) (28 ms throttle). Adım her yerde sabit 2,5 (kullanıcı kararı). Cetvelde mavi GEÇEN (önceki seansın top/back-off'u) ve altın REKOR (top/back-off PR) işaretleri — çizgiler hep ayrı, etiketler yakınsa sola/sağa yaslanır, aynı değerse birleşir. Sayının altında not: REKORUN ÜSTÜ +X / REKOR AĞIRLIĞI / GEÇEN SEFERDEN +X / GEÇEN SEFERKİ. Varsayılan: açılışta ve her kayıttan sonra (prefillPending ref) geçen seferki ağırlık+tekrar dolar; top'tan sonra otomatik back-off hedefine geçer; hedef yoksa son set / PR / 20. Kullanıcı silip yazarken yeniden doldurma YOK. Büyük sayıya dokununca klavye açılır (tümünü seçer). Tekrar: − / ＋ ve yazılabilir alan. Kayıt sonrası klavye artık otomatik açılmıyor (focus kaldırıldı). Imperial'da max 900 lb. 
+// prev:  // APEX WRAPPED: yıl sonu hikaye özeti, TÜM SALONLARIN verisi birleştirilerek (collectAllGymsData: GYMS_KEY'deki her salonun data'sı okunur, logs/sessions id'ye göre tekilleştirilir, customMuscleMap birleşir). buildWrapped(range) bir dönemin istatistiklerini üretir: set/tekrar/hacim/gün/dakika, haftanın günü dağılımı + en sadık gün, rekor sayısı ve en çok gelişen hareket (getExercisePRHistory top-set eğrisi, 14 noktaya seyreltilir), en çok çalışılan kas, en uzun haftalık seri, en çok yapılan hareket. WrappedStory: 7 kart (açılış / set / hacim+somut karşılaştırma / en çok gelişen + kendini çizen grafik / haftanın günleri çubukları / rekorlar / holografik kapanış kartı), dissolve geçişli, story barlı, Atla'lı. volumeComparison() hacmi uçak-balina-otobüs-otomobil-buzdolabı ölçeğine çevirir. GİRİŞ: (1) Defter'de hafta özetlerinin üstünde parıltılı kart — her zaman erişilebilir, (2) 25 Aralık–7 Ocak arası ana ekranda afiş. 1–7 Ocak arası hâlâ geçen yılı gösterir. En az 5 antrenman günü şartı. Seans Filmi'nin CSS grain'i paylaşılır; yeni wr-* animasyonları eklendi. Emoji yok, i18n tr+en tam. // SEANS FİLMİ: antrenman bitince kendiliğinden oynayan ~11 sn'lik sinematik özet. 5 sahne: (1) gün adı — ışık süzülmesi + accent hale, (2) hareket montajı — seansın TÜM hareketleri sırayla düşer (isim, set sayısı, top set, hacim; rekorlular altın + kupa SVG), altta hacim barı dolar, (3) doruk nokta — rekor varsa madalya+ışınlar+"önceki X · +Ykg", rekor yoksa sahne atlanmaz ama "GÜNÜN EN AĞIR SETİ"ne döner (halter SVG, gün accent'i), (4) sayaçlar (hacim/set/süre, geçen seansa göre % çipi) + mevcut BodyFront/BodyBack silüetinde kas haritası (seans hacmi kaslara dağıtılıp 0..1 yoğunlukla accent'e boyanır; baskın taraf ön/arka otomatik), (5) kapanış kartı — holografik parlama + konfeti + ↻/Detaylar/Kapat. Sahne geçişleri dissolve, üstte story barları, sağ üstte Atla/Kapat. Tüm sahneler animasyon bittikten sonra ~1 sn bekler (ritim). computeSessionSummary'ye exerciseRows/heaviestSet/muscleScores/muscleSide/topMuscleNames/endedAt eklendi ve prs artık prev taşıyor; aynı harekette top+backoff rekoru tek rekor sayılır. Renkler gün tipinin accent'inden gelir, emoji yok (SVG). Detaylar mevcut SessionSummaryModal'ı açar — eski özet kaldırılmadı. // ROOT CAUSE FIXED (the black-screen crash). Error text from the wild: "null is not an object (evaluating 'todayTop.weight')" at ExerciseView. This was a regression Claude introduced in v5.9.93: todayTop changed from todaySorted[0] (never null when sets exist) to todaySplit.top, and splitTopBackoff returns top:null when EVERY set of the group is explicitly setType:'backoff' with no 'top' — which is exactly what happens after the TOP set is DELETED (dad's "deleting a set -> black screen") . showingBackoff (sets exist) still rendered the TOP strip -> todayTop.weight on null -> throw on every render of that exercise. FIX: splitTopBackoff now falls back to the earliest set as top when no explicit top remains (if (!tops.length && backoffs.length) tops.push(backoffs.shift())), restoring pre-5.9.93 behaviour; plus defence-in-depth guard `!todayTop ? null :` on the targetTopStrip branch. Reproduced in headless Chromium (all-backoff seed -> boundary + exact error), verified fixed (renders "ILK TOP"), and re-ran the other scenario repros for regressions.
 // Crash boundary made DIAGNOSTIC (brother hit a crash on v5.9.107 we could not reproduce across 6 paths: zero-log exercise open, end-session, calendar day-detail Düzenle, journal, progress, friends). Recovery screen now shows the error message + first stack lines + REACT COMPONENT STACK (names the exact crashing component) + APP_VERSION in a scrollable mono box, adds a "Hatayı Kopyala"/Copy Error button (clipboard + textarea fallback), and componentDidCatch persists the full record to localStorage 'apex-last-error' {at, version, message, stack, componentStack, ua}. Verified end-to-end in headless Chromium with an injected throw: boundary renders, names HomeView/WorkoutTab, and stores the record.
 // URGENT crash-recovery (Dostum's dad's Android: deleting a set → black screen that never came back = persisted data state crashing render on every load). TWO safety layers: (1) AppErrorBoundary class wraps <App> at root — any render exception now shows a dark recovery screen (⚠️ + "Yeniden Dene"/reload + "Yedeği İndir"/export-from-localStorage, bilingual via CURRENT_LANG) instead of a black screen. (2) sanitizeGymData(d) drops malformed logs (missing id/exerciseName, non-finite weight/reps/timestamp) and sessions (missing id / non-finite startTime); applied to localData on load (both tabs) AND to the cloud-merged result (mutates in place so localStorage + cloud push-back also get cleaned) → corrupt data can no longer crash render and is auto-cleaned on next load across devices. Tested sanitize + full-file syntax incl boundary.
 // Plateau engine unified + off-by-one fix (2nd review round). Replaced getStuckWeeksForExercise with getPlateauState(logs, exerciseName, opts) → {isStuck, weeksSinceImprovement, lastImprovementTs, lastWorkoutTs, trainedRecently, curve}, built on getExercisePRHistory (session/setType-aware per-session top curve). Loop scans ALL curve points (fixes feed off-by-one: old day-based helper looped i<days.length-1, skipping the most recent real workout since the feed calls it before today's set is added → could false-fire "plateau broken" when you PR'd last week). BOTH ProgressTab exerciseStats AND the feed plateau card now use this one engine (were separate, drifting) — feed now also gets the trainedRecently gate (no "8 weeks stuck" card when you'd actually abandoned then returned). Trade-off note (accepted): cloud union-merge can resurrect a delete made on an offline-with-unsynced device — future tombstone/deletedAt. Tested unified engine. (Prior v5.9.105 fixes retained: isStuck trainedRecently gate, monthStats rep-PR counting.)
@@ -1711,6 +1712,10 @@ function t(key, vars) {
 }
 const I18N = {
   tr: {
+    // Ağırlık çarkı (v5.9.112)
+    wheel_last: 'GEÇEN', wheel_pr: 'REKOR', wheel_above_pr: 'REKORUN ÜSTÜ · +{d}', wheel_at_pr: 'REKOR AĞIRLIĞI',
+    wheel_above_last: 'GEÇEN SEFERDEN +{d}', wheel_same_last: 'GEÇEN SEFERKİ',
+    wheel_step: 'ADIM {s}', wheel_step_auto: 'OTO', wheel_step_manual: 'ELLE',
     // APEX Wrapped (v5.9.111)
     wrap_title: 'APEX WRAPPED', wrap_total: 'TOPLAM', wrap_sets: 'SET', wrap_lifted: 'KALDIRDIĞIN TOPLAM AĞIRLIK',
     wrap_most_improved: 'EN ÇOK GELİŞEN HAREKETİN', wrap_loyal_day: 'EN SADIK GÜNÜN', wrap_pr_broken: 'KEZ REKOR KIRDIN',
@@ -2026,6 +2031,9 @@ const I18N = {
     report_failed: 'Şikâyet gönderilemedi, tekrar dene.'
   },
   en: {
+    wheel_last: 'LAST', wheel_pr: 'RECORD', wheel_above_pr: 'ABOVE RECORD · +{d}', wheel_at_pr: 'RECORD WEIGHT',
+    wheel_above_last: '+{d} VS LAST TIME', wheel_same_last: 'SAME AS LAST TIME',
+    wheel_step: 'STEP {s}', wheel_step_auto: 'AUTO', wheel_step_manual: 'MANUAL',
     wrap_title: 'APEX WRAPPED', wrap_total: 'TOTAL', wrap_sets: 'SETS', wrap_lifted: 'TOTAL WEIGHT LIFTED',
     wrap_most_improved: 'YOUR MOST IMPROVED LIFT', wrap_loyal_day: 'YOUR MOST LOYAL DAY', wrap_pr_broken: 'RECORDS BROKEN',
     wrap_intro: 'Let\'s see how it went.',
@@ -11311,6 +11319,118 @@ function DayView({
     }
   }, t('send_to_friend')));
 }
+// ============ AĞIRLIK ÇARKI (v5.9.112) ============
+// Sürüklenebilir cetvel: fırlatınca süzülür, her adımda titreşim "tık"ı, en yakın adıma oturur.
+// value: string (gösterim biriminde), onChange(string). marks: [{v, color, label}]
+function WeightWheel({ value, onChange, step = 2.5, min = 0, max = 400, marks = [] }) {
+  const PX = 26;
+  const trackRef = useRef(null);
+  const S0 = useRef({ off: 0, vel: 0, drag: false, lastX: 0, lastT: 0, raf: 0, lastV: null, lastHap: 0 });
+  const toOff = v => -((v - min) / step) * PX;
+  const minOff = toOff(max);
+  const clampOff = o => Math.min(0, Math.max(minOff, o));
+  const fromOff = o => Math.min(max, Math.max(min, +(min + Math.round(-o / PX) * step).toFixed(2)));
+  const paint = () => { if (trackRef.current) trackRef.current.style.transform = `translateX(${S0.current.off}px)`; };
+  const emit = () => {
+    const s = S0.current, v = fromOff(s.off);
+    if (v !== s.lastV) {
+      if (s.lastV !== null) {
+        const now = performance.now();
+        if (now - s.lastHap > 28) { haptic(4); s.lastHap = now; }
+      }
+      s.lastV = v;
+      onChange(String(v));
+    }
+  };
+  // Dışarıdan gelen değer (klavye, "Aynısını Getir", varsayılan) → cetveli oraya taşı
+  useEffect(() => {
+    const s = S0.current;
+    if (s.drag || s.raf) return;
+    const v = parseFloat(String(value).replace(',', '.'));
+    if (!isFinite(v)) return;
+    s.off = clampOff(toOff(Math.min(max, Math.max(min, v))));
+    s.lastV = fromOff(s.off);
+    paint();
+  }, [value, step, min, max]);
+  useEffect(() => () => cancelAnimationFrame(S0.current.raf), []);
+
+  const glide = () => {
+    const s = S0.current;
+    const step1 = () => {
+      s.vel *= 0.93;
+      s.off = clampOff(s.off + s.vel); paint(); emit();
+      if (Math.abs(s.vel) > 0.4) { s.raf = requestAnimationFrame(step1); return; }
+      const target = clampOff(Math.round(s.off / PX) * PX), from = s.off, t0 = performance.now();
+      const snap = n => {
+        const p = Math.min(1, (n - t0) / 180);
+        s.off = from + (target - from) * (1 - Math.pow(1 - p, 3)); paint(); emit();
+        if (p < 1) s.raf = requestAnimationFrame(snap); else s.raf = 0;
+      };
+      s.raf = requestAnimationFrame(snap);
+    };
+    s.raf = requestAnimationFrame(step1);
+  };
+  const onDown = e => {
+    const s = S0.current;
+    cancelAnimationFrame(s.raf); s.raf = 0;
+    s.drag = true; s.vel = 0; s.lastX = e.clientX; s.lastT = performance.now();
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+  };
+  const onMove = e => {
+    const s = S0.current; if (!s.drag) return;
+    const now = performance.now(), dx = e.clientX - s.lastX;
+    s.off = clampOff(s.off + dx);
+    s.vel = dx / Math.max(1, now - s.lastT) * 16;
+    s.lastX = e.clientX; s.lastT = now;
+    paint(); emit();
+  };
+  const onUp = () => { const s = S0.current; if (!s.drag) return; s.drag = false; glide(); };
+
+  const ticks = React.useMemo(() => {
+    const out = [];
+    const n = Math.round((max - min) / step);
+    for (let i = 0; i <= n; i++) {
+      const v = +(min + i * step).toFixed(2), x = i * PX;
+      const big = Math.abs(v % 10) < 1e-6, mid = Math.abs(v % 5) < 1e-6;
+      out.push(React.createElement('div', { key: 't' + i, style: { position: 'absolute', bottom: 24, left: x, width: 2, marginLeft: -1,
+        height: big ? 32 : mid ? 21 : 13, borderRadius: 1, background: big ? '#8a8a8a' : mid ? '#555' : '#333' } }));
+      if (big) out.push(React.createElement('div', { key: 'l' + i, style: { position: 'absolute', bottom: 3, left: x,
+        transform: 'translateX(-50%)', fontSize: 10, color: '#666', fontWeight: 800 } }, v));
+    }
+    // işaretler (geçen / rekor): çizgiler hep ayrı; aynı değerdeyse etiket birleşir,
+    // yakınsa soldaki etiket sola, sağdaki sağa yaslanır (üst üste binmesin)
+    const ms = [...marks].filter(m => m && isFinite(m.v)).sort((a, b) => a.v - b.v);
+    const merged = [];
+    ms.forEach(m => {
+      const last = merged[merged.length - 1];
+      if (last && Math.abs(last.v - m.v) < step * 0.5) { last.label += ' · ' + m.label; last.color = m.color; }
+      else merged.push({ ...m });
+    });
+    merged.forEach((m, i) => {
+      const x = (m.v - min) / step * PX;
+      const prevClose = i > 0 && (m.v - merged[i - 1].v) < step * 3;
+      const nextClose = i < merged.length - 1 && (merged[i + 1].v - m.v) < step * 3;
+      const tx = nextClose ? 'translateX(calc(-100% + 4px))' : prevClose ? 'translateX(-4px)' : 'translateX(-50%)';
+      out.push(React.createElement('div', { key: 'mk' + i, style: { position: 'absolute', top: 22, bottom: 24, left: x, width: 2,
+        marginLeft: -1, borderRadius: 1, background: m.color } }));
+      out.push(React.createElement('div', { key: 'ml' + i, style: { position: 'absolute', top: 3, left: x, transform: tx,
+        fontSize: 8.5, fontWeight: 900, letterSpacing: .6, padding: '2px 6px', borderRadius: 10, whiteSpace: 'nowrap',
+        color: m.color, background: hexToRgba(m.color, .18) } }, m.label));
+    });
+    return out;
+  }, [min, max, step, JSON.stringify(marks)]);
+
+  return React.createElement('div', {
+    onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp,
+    style: { position: 'relative', height: 92, overflow: 'hidden', touchAction: 'none', cursor: 'grab', margin: '0 -4px',
+      WebkitMaskImage: 'linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)',
+      maskImage: 'linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)', userSelect: 'none' }
+  },
+    React.createElement('div', { ref: trackRef, style: { position: 'absolute', top: 0, bottom: 0, left: '50%', willChange: 'transform' } }, ticks),
+    React.createElement('div', { style: { position: 'absolute', left: '50%', top: 16, bottom: 18, width: 3, marginLeft: -1.5, borderRadius: 2,
+      background: '#fff', boxShadow: '0 0 12px rgba(255,255,255,.6)', pointerEvents: 'none' } }));
+}
+
 function ExerciseView({
   exerciseName,
   cfg,
@@ -11394,6 +11514,67 @@ function ExerciseView({
 
   // Dynamic: show top focus if no sets yet today; backoff focus once first set is in
   const showingBackoff = todaySorted.length > 0;
+
+  // ---- AĞIRLIK ÇARKI (v5.9.112): varsayılan değer + işaretler ----
+  const dispW = v => Math.round(wOut(v) * 100) / 100;
+  const lastTodaySet = todaySorted.length ? todaySorted[todaySorted.length - 1] : null;
+  const wheelTarget = showingBackoff ? targetBackoff : targetTop;          // "geçen sefer"
+  const wheelPR = showingBackoff ? backoffPR : topPR;                       // rekor
+  const wheelDefaultW = wheelTarget ? dispW(wheelTarget.weight)
+    : (showingBackoff && lastTodaySet ? dispW(lastTodaySet.weight) : (wheelPR ? dispW(wheelPR.weight) : 20));
+  const wheelDefaultR = wheelTarget ? wheelTarget.reps : (showingBackoff && lastTodaySet ? lastTodaySet.reps : null);
+  // Yalnızca açılışta ve her kayıttan sonra doldur — kullanıcı silip yazarken araya girme
+  const prefillPending = useRef(true);
+  useEffect(() => {
+    if (!prefillPending.current) return;
+    if (weight === '' && wheelDefaultW != null) setWeight(String(wheelDefaultW));
+    if (reps === '' && wheelDefaultR != null) setReps(String(wheelDefaultR));
+    prefillPending.current = false;
+  }, [weight, reps, wheelDefaultW, wheelDefaultR]);
+  const wheelMax = CURRENT_UNIT === 'imperial' ? 900 : 400;
+  // ADIM TAHMİNİ (v5.9.113): bu harekette girdiğin ağırlıkların %90'ı hangi adımın katıysa o.
+  // Büyükten küçüğe dener: makine 5, barbell 2,5, dumbbell 2 gibi. 2,5'ten büyük adım için en az 4 farklı ağırlık ister.
+  const wheelStepAuto = React.useMemo(() => {
+    const ws = [...new Set(history.flatMap(h => (h.sets || []).map(x => Math.round(wOut(x.weight) * 100) / 100)))].filter(w => w > 0);
+    const base = CURRENT_UNIT === 'imperial' ? 5 : 2.5;
+    if (ws.length < 3) return base;
+    const cands = CURRENT_UNIT === 'imperial' ? [10, 5, 2.5, 1] : [5, 2.5, 2, 1.25, 1];
+    for (const st of cands) {
+      if (st > base && ws.length < 4) continue;
+      const fit = ws.filter(w => Math.abs(w / st - Math.round(w / st)) < 0.01).length / ws.length;
+      if (fit >= 0.9) return st;
+    }
+    return CURRENT_UNIT === 'imperial' ? 1 : 0.5;
+  }, [history]);
+  const STEP_KEY = 'apex-wheel-step';
+  const [wheelStepOverride, setWheelStepOverride] = useState(() => {
+    try { const m = JSON.parse(localStorage.getItem(vk(STEP_KEY)) || '{}'); return m[exerciseName] || null; } catch (e) { return null; }
+  });
+  const wheelStep = wheelStepOverride || wheelStepAuto;
+  const cycleWheelStep = () => {
+    const opts = CURRENT_UNIT === 'imperial' ? [null, 1, 2.5, 5, 10] : [null, 1, 1.25, 2, 2.5, 5];
+    const next = opts[(opts.indexOf(wheelStepOverride) + 1) % opts.length];
+    setWheelStepOverride(next); haptic(8);
+    try { const m = JSON.parse(localStorage.getItem(vk(STEP_KEY)) || '{}'); if (next) m[exerciseName] = next; else delete m[exerciseName];
+      localStorage.setItem(vk(STEP_KEY), JSON.stringify(m)); } catch (e) {}
+  };
+  const wheelMarks = [];
+  if (wheelTarget) wheelMarks.push({ v: dispW(wheelTarget.weight), color: '#4A90E2', label: t('wheel_last') });
+  if (wheelPR) wheelMarks.push({ v: dispW(wheelPR.weight), color: '#FFB74D', label: t('wheel_pr') });
+  const curW = parseFloat(String(weight).replace(',', '.'));
+  const wheelNote = (() => {
+    if (!isFinite(curW)) return null;
+    const fmt = x => String(+x.toFixed(2)).replace('.', ',');
+    if (wheelPR) { const p = dispW(wheelPR.weight);
+      if (curW > p) return { c: '#FFB74D', txt: t('wheel_above_pr', { d: fmt(curW - p) + wUnit() }) };
+      if (curW === p) return { c: '#FFB74D', txt: t('wheel_at_pr') }; }
+    if (wheelTarget) { const l = dispW(wheelTarget.weight);
+      if (curW > l) return { c: '#7FB3F0', txt: t('wheel_above_last', { d: fmt(curW - l) + wUnit() }) };
+      if (curW === l) return { c: '#7FB3F0', txt: t('wheel_same_last') }; }
+    return null;
+  })();
+  const bumpReps = d => { const r = parseInt(reps, 10); const nr = Math.max(1, Math.min(100, (isFinite(r) ? r : 0) + d)); setReps(String(nr)); haptic(6); };
+
   const handleSubmit = () => {
     if (!weight || !reps) return;
     const normalizedWeight = weight.replace(',', '.');
@@ -11405,9 +11586,9 @@ function ExerciseView({
     // Kullanıcı imperial modundaysa girdiği lb → kg'ye çevir (veri hep kg saklanır)
     const kgWeight = CURRENT_UNIT === 'imperial' ? +(w / KG_TO_LB).toFixed(2) : w;
     onAddLog(String(kgWeight), String(rInt));
+    prefillPending.current = true; // sıradaki set için çark yeniden konumlansın
     setWeight('');
     setReps('');
-    weightRef.current?.focus();
   };
   const formatDate = ts => {
     const d = new Date(ts),
@@ -11646,34 +11827,44 @@ function ExerciseView({
       fontWeight: 700,
       letterSpacing: 1
     }
-  }, "📅 ", backdatedLabel)), /*#__PURE__*/React.createElement("div", {
-    style: S.inputRow
-  }, /*#__PURE__*/React.createElement("div", {
-    style: S.inputGroup
-  }, /*#__PURE__*/React.createElement("input", {
-    ref: weightRef,
-    type: "text",
-    inputMode: "decimal",
-    value: weight,
-    onChange: e => setWeight(e.target.value.replace(/[^0-9.,]/g, '').replace(/([.,].*)[.,]/g, '$1')),
-    placeholder: "0",
-    style: S.numInput
-  }), /*#__PURE__*/React.createElement("div", {
-    style: S.unit
-  }, wUnit().toUpperCase())), /*#__PURE__*/React.createElement("div", {
-    style: S.times
-  }, "×"), /*#__PURE__*/React.createElement("div", {
-    style: S.inputGroup
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "number",
-    inputMode: "numeric",
-    value: reps,
-    onChange: e => setReps(e.target.value),
-    placeholder: "0",
-    style: S.numInput
-  }), /*#__PURE__*/React.createElement("div", {
-    style: S.unit
-  }, t('reps_cap')))), /*#__PURE__*/React.createElement("button", {
+  }, "📅 ", backdatedLabel)),
+  // ---- AĞIRLIK ÇARKI ----
+  /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 } },
+    /*#__PURE__*/React.createElement("input", {
+      type: "text", inputMode: "decimal", value: String(weight).replace('.', ','),
+      onChange: e => setWeight(e.target.value.replace(/[^0-9.,]/g, '').replace(/([.,].*)[.,]/g, '$1').replace(',', '.')),
+      onFocus: e => e.target.select(),
+      placeholder: "0",
+      style: { width: (Math.max(1, String(weight).length) * 0.54 + 0.15) + 'em', maxWidth: '78%', background: 'transparent', border: 'none', outline: 'none', textAlign: 'center', padding: 0,
+        fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 76, lineHeight: .9, letterSpacing: -1,
+        color: wheelNote && wheelNote.c === '#FFB74D' ? '#FFB74D' : '#fff', transition: 'color .25s' }
+    }),
+    /*#__PURE__*/React.createElement("span", { style: { fontSize: 15, color: '#777', fontWeight: 800 } }, wUnit())),
+  /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', fontSize: 10.5, fontWeight: 800, letterSpacing: .4, height: 15, marginTop: 4,
+    color: wheelNote ? wheelNote.c : 'transparent' } }, wheelNote ? wheelNote.txt : '.'),
+  /*#__PURE__*/React.createElement(WeightWheel, {
+    value: weight, onChange: v => setWeight(v), step: wheelStep, min: 0, max: wheelMax, marks: wheelMarks
+  }),
+  /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center', marginTop: 2 } },
+    /*#__PURE__*/React.createElement("button", { onClick: cycleWheelStep, style: { border: 'none', background: 'none', cursor: 'pointer',
+      fontFamily: 'inherit', fontSize: 9.5, fontWeight: 800, letterSpacing: 1.2, color: '#5e5e5e', padding: '4px 8px' } },
+      t('wheel_step', { s: String(wheelStep).replace('.', ',') + ' ' + wUnit() }) + ' · ' + (wheelStepOverride ? t('wheel_step_manual') : t('wheel_step_auto')))),
+  /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, margin: '10px 0 14px' } },
+    /*#__PURE__*/React.createElement("button", { onClick: () => bumpReps(-1), style: { width: 46, height: 46, borderRadius: 14, border: '1px solid #242424',
+      background: '#101010', color: '#ddd', fontSize: 22, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' } }, "−"),
+    /*#__PURE__*/React.createElement("div", { style: { textAlign: 'center' } },
+      /*#__PURE__*/React.createElement("input", {
+        type: "text", inputMode: "numeric", value: reps,
+        onChange: e => setReps(e.target.value.replace(/[^0-9]/g, '')),
+        onFocus: e => e.target.select(),
+        placeholder: "–",
+        style: { width: 76, background: 'transparent', border: 'none', outline: 'none', textAlign: 'center', padding: 0, color: '#fff',
+          fontFamily: "'Big Shoulders Display',sans-serif", fontWeight: 900, fontSize: 42, lineHeight: 1 }
+      }),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, letterSpacing: 2, color: '#666', fontWeight: 800, marginTop: 1 } }, t('reps_cap'))),
+    /*#__PURE__*/React.createElement("button", { onClick: () => bumpReps(1), style: { width: 46, height: 46, borderRadius: 14, border: '1px solid #242424',
+      background: '#101010', color: '#ddd', fontSize: 22, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' } }, "＋")),
+  /*#__PURE__*/React.createElement("button", {
     onClick: handleSubmit,
     disabled: !weight || !reps,
     style: {
