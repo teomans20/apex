@@ -1603,7 +1603,7 @@ function saveActiveGymId(id) {
     localStorage.setItem(vk(ACTIVE_GYM_KEY), id);
   } catch (e) {}
 }
-const APP_VERSION = '5.9.117'; // CANLI SALON: arkadaş durumları artık onSnapshot ile CANLI (useLiveFriends; sadece WorkoutTab/FriendsTab mount iken dinler). Durum belgesine seans içinde exercise/exIndex (yalnız hareket değişince, _liveLastEx ile) ve pr {ex,w,r,pw,pr,at} (yalnız rekor anında) yazılır; seans başında sıfırlanır; paylaşımlı salon kuralı aynı (activeGym.shared!==false). LiveGymStrip: dönen yeşil halkalı avatarlar (rekor kıranın halkası 25 dk altın), hareket · n. hareket · dk; altta canlı rekor kartı + ateş butonu (notifications'a type:'fire', id fire_{from}_{prAt} → rekor başına tek; apex-fired ile yerelde de kilit; uçan alev animasyonu). Yerleşim: Arkadaşlar sekmesi başlığın altı (segmentin üstü) + ana ekranda SANA ÖZEL'in üstü (compact, dokununca Arkadaşlar'a gider) — ikisi de SADECE biri salondaysa görünür. 6 saatten eski 'salonda' durumu bayat sayılır. Bildirimlerde 'fire' metni. ÖNCEKİ (5.9.116): GÜN RENGİ: seans aktifken (herhangi gün, bitmemiş, son 6 saatte başlamış) tüm uygulamanın --accent/-light/-dark/-deep/-rgb değişkenleri o günün rengine döner (setDayTint, WorkoutTab useEffect[tintAccent]); seans bitince seçili temaya geri döner. WorkoutTab sekme değişince unmount olsa da tint kalır (cleanup yok, sadece seans durumuyla değişir). Seans sırasında tema değiştirilirse gün rengi önde kalır (applyTheme sonunda yeniden uygular). html.apex-day-tint → body::before üstte gün renginde ışık (içeriğin üstünde, mix-blend screen — yazıyı örtmez, ışık ekler), body::after ince kenar çerçevesi + iç parıltı. @property ile --accent* renk geçişleri .8s akıcı (--accent-rgb liste olduğu için anında). ÖNCEKİ (5.9.115): ÇARK SESİ: titreşim tamamen kaldırıldı (kullanıcı: sadece ses). Tık sesi kısıldı (gain .09→.035, 18→14 ms, 3200→2600 Hz daha yumuşak). iOS'ta navigator.audioSession.type='ambient' → kulaklıkta çalan müziği durdurmaz/kısmaz, üstüne karışır, sessiz modda susar. Adım etiketinin solunda hoparlör düğmesi: sesi aç/kapa, cihaz genelinde 'apex-wheel-sound' ile hatırlanır. ÖNCEKİ (5.9.114): ÇARK TIKI: çevirirken hissedilen/duyulan tık. haptic(4) çoğu Android'de hissedilmiyordu → vibrate(10); iPhone'da navigator.vibrate yok → iOS 18+ gizli <input switch> label.click() sistem haptiği; ayrıca 18 ms'lik bandpass gürültü tıkı (Web Audio, dosya yok, vol .09). En fazla ~30 tık/sn. Tekrar ± butonları da aynı tığı verir. ÖNCEKİ (5.9.113): ÇARK ADIM TAHMİNİ: adım artık hareket başına geçmiş loglardan tahmin ediliyor (ağırlıkların %90'ının katı olan en büyük adım: 5 / 2,5 / 2 / 1,25 / 1; 2,5'ten büyük adım için ≥4 farklı ağırlık; az veri → 2,5). Cetvelin altında 'ADIM 2 kg · OTO' — dokununca elle değiştirilir (OTO→1→1,25→2→2,5→5), hareket başına vk('apex-wheel-step')'te hatırlanır. ÖNCEKİ (5.9.112): AĞIRLIK ÇARKI: set girme kutusundaki ağırlık input'u yerine büyük sayı + sürüklenebilir cetvel (WeightWheel). Fırlatınca süzülür (sürtünme 0.93), en yakın adıma oturur, her adımda haptic(4) (28 ms throttle). Adım her yerde sabit 2,5 (kullanıcı kararı). Cetvelde mavi GEÇEN (önceki seansın top/back-off'u) ve altın REKOR (top/back-off PR) işaretleri — çizgiler hep ayrı, etiketler yakınsa sola/sağa yaslanır, aynı değerse birleşir. Sayının altında not: REKORUN ÜSTÜ +X / REKOR AĞIRLIĞI / GEÇEN SEFERDEN +X / GEÇEN SEFERKİ. Varsayılan: açılışta ve her kayıttan sonra (prefillPending ref) geçen seferki ağırlık+tekrar dolar; top'tan sonra otomatik back-off hedefine geçer; hedef yoksa son set / PR / 20. Kullanıcı silip yazarken yeniden doldurma YOK. Büyük sayıya dokununca klavye açılır (tümünü seçer). Tekrar: − / ＋ ve yazılabilir alan. Kayıt sonrası klavye artık otomatik açılmıyor (focus kaldırıldı). Imperial'da max 900 lb. 
+const APP_VERSION = '5.9.118'; // ARŞİV DÜZELTMESİ (Dostum: itiş gününün tüm hareketleri birden arşive düştü). (1) Otomatik arşiv kuralına ikinci şart: 14 gün + o GÜN bu arada en az 2 kez yapılmış olmalı (computeExArchived, modül seviyesi). Eskiden günü birkaç hafta hiç yapmayınca günün TÜM hareketleri birden arşivleniyordu. (2) Günü DÜZENLERKEN 'Mevcut günlerden kopyala' seçimleri sessizce atlanıyordu (onSave 4. argümanı düşüyordu) → updateDay/updateCustomDay artık kopyalananları aynı saveData'da ekler (yazım farkı gözetmeden tekrarsız) ve hepsini arşivden çıkarır. (3) addExercise: günde zaten olan ama arşivdeki bir hareketi eklemeye çalışınca 'zaten var' uyarısı yerine geri getirir (toast); her başarılı eklemede saat sıfırlanır (unarchiveInDay). DayView 'apex-archive-changed' olayıyla arşiv durumunu yeniden okur. (4) YAN HATA: renk seçilmemiş yerleşik günü düzenlerken ilk palet (turkuaz) seçili geliyordu → değiştirmeden kaydedince gün turkuaza dönüyordu; artık null = mevcut rengi koru (önizleme de günün kendi rengi). ÖNCEKİ (5.9.117): CANLI SALON: arkadaş durumları artık onSnapshot ile CANLI (useLiveFriends; sadece WorkoutTab/FriendsTab mount iken dinler). Durum belgesine seans içinde exercise/exIndex (yalnız hareket değişince, _liveLastEx ile) ve pr {ex,w,r,pw,pr,at} (yalnız rekor anında) yazılır; seans başında sıfırlanır; paylaşımlı salon kuralı aynı (activeGym.shared!==false). LiveGymStrip: dönen yeşil halkalı avatarlar (rekor kıranın halkası 25 dk altın), hareket · n. hareket · dk; altta canlı rekor kartı + ateş butonu (notifications'a type:'fire', id fire_{from}_{prAt} → rekor başına tek; apex-fired ile yerelde de kilit; uçan alev animasyonu). Yerleşim: Arkadaşlar sekmesi başlığın altı (segmentin üstü) + ana ekranda SANA ÖZEL'in üstü (compact, dokununca Arkadaşlar'a gider) — ikisi de SADECE biri salondaysa görünür. 6 saatten eski 'salonda' durumu bayat sayılır. Bildirimlerde 'fire' metni. ÖNCEKİ (5.9.116): GÜN RENGİ: seans aktifken (herhangi gün, bitmemiş, son 6 saatte başlamış) tüm uygulamanın --accent/-light/-dark/-deep/-rgb değişkenleri o günün rengine döner (setDayTint, WorkoutTab useEffect[tintAccent]); seans bitince seçili temaya geri döner. WorkoutTab sekme değişince unmount olsa da tint kalır (cleanup yok, sadece seans durumuyla değişir). Seans sırasında tema değiştirilirse gün rengi önde kalır (applyTheme sonunda yeniden uygular). html.apex-day-tint → body::before üstte gün renginde ışık (içeriğin üstünde, mix-blend screen — yazıyı örtmez, ışık ekler), body::after ince kenar çerçevesi + iç parıltı. @property ile --accent* renk geçişleri .8s akıcı (--accent-rgb liste olduğu için anında). ÖNCEKİ (5.9.115): ÇARK SESİ: titreşim tamamen kaldırıldı (kullanıcı: sadece ses). Tık sesi kısıldı (gain .09→.035, 18→14 ms, 3200→2600 Hz daha yumuşak). iOS'ta navigator.audioSession.type='ambient' → kulaklıkta çalan müziği durdurmaz/kısmaz, üstüne karışır, sessiz modda susar. Adım etiketinin solunda hoparlör düğmesi: sesi aç/kapa, cihaz genelinde 'apex-wheel-sound' ile hatırlanır. ÖNCEKİ (5.9.114): ÇARK TIKI: çevirirken hissedilen/duyulan tık. haptic(4) çoğu Android'de hissedilmiyordu → vibrate(10); iPhone'da navigator.vibrate yok → iOS 18+ gizli <input switch> label.click() sistem haptiği; ayrıca 18 ms'lik bandpass gürültü tıkı (Web Audio, dosya yok, vol .09). En fazla ~30 tık/sn. Tekrar ± butonları da aynı tığı verir. ÖNCEKİ (5.9.113): ÇARK ADIM TAHMİNİ: adım artık hareket başına geçmiş loglardan tahmin ediliyor (ağırlıkların %90'ının katı olan en büyük adım: 5 / 2,5 / 2 / 1,25 / 1; 2,5'ten büyük adım için ≥4 farklı ağırlık; az veri → 2,5). Cetvelin altında 'ADIM 2 kg · OTO' — dokununca elle değiştirilir (OTO→1→1,25→2→2,5→5), hareket başına vk('apex-wheel-step')'te hatırlanır. ÖNCEKİ (5.9.112): AĞIRLIK ÇARKI: set girme kutusundaki ağırlık input'u yerine büyük sayı + sürüklenebilir cetvel (WeightWheel). Fırlatınca süzülür (sürtünme 0.93), en yakın adıma oturur, her adımda haptic(4) (28 ms throttle). Adım her yerde sabit 2,5 (kullanıcı kararı). Cetvelde mavi GEÇEN (önceki seansın top/back-off'u) ve altın REKOR (top/back-off PR) işaretleri — çizgiler hep ayrı, etiketler yakınsa sola/sağa yaslanır, aynı değerse birleşir. Sayının altında not: REKORUN ÜSTÜ +X / REKOR AĞIRLIĞI / GEÇEN SEFERDEN +X / GEÇEN SEFERKİ. Varsayılan: açılışta ve her kayıttan sonra (prefillPending ref) geçen seferki ağırlık+tekrar dolar; top'tan sonra otomatik back-off hedefine geçer; hedef yoksa son set / PR / 20. Kullanıcı silip yazarken yeniden doldurma YOK. Büyük sayıya dokununca klavye açılır (tümünü seçer). Tekrar: − / ＋ ve yazılabilir alan. Kayıt sonrası klavye artık otomatik açılmıyor (focus kaldırıldı). Imperial'da max 900 lb. 
 // prev:  // APEX WRAPPED: yıl sonu hikaye özeti, TÜM SALONLARIN verisi birleştirilerek (collectAllGymsData: GYMS_KEY'deki her salonun data'sı okunur, logs/sessions id'ye göre tekilleştirilir, customMuscleMap birleşir). buildWrapped(range) bir dönemin istatistiklerini üretir: set/tekrar/hacim/gün/dakika, haftanın günü dağılımı + en sadık gün, rekor sayısı ve en çok gelişen hareket (getExercisePRHistory top-set eğrisi, 14 noktaya seyreltilir), en çok çalışılan kas, en uzun haftalık seri, en çok yapılan hareket. WrappedStory: 7 kart (açılış / set / hacim+somut karşılaştırma / en çok gelişen + kendini çizen grafik / haftanın günleri çubukları / rekorlar / holografik kapanış kartı), dissolve geçişli, story barlı, Atla'lı. volumeComparison() hacmi uçak-balina-otobüs-otomobil-buzdolabı ölçeğine çevirir. GİRİŞ: (1) Defter'de hafta özetlerinin üstünde parıltılı kart — her zaman erişilebilir, (2) 25 Aralık–7 Ocak arası ana ekranda afiş. 1–7 Ocak arası hâlâ geçen yılı gösterir. En az 5 antrenman günü şartı. Seans Filmi'nin CSS grain'i paylaşılır; yeni wr-* animasyonları eklendi. Emoji yok, i18n tr+en tam. // SEANS FİLMİ: antrenman bitince kendiliğinden oynayan ~11 sn'lik sinematik özet. 5 sahne: (1) gün adı — ışık süzülmesi + accent hale, (2) hareket montajı — seansın TÜM hareketleri sırayla düşer (isim, set sayısı, top set, hacim; rekorlular altın + kupa SVG), altta hacim barı dolar, (3) doruk nokta — rekor varsa madalya+ışınlar+"önceki X · +Ykg", rekor yoksa sahne atlanmaz ama "GÜNÜN EN AĞIR SETİ"ne döner (halter SVG, gün accent'i), (4) sayaçlar (hacim/set/süre, geçen seansa göre % çipi) + mevcut BodyFront/BodyBack silüetinde kas haritası (seans hacmi kaslara dağıtılıp 0..1 yoğunlukla accent'e boyanır; baskın taraf ön/arka otomatik), (5) kapanış kartı — holografik parlama + konfeti + ↻/Detaylar/Kapat. Sahne geçişleri dissolve, üstte story barları, sağ üstte Atla/Kapat. Tüm sahneler animasyon bittikten sonra ~1 sn bekler (ritim). computeSessionSummary'ye exerciseRows/heaviestSet/muscleScores/muscleSide/topMuscleNames/endedAt eklendi ve prs artık prev taşıyor; aynı harekette top+backoff rekoru tek rekor sayılır. Renkler gün tipinin accent'inden gelir, emoji yok (SVG). Detaylar mevcut SessionSummaryModal'ı açar — eski özet kaldırılmadı. // ROOT CAUSE FIXED (the black-screen crash). Error text from the wild: "null is not an object (evaluating 'todayTop.weight')" at ExerciseView. This was a regression Claude introduced in v5.9.93: todayTop changed from todaySorted[0] (never null when sets exist) to todaySplit.top, and splitTopBackoff returns top:null when EVERY set of the group is explicitly setType:'backoff' with no 'top' — which is exactly what happens after the TOP set is DELETED (dad's "deleting a set -> black screen") . showingBackoff (sets exist) still rendered the TOP strip -> todayTop.weight on null -> throw on every render of that exercise. FIX: splitTopBackoff now falls back to the earliest set as top when no explicit top remains (if (!tops.length && backoffs.length) tops.push(backoffs.shift())), restoring pre-5.9.93 behaviour; plus defence-in-depth guard `!todayTop ? null :` on the targetTopStrip branch. Reproduced in headless Chromium (all-backoff seed -> boundary + exact error), verified fixed (renders "ILK TOP"), and re-ran the other scenario repros for regressions.
 // Crash boundary made DIAGNOSTIC (brother hit a crash on v5.9.107 we could not reproduce across 6 paths: zero-log exercise open, end-session, calendar day-detail Düzenle, journal, progress, friends). Recovery screen now shows the error message + first stack lines + REACT COMPONENT STACK (names the exact crashing component) + APP_VERSION in a scrollable mono box, adds a "Hatayı Kopyala"/Copy Error button (clipboard + textarea fallback), and componentDidCatch persists the full record to localStorage 'apex-last-error' {at, version, message, stack, componentStack, ua}. Verified end-to-end in headless Chromium with an injected throw: boundary renders, names HomeView/WorkoutTab, and stores the record.
 // URGENT crash-recovery (Dostum's dad's Android: deleting a set → black screen that never came back = persisted data state crashing render on every load). TWO safety layers: (1) AppErrorBoundary class wraps <App> at root — any render exception now shows a dark recovery screen (⚠️ + "Yeniden Dene"/reload + "Yedeği İndir"/export-from-localStorage, bilingual via CURRENT_LANG) instead of a black screen. (2) sanitizeGymData(d) drops malformed logs (missing id/exerciseName, non-finite weight/reps/timestamp) and sessions (missing id / non-finite startTime); applied to localData on load (both tabs) AND to the cloud-merged result (mutates in place so localStorage + cloud push-back also get cleaned) → corrupt data can no longer crash render and is auto-cleaned on next load across devices. Tested sanitize + full-file syntax incl boundary.
@@ -2422,7 +2422,30 @@ function setExArchiveState(dayType, exName, patch) {
   if (!all[dayType]) all[dayType] = {};
   all[dayType][exName] = { ...(all[dayType][exName] || {}), ...patch };
   saveExArchive(all);
+  try { window.dispatchEvent(new Event('apex-archive-changed')); } catch (e) {}
   return all;
+}
+// Bir hareketi bu günde "aktif" yap (ekleme/kopyalama/geri getirme): saat sıfırlanır.
+function unarchiveInDay(dayType, names) {
+  const now = Date.now();
+  (names || []).forEach(n => { if (n) setExArchiveState(dayType, n, { unarchivedAt: now, archivedAt: 0 }); });
+}
+// ARŞİV KURALI (v5.9.118):
+//   - Elle arşivlendiyse (archivedAt ≥ son referans) → arşivde.
+//   - Otomatik arşiv için İKİ şart birden: son yapılıştan (ya da geri getirmeden) 14 gün geçmiş OLMALI
+//     VE o günün kendisi bu arada EN AZ 2 KEZ yapılmış olmalı (o harekete dokunmadan).
+//   Eskiden 2. şart yoktu → birkaç hafta o günü hiç yapmayınca günün TÜM hareketleri birden arşive düşüyordu.
+function computeExArchived(dayType, exName, logs, archAll, now) {
+  const st = ((archAll || {})[dayType] || {})[exName] || {};
+  let done = 0;
+  (logs || []).forEach(l => { if (l.exerciseName === exName && l.dayType === dayType && l.timestamp > done) done = l.timestamp; });
+  const ref = Math.max(done, st.unarchivedAt || 0);
+  if (st.archivedAt && st.archivedAt >= ref) return true;
+  if (!ref) return false;
+  if ((now || Date.now()) - ref <= EX_ARCHIVE_WINDOW_MS) return false;
+  const workouts = new Set();
+  (logs || []).forEach(l => { if (l.dayType === dayType && l.timestamp > ref) workouts.add(l.sessionId || dateKey(l.timestamp)); });
+  return workouts.size >= 2;
 }
 
 // Sabit 4 alan + opsiyonel ekstralar
@@ -8964,18 +8987,17 @@ function WorkoutTab({
     if (!pendingProgram || !cloudLoaded) return;
     onAcceptProgramToWorkout(pendingProgram.dayName, pendingProgram.fromName, pendingProgram.exercises);
     onConsumePendingProgram();
-  }, [pendingProgram, cloudLoaded]);  const updateCustomDay = (id, name, subtitle, paletteId) => {
-    const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId) || DAY_COLOR_PALETTE[0];
+  }, [pendingProgram, cloudLoaded]);  const updateCustomDay = (id, name, subtitle, paletteId, exPatch) => {
+    const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId); // yoksa mevcut rengi koru
     const newCustomDays = (data.customDays || []).map(d => d.id === id ? {
       ...d,
       name: name.trim(),
       subtitle: (subtitle || '').trim(),
-      accent: palette.accent,
-      dark: palette.dark,
-      paletteId: palette.id
+      ...(palette ? { accent: palette.accent, dark: palette.dark, paletteId: palette.id } : {})
     } : d);
     saveData({
       ...data,
+      ...(exPatch || {}),
       customDays: newCustomDays
     });
     setEditDayId(null);
@@ -9000,20 +9022,33 @@ function WorkoutTab({
   };
 
   // Herhangi bir günü düzenle (yerleşik → override; özel → doğrudan)
-  const updateDay = (id, name, subtitle, paletteId) => {
+  const updateDay = (id, name, subtitle, paletteId, copied) => {
+    // v5.9.118: "Mevcut günlerden kopyala" düzenleme modunda da çalışsın (eskiden sessizce atlanıyordu).
+    // Günde zaten olanlar tekrar eklenmez (yazım farkına bakmadan); kopyalananların hepsi arşivden çıkarılır.
+    const cur = data.exercises[id] || [];
+    const curNorm = new Set(cur.map(normExName));
+    const add = [];
+    (copied || []).forEach(n => { const k = normExName(n); if (n && !curNorm.has(k)) { curNorm.add(k); add.push(n); } });
+    const exPatch = add.length ? { exercises: { ...data.exercises, [id]: [...cur, ...add] } } : {};
     const isBuiltin = !!BUILTIN_DAYS[id];
     if (isBuiltin) {
       const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId);
       const ov = { ...(data.dayOverrides || {}) };
+      const prevOv = ov[id] || {};
       ov[id] = {
         name: name.trim(),
         subtitle: (subtitle || '').trim(),
-        ...(palette ? { accent: palette.accent, dark: palette.dark, paletteId: palette.id } : {})
+        ...(palette ? { accent: palette.accent, dark: palette.dark, paletteId: palette.id }
+          : (prevOv.accent ? { accent: prevOv.accent, dark: prevOv.dark, paletteId: prevOv.paletteId } : {}))
       };
-      saveData({ ...data, dayOverrides: ov });
+      saveData({ ...data, ...exPatch, dayOverrides: ov });
       setEditDayId(null);
     } else {
-      updateCustomDay(id, name, subtitle, paletteId);
+      updateCustomDay(id, name, subtitle, paletteId, exPatch);
+    }
+    if (copied && copied.length) {
+      const dayList = [...cur, ...add];
+      unarchiveInDay(id, (copied || []).map(n => dayList.find(e => normExName(e) === normExName(n)) || n));
     }
   };
   // Herhangi bir günü sil (yerleşik veya özel) — kayıtlar dahil
@@ -9271,7 +9306,14 @@ function WorkoutTab({
     if (match) {
       // Bu günde birebir (normalize) aynısı zaten varsa → gerçek çift, ekleme
       const dayList = data.exercises[currentDay] || [];
-      if (dayList.some(e => normExName(e) === norm)) {
+      const existing = dayList.find(e => normExName(e) === norm);
+      if (existing) {
+        // Görünmüyorsa arşivdedir → kullanıcı onu geri istiyor demektir
+        if (computeExArchived(currentDay, existing, data.logs, loadExArchive(), Date.now())) {
+          unarchiveInDay(currentDay, [existing]);
+          setToast(t('unarchived_toast', { ex: existing }));
+          return;
+        }
         alert(t('day_prefix') + trimmed + t('ex_exists'));
         return;
       }
@@ -9287,6 +9329,7 @@ function WorkoutTab({
         [currentDay]: [...(data.exercises[currentDay] || []), finalName]
       }
     });
+    unarchiveInDay(currentDay, [finalName]); // eski kayıtları olsa bile yeni eklenen hemen arşive düşmesin
   };
   const removeExercise = name => {
     saveData({
@@ -9846,8 +9889,9 @@ function WorkoutTab({
     dayConfig: dayConfig
   }), editDayId && /*#__PURE__*/React.createElement(DayEditorModal, {
     editingDay: (data.customDays || []).find(d => d.id === editDayId) || { id: editDayId, name: dayConfig[editDayId] && dayConfig[editDayId].name || editDayId, subtitle: dayConfig[editDayId] && dayConfig[editDayId].subtitle || '', paletteId: (data.dayOverrides || {})[editDayId] && (data.dayOverrides || {})[editDayId].paletteId, builtin: !(data.customDays || []).some(d => d.id === editDayId) },
+    dayConfig: dayConfig,
     onClose: () => setEditDayId(null),
-    onSave: (name, sub, pal) => updateDay(editDayId, name, sub, pal),
+    onSave: (name, sub, pal, copied) => updateDay(editDayId, name, sub, pal, copied),
     onDelete: () => {
       if (confirm('Bu günü ve TÜM kayıtlarını (geçmiş antrenmanlar dahil) kalıcı olarak silmek istiyor musun?\n\nBu işlem geri alınamaz!')) deleteDay(editDayId);
     }
@@ -11296,15 +11340,13 @@ function DayView({
     });
     return max || null;
   };
-  const dayArchive = archiveState[dayType] || {};
-  const isArchived = (exName) => {
-    const st = dayArchive[exName] || {};
-    const done = lastDoneInDay(exName);
-    const ref = Math.max(done || 0, st.unarchivedAt || 0);
-    if (st.archivedAt && st.archivedAt >= ref) return true;
-    if (!ref) return false;
-    return (nowMs - ref) > EX_ARCHIVE_WINDOW_MS;
-  };
+  // Arşiv durumu başka yerden değişirse (hareket ekleme/kopyalama) yeniden oku
+  useEffect(() => {
+    const h = () => setArchiveState(loadExArchive());
+    window.addEventListener('apex-archive-changed', h);
+    return () => window.removeEventListener('apex-archive-changed', h);
+  }, []);
+  const isArchived = (exName) => computeExArchived(dayType, exName, logsForDay, archiveState, nowMs);
   const activeExercises = editMode ? exercises : exercises.filter(e => !isArchived(e));
   const archivedExercises = editMode ? [] : exercises.filter(e => isArchived(e));
   const unarchiveExercise = (exName) => {
@@ -13019,11 +13061,16 @@ function DayEditorModal({
   const isEdit = !!editingDay;
   const [name, setName] = useState(editingDay?.name || '');
   const [subtitle, setSubtitle] = useState(editingDay?.subtitle || '');
-  const [paletteId, setPaletteId] = useState(editingDay?.paletteId || DAY_COLOR_PALETTE[0].id);
+  // v5.9.118: renk seçilmemiş yerleşik günü düzenlerken İLK palet (turkuaz) seçili geliyordu → değiştirmeden
+  // Kaydet'e basınca gün turkuaza dönüyordu. Artık null = "mevcut rengi koru"; önizleme günün kendi rengini gösterir.
+  const [paletteId, setPaletteId] = useState(editingDay?.paletteId || (isEdit ? null : DAY_COLOR_PALETTE[0].id));
   const [copiedExercises, setCopiedExercises] = useState([]);
   const [showCopySection, setShowCopySection] = useState(false);
-  const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId) || DAY_COLOR_PALETTE[0];
-  const previewGradient = `linear-gradient(135deg,${palette.accent},${palette.dark})`;
+  const curDayCfg = isEdit && dayConfig && editingDay ? dayConfig[editingDay.id] : null;
+  const palette = DAY_COLOR_PALETTE.find(p => p.id === paletteId)
+    || (curDayCfg && curDayCfg.accent ? { accent: curDayCfg.accent, dark: curDayCfg.dark || curDayCfg.accent } : DAY_COLOR_PALETTE[0]);
+  const previewGradient = (!DAY_COLOR_PALETTE.find(p => p.id === paletteId) && curDayCfg && curDayCfg.gradient)
+    ? curDayCfg.gradient : `linear-gradient(135deg,${palette.accent},${palette.dark})`;
 
   // Copyable exercises from existing days (for new day creation only)
   const copyable = [];
