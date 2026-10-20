@@ -21,9 +21,17 @@ self.addEventListener('push', e => {
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
+  // Bildirim türü tag'den: apex-<tür>[-gönderen] → uygulama doğru ekranı açar
+  const tag = e.notification.tag || '';
+  const n = tag.startsWith('apex-') ? tag.split('-')[1] : '';
+  const scope = self.registration.scope;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
-    for (const c of cs) if (c.url.startsWith(self.registration.scope) && 'focus' in c) return c.focus();
-    return self.clients.openWindow(url);
+    for (const c of cs) {
+      if (c.url.startsWith(scope) && 'focus' in c) {
+        if (n) c.postMessage({ apexOpen: n });
+        return c.focus();
+      }
+    }
+    return self.clients.openWindow(scope + (n ? '?n=' + n : ''));
   }));
 });
