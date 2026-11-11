@@ -22,7 +22,7 @@ li { margin-bottom: 6px; }
 
 <div class="logo">APEX</div>
 <h1>Gizlilik Politikası</h1>
-<div class="date">Son güncelleme: 14 Temmuz 2026</div>
+<div class="date">Son güncelleme: 11 Kasım 2026</div>
 
 <p>APEX ("uygulama"), kullanıcılarının gizliliğine saygı duyar. Bu politika, hangi verilerin toplandığını, nasıl kullanıldığını ve nasıl korunduğunu açıklar.</p>
 
@@ -36,6 +36,7 @@ li { margin-bottom: 6px; }
   <li><strong>Profil fotoğrafı:</strong> İsteğe bağlı olarak yüklenen profil görseli.</li>
   <li><strong>Sosyal veriler:</strong> Arkadaş listesi, arkadaşlık istekleri, bildirimler, antrenman paylaşımları, reaksiyonlar ve gönderilen programlar.</li>
   <li><strong>Güvenlik ve moderasyon verileri:</strong> Engellenen kullanıcılar, kullanıcı şikâyetleri, şikâyet nedeni, bildirilen içerik türü ve işlem zamanı.</li>
+  <li><strong>Telefon bildirimi verileri (yalnızca bildirimleri açarsanız):</strong> Cihazınızın bildirim aboneliği (bildirim servisinin adresi ve şifreleme anahtarları), rastgele üretilen bir cihaz kimliği, saat diliminiz, dil tercihiniz, görünen adınız, bildirim tercihleriniz, hatırlatma günleri ve saati ile o günlerin antrenman adları, engellediğiniz kullanıcıların kimlikleri ve hatırlatmaların doğru gönderilebilmesi için antrenman durumunuzun kısa özeti (son antrenman günü, açık antrenmanın başlangıç saati, haftalık seri ve haftalık özet metni).</li>
   <li><strong>Teknik veriler:</strong> Firebase tarafından kimlik doğrulama ve hizmet sağlama kapsamında işlenebilecek teknik bilgiler.</li>
 </ul>
 
@@ -52,6 +53,13 @@ li { margin-bottom: 6px; }
 <h2>Veri Depolama</h2>
 <p>Veriler Google Firebase (Firestore ve Authentication) altyapısında güvenli şekilde saklanır. Antrenman verileri ayrıca cihazınızda (localStorage) yerel olarak tutulur ve çevrimdışı erişim sağlar.</p>
 
+<h2>Telefon Bildirimleri</h2>
+<p>Telefon bildirimleri isteğe bağlıdır ve siz açmadıkça hiçbir bildirim verisi toplanmaz. Bildirimleri açtığınızda yukarıda sayılan bildirim verileri, bildirimleri göndermek amacıyla Cloudflare altyapısında çalışan APEX bildirim sunucusunda saklanır. Web sürümünde bildirimler cihazınıza Apple veya Google'ın bildirim servisi üzerinden şifrelenmiş olarak iletilir; bu servisler bildirimin içeriğini göremez. Cloudflare bu kapsamda verileri bir hizmet sağlayıcı olarak işler.</p>
+<p>Bildirim sunucusundaki kaydınız şu durumlarda silinir: bildirimleri son cihazınızda da kapattığınızda, hesabınızı sildiğinizde ya da aboneliğiniz geçersiz hale geldiğinde. Antrenman kayıtlarınız bildirim sunucusunda saklanmaz. Arkadaşlarınıza giden bildirimlerin metni (örneğin kırdığınız bir rekor) gönderim sırasında sunucudan geçer, ancak saklanmaz.</p>
+
+<h2>iPhone Uygulaması</h2>
+<p>APEX iPhone uygulaması, web sürümüyle aynı hesabı ve aynı verileri kullanır. Kilit ekranındaki antrenman kartı yalnızca cihazınızda çalışır; karttan girilen setler önce cihazda saklanır, uygulama açıldığında antrenman kaydınıza eklenir. Kamera ve fotoğraf erişimi yalnızca profil fotoğrafı seçerken, sizin izninizle kullanılır.</p>
+
 <h2>Veri Güvenliği ve Görünürlük</h2>
 <p>Firebase Authentication ile kimlik doğrulama, Firestore Security Rules ile veri erişim kontrolü sağlanır. Özel antrenman ve ölçüm verilerine erişim Firestore güvenlik kurallarıyla sınırlandırılır. Kullanıcı adı, profil fotoğrafı ve kullanıcı tarafından sosyal özelliklerle paylaşılan içerikler diğer kullanıcılar veya arkadaşlar tarafından görülebilir.</p>
 
@@ -60,7 +68,7 @@ li { margin-bottom: 6px; }
 <ul>
   <li>Verilerinizi uygulama içinden görüntüleyebilirsiniz.</li>
   <li>Profil bilgilerinizi düzenleyebilirsiniz.</li>
-  <li>Hesabınızı uygulama içerisinden kalıcı olarak silebilirsiniz (Ayarlar → Hesap → Hesabı Sil). Hesap silme işlemi, Firebase Authentication hesabınızın ve APEX tarafından tutulan ilişkili kişisel verilerin silinmesi sürecini başlatır. Yasal olarak saklanması gereken bilgiler varsa bunlar gerekli süre boyunca tutulabilir.</li>
+  <li>Hesabınızı uygulama içerisinden kalıcı olarak silebilirsiniz (Ayarlar → Hesap → Hesabı Sil). Hesap silme işlemi, Firebase Authentication hesabınızın, APEX tarafından tutulan ilişkili kişisel verilerin ve bildirim sunucusundaki kaydınızın silinmesi sürecini başlatır. Yasal olarak saklanması gereken bilgiler varsa bunlar gerekli süre boyunca tutulabilir.</li>
 </ul>
 
 <h2>Çerezler ve Yerel Depolama</h2>

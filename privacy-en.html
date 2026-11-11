@@ -22,7 +22,7 @@ li { margin-bottom: 6px; }
 
 <div class="logo">APEX</div>
 <h1>Privacy Policy</h1>
-<div class="date">Last updated: July 14, 2026</div>
+<div class="date">Last updated: November 11, 2026</div>
 
 <p>APEX ("the app") respects the privacy of its users. This policy describes what data is collected, how it is used, and how it is protected.</p>
 
@@ -36,6 +36,7 @@ li { margin-bottom: 6px; }
   <li><strong>Profile photo:</strong> Optionally uploaded profile image.</li>
   <li><strong>Social data:</strong> Friends list, friend requests, notifications, workout shares, reactions, and sent programs.</li>
   <li><strong>Safety and moderation data:</strong> Blocked users, user reports, report reasons, reported content type, and timestamps.</li>
+  <li><strong>Phone notification data (only if you turn notifications on):</strong> Your device's push subscription (the push service address and encryption keys), a randomly generated device identifier, your time zone, language preference, display name, notification preferences, reminder days and time together with the workout names for those days, the identifiers of users you have blocked, and a short summary of your workout status needed to send reminders correctly (last workout day, start time of an open workout, weekly streak, and weekly summary text).</li>
   <li><strong>Technical data:</strong> Technical information that may be processed by Firebase for authentication and service delivery.</li>
 </ul>
 
@@ -52,6 +53,13 @@ li { margin-bottom: 6px; }
 <h2>Data Storage</h2>
 <p>Data is securely stored in Google Firebase (Firestore and Authentication) infrastructure. Workout data is also stored locally on your device (localStorage) for offline access.</p>
 
+<h2>Phone Notifications</h2>
+<p>Phone notifications are optional, and no notification data is collected unless you turn them on. When you do, the notification data listed above is stored on the APEX notification server, which runs on Cloudflare infrastructure, for the purpose of sending notifications. In the web version, notifications are delivered to your device in encrypted form through Apple's or Google's push service; these services cannot see the content of the notification. Cloudflare processes this data as a service provider.</p>
+<p>Your record on the notification server is deleted when you turn notifications off on your last device, when you delete your account, or when your subscription becomes invalid. Your workout records are not stored on the notification server. The text of notifications sent to your friends (for example, a record you broke) passes through the server while being sent, but is not stored.</p>
+
+<h2>iPhone App</h2>
+<p>The APEX iPhone app uses the same account and the same data as the web version. The workout card on the Lock Screen runs only on your device; sets entered from the card are first kept on the device and are added to your workout record when you open the app. Camera and photo access is used only when you choose a profile photo, and only with your permission.</p>
+
 <h2>Data Security and Visibility</h2>
 <p>Authentication is provided by Firebase Authentication, and data access control is enforced by Firestore Security Rules. Access to private workout and measurement data is restricted through Firestore Security Rules. Usernames, profile photos, and content shared through social features may be visible to other users or friends.</p>
 
@@ -60,7 +68,7 @@ li { margin-bottom: 6px; }
 <ul>
   <li>View your data within the app.</li>
   <li>Edit your profile information.</li>
-  <li>Permanently delete your account from within the app (Settings → Account → Delete Account). Account deletion initiates the removal of your Firebase Authentication account and associated personal data held by APEX. Information that must be retained for legal purposes may be kept for the required period.</li>
+  <li>Permanently delete your account from within the app (Settings → Account → Delete Account). Account deletion initiates the removal of your Firebase Authentication account, the associated personal data held by APEX, and your record on the notification server. Information that must be retained for legal purposes may be kept for the required period.</li>
 </ul>
 
 <h2>Cookies and Local Storage</h2>
